@@ -619,7 +619,7 @@ const openApiSpec = {
     schemas: {
       UserRole: {
         type: "string",
-        enum: ["арендатор", "арендодатель"],
+        enum: ["tenant", "landlord"],
       },
       DealStatus: {
         type: "string",
