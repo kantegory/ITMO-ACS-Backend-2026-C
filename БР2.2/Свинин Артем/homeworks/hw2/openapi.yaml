@@ -1,0 +1,2594 @@
+openapi: 3.0.0
+info:
+  title: Rental Service API
+  version: 0.0.0
+tags:
+  - name: Auth
+  - name: Users
+  - name: Properties
+  - name: Facilities
+  - name: PropertyFacilities
+  - name: Images
+  - name: Bookings
+  - name: Transactions
+  - name: Reviews
+  - name: Favourites
+  - name: Chats
+  - name: Messages
+  - name: Addresses
+  - name: PropertyTypes
+paths:
+  /addresses:
+    post:
+      operationId: AddressesApi_create
+      description: Создать новый адрес
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Addresses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                country:
+                  type: string
+                city:
+                  type: string
+                district:
+                  type: string
+                houseNumber:
+                  type: string
+                apartment:
+                  type: string
+                postalCode:
+                  type: string
+                lat:
+                  type: number
+                  format: double
+                lon:
+                  type: number
+                  format: double
+              required:
+                - country
+                - city
+                - district
+                - houseNumber
+    get:
+      operationId: AddressesApi_list
+      description: Получить список адресов
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Address'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Addresses
+  /addresses/{id}:
+    get:
+      operationId: AddressesApi_read
+      description: Получить конкретный адрес
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Addresses
+    patch:
+      operationId: AddressesApi_update
+      description: Обновить адрес
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Addresses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                country:
+                  type: string
+                city:
+                  type: string
+                district:
+                  type: string
+                houseNumber:
+                  type: string
+                apartment:
+                  type: string
+                postalCode:
+                  type: string
+                lat:
+                  type: number
+                  format: double
+                lon:
+                  type: number
+                  format: double
+    delete:
+      operationId: AddressesApi_remove
+      description: Удалить адрес
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Addresses
+  /auth/login:
+    post:
+      operationId: AuthApi_login
+      description: Вход в систему
+      parameters: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/logout:
+    post:
+      operationId: AuthApi_logout
+      description: Выход из системы
+      parameters: []
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Auth
+  /auth/refresh:
+    post:
+      operationId: AuthApi_refresh
+      description: Обновление access токена
+      parameters: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                required:
+                  - accessToken
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required:
+                - refreshToken
+  /auth/register:
+    post:
+      operationId: AuthApi_register
+      description: Регистрация нового пользователя
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '409':
+          description: Конфликт - ресурс уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+  /bookings:
+    post:
+      operationId: BookingsApi_create
+      description: Создать новое бронирование
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                startDate:
+                  type: string
+                  format: date-time
+                endDate:
+                  type: string
+                  format: date-time
+                guestsCount:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                specialRequest:
+                  type: string
+              required:
+                - propertyId
+                - startDate
+                - endDate
+                - guestsCount
+    get:
+      operationId: BookingsApi_list
+      description: Получить список бронирований с фильтрацией
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+          explode: false
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          explode: false
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
+  /bookings/{id}:
+    get:
+      operationId: BookingsApi_read
+      description: Получить детали бронирования
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
+    patch:
+      operationId: BookingsApi_update
+      description: Обновить статус или данные бронирования
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/BookingStatus'
+                specialRequest:
+                  type: string
+                cancellationReason:
+                  type: string
+    delete:
+      operationId: BookingsApi_remove
+      description: Удалить бронирование
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
+  /chats:
+    post:
+      operationId: ChatsApi_create
+      description: Создать новый чат между владельцем и гостем
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Chats
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                bookingId:
+                  type: integer
+                  format: int32
+              required:
+                - propertyId
+    get:
+      operationId: ChatsApi_list
+      description: Получить список чатов текущего пользователя
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chat'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Chats
+  /chats/{id}:
+    get:
+      operationId: ChatsApi_read
+      description: Получить детали чата
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Chats
+  /facilities:
+    get:
+      operationId: FacilitiesApi_list
+      description: Получить список всех удобств
+      parameters: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Facility'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Facilities
+    post:
+      operationId: FacilitiesApi_create
+      description: Создать новое удобство
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facility'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Facilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  $ref: '#/components/schemas/FacilityType'
+              required:
+                - type
+  /facilities/{id}:
+    patch:
+      operationId: FacilitiesApi_update
+      description: Обновить удобство
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facility'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Facilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  $ref: '#/components/schemas/FacilityType'
+    delete:
+      operationId: FacilitiesApi_remove
+      description: Удалить удобство
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Facilities
+  /favourites:
+    post:
+      operationId: FavouritesApi_add
+      description: Добавить объект в избранное (userId берется из JWT)
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Favourite'
+        '409':
+          description: Конфликт - ресурс уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Favourites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+              required:
+                - propertyId
+    get:
+      operationId: FavouritesApi_list
+      description: Получить список избранных объектов текущего пользователя
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Favourite'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Favourites
+  /favourites/{id}:
+    delete:
+      operationId: FavouritesApi_remove
+      description: Удалить объект из избранного
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Favourites
+  /images:
+    post:
+      operationId: ImagesApi_add
+      description: Добавить фотографию к объекту
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Image'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                imageUrl:
+                  type: string
+                isMain:
+                  type: boolean
+              required:
+                - propertyId
+                - imageUrl
+    get:
+      operationId: ImagesApi_list
+      description: Получить список фотографий объекта
+      parameters:
+        - name: propertyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Images
+  /images/{id}:
+    delete:
+      operationId: ImagesApi_remove
+      description: Удалить фотографию
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Images
+  /messages:
+    post:
+      operationId: MessagesApi_send
+      description: Отправить сообщение в чат
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: integer
+                  format: int32
+                content:
+                  type: string
+                  minLength: 1
+              required:
+                - chatId
+                - content
+    get:
+      operationId: MessagesApi_list
+      description: Получить список сообщений чата
+      parameters:
+        - name: chatId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Messages
+  /messages/{id}:
+    patch:
+      operationId: MessagesApi_markRead
+      description: Пометить сообщение как прочитанное
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Messages
+  /properties:
+    get:
+      operationId: PropertiesApi_list
+      description: Поиск объектов недвижимости с фильтрацией и пагинацией
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: minPricePerDay
+          in: query
+          required: false
+          schema:
+            type: number
+            format: decimal
+          explode: false
+        - name: maxPricePerDay
+          in: query
+          required: false
+          schema:
+            type: number
+            format: decimal
+          explode: false
+        - name: minPricePerMonth
+          in: query
+          required: false
+          schema:
+            type: number
+            format: decimal
+          explode: false
+        - name: maxPricePerMonth
+          in: query
+          required: false
+          schema:
+            type: number
+            format: decimal
+          explode: false
+        - name: minArea
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: maxArea
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: bedrooms
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: bathrooms
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: maxGuests
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: facilities
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/FacilityType'
+          explode: false
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: country
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: isAvailable
+          in: query
+          required: false
+          schema:
+            type: boolean
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Property'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Properties
+    post:
+      operationId: PropertiesApi_create
+      description: Создать новый объект недвижимости
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Properties
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                typeId:
+                  type: integer
+                  format: int32
+                  description: ownerId устанавливается из JWT токена
+                addressId:
+                  type: integer
+                  format: int32
+                title:
+                  type: string
+                description:
+                  type: string
+                pricePerDay:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                pricePerMonth:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                areaSqM:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                maxGuests:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                bedrooms:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                bathrooms:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                isAvailable:
+                  type: boolean
+                minRentDays:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                maxRentDays:
+                  type: integer
+                  format: int32
+              required:
+                - addressId
+                - title
+                - description
+                - pricePerDay
+                - pricePerMonth
+                - areaSqM
+                - maxGuests
+                - bedrooms
+                - bathrooms
+                - minRentDays
+  /properties/{id}:
+    get:
+      operationId: PropertiesApi_read
+      description: Получить детальную информацию об объекте
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Properties
+    patch:
+      operationId: PropertiesApi_update
+      description: Обновить данные объекта недвижимости
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Properties
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                typeId:
+                  type: integer
+                  format: int32
+                addressId:
+                  type: integer
+                  format: int32
+                title:
+                  type: string
+                description:
+                  type: string
+                pricePerDay:
+                  type: number
+                  format: decimal
+                pricePerMonth:
+                  type: number
+                  format: decimal
+                areaSqM:
+                  type: integer
+                  format: int32
+                maxGuests:
+                  type: integer
+                  format: int32
+                bedrooms:
+                  type: integer
+                  format: int32
+                bathrooms:
+                  type: integer
+                  format: int32
+                isAvailable:
+                  type: boolean
+                minRentDays:
+                  type: integer
+                  format: int32
+                maxRentDays:
+                  type: integer
+                  format: int32
+    delete:
+      operationId: PropertiesApi_remove
+      description: Удалить объект недвижимости
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Properties
+  /property-facilities:
+    post:
+      operationId: PropertyFacilitiesApi_add
+      description: Привязать удобство к объекту недвижимости
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyFacility'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyFacilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                facilityId:
+                  type: integer
+                  format: int32
+              required:
+                - propertyId
+                - facilityId
+    get:
+      operationId: PropertyFacilitiesApi_list
+      description: Получить список удобств объекта
+      parameters:
+        - name: propertyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyFacility'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyFacilities
+  /property-facilities/{id}:
+    delete:
+      operationId: PropertyFacilitiesApi_remove
+      description: Удалить ��добство у объекта
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyFacilities
+  /property-types:
+    post:
+      operationId: PropertyTypesApi_create
+      description: Создать новый тип недвижимости
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyType'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+              required:
+                - name
+    get:
+      operationId: PropertyTypesApi_list
+      description: Получить список типов недвижимости
+      parameters: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyType'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyTypes
+  /property-types/{id}:
+    get:
+      operationId: PropertyTypesApi_read
+      description: Получить конкретный тип недвижимости
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyType'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyTypes
+    patch:
+      operationId: PropertyTypesApi_update
+      description: Обновить тип недвижимости
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyType'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+    delete:
+      operationId: PropertyTypesApi_remove
+      description: Удалить тип недвижимости
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - PropertyTypes
+  /reviews:
+    post:
+      operationId: ReviewsApi_create
+      description: Ост��вить отзыв после завершения бронирования
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Reviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: integer
+                  format: int32
+                propertyId:
+                  type: integer
+                  format: int32
+                targetType:
+                  $ref: '#/components/schemas/ReviewTargetType'
+                rating:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+              required:
+                - bookingId
+                - targetType
+                - rating
+    get:
+      operationId: ReviewsApi_list
+      description: Получить список отзывов с фильтрацией
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: reviewerId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: targetType
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReviewTargetType'
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Reviews
+  /reviews/{id}:
+    get:
+      operationId: ReviewsApi_read
+      description: Получить конкретный отзыв
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Reviews
+    patch:
+      operationId: ReviewsApi_respond
+      description: Владелец отвечает на отзыв
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Reviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                responseText:
+                  type: string
+              required:
+                - responseText
+    delete:
+      operationId: ReviewsApi_remove
+      description: Удалить отзыв
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Reviews
+  /transactions:
+    post:
+      operationId: TransactionsApi_create
+      description: Создать новую транзакцию
+      parameters: []
+      responses:
+        '201':
+          description: Ресурс успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: integer
+                  format: int32
+                paymentMethod:
+                  type: string
+                currency:
+                  type: string
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+              required:
+                - bookingId
+                - paymentMethod
+                - currency
+                - amount
+    get:
+      operationId: TransactionsApi_list
+      description: Получить список транзакций с фильтрацией
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: bookingId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+          explode: false
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          explode: false
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Transactions
+  /transactions/{id}:
+    get:
+      operationId: TransactionsApi_read
+      description: Получить детали транзакции
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Transactions
+    patch:
+      operationId: TransactionsApi_update
+      description: Обновить статус транзакции
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/TransactionStatus'
+                refundedAmount:
+                  type: number
+                  format: decimal
+  /users:
+    get:
+      operationId: UsersApi_list
+      description: Получить список пользователей с пагинацией
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserResponse'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Users
+  /users/{id}:
+    get:
+      operationId: UsersApi_read
+      description: Получить профиль пользователя по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Users
+    patch:
+      operationId: UsersApi_update
+      description: Обновить данные пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                middleName:
+                  type: string
+                email:
+                  type: string
+    delete:
+      operationId: UsersApi_remove
+      description: Удалить пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешное выполнение без содержимого
+        '404':
+          description: Ресурс не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Users
+security:
+  - BearerAuth: []
+components:
+  parameters:
+    PaginationParams.page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    PaginationParams.pageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+  schemas:
+    Address:
+      type: object
+      required:
+        - id
+        - country
+        - city
+        - district
+        - houseNumber
+      properties:
+        id:
+          type: integer
+          format: int32
+        country:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        houseNumber:
+          type: string
+        apartment:
+          type: string
+        postalCode:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        fullAddress:
+          type: string
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    AuthTokens:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    BadRequestResponse:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          $ref: '#/components/schemas/ApiError'
+      description: Некорректный запрос
+    Booking:
+      type: object
+      required:
+        - id
+        - propertyId
+        - occupierId
+        - startDate
+        - endDate
+        - totalPrice
+        - status
+        - guestsCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        occupierId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        totalPrice:
+          type: number
+          format: decimal
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        guestsCount:
+          type: integer
+          format: int32
+          minimum: 1
+        specialRequest:
+          type: string
+        cancellationReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BookingStatus:
+      type: string
+      enum:
+        - PENDING
+        - CONFIRMED
+        - ACTIVE
+        - COMPLETED
+        - CANCELLED
+        - REJECTED
+    Chat:
+      type: object
+      required:
+        - id
+        - ownerId
+        - occupierId
+        - propertyId
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+        occupierId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+          description: 'Опционально: чат может существовать до бронирования'
+        createdAt:
+          type: string
+          format: date-time
+        lastMessageAt:
+          type: string
+          format: date-time
+    Facility:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: integer
+          format: int32
+        type:
+          $ref: '#/components/schemas/FacilityType'
+    FacilityType:
+      type: string
+      enum:
+        - WIFI
+        - WASHING_MACHINE
+        - AIR_CONDITIONING
+        - PARKING
+        - KITCHEN
+        - TV
+        - HEATING
+        - ELEVATOR
+        - POOL
+        - GYM
+    Favourite:
+      type: object
+      required:
+        - id
+        - userId
+        - propertyId
+        - addedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        userId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        addedAt:
+          type: string
+          format: date-time
+    ForbiddenResponse:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          $ref: '#/components/schemas/ApiError'
+      description: Доступ запрещен - недостаточно прав
+    Image:
+      type: object
+      required:
+        - id
+        - propertyId
+        - imageUrl
+        - isMain
+      properties:
+        id:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        imageUrl:
+          type: string
+        isMain:
+          type: boolean
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    Message:
+      type: object
+      required:
+        - id
+        - chatId
+        - senderId
+        - content
+        - sentAt
+        - isRead
+      properties:
+        id:
+          type: integer
+          format: int32
+        chatId:
+          type: integer
+          format: int32
+        senderId:
+          type: integer
+          format: int32
+        content:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        isRead:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+    Property:
+      type: object
+      required:
+        - id
+        - ownerId
+        - addressId
+        - title
+        - description
+        - pricePerDay
+        - pricePerMonth
+        - areaSqM
+        - maxGuests
+        - bedrooms
+        - bathrooms
+        - isAvailable
+        - minRentDays
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+          description: Устанавливается автоматически из JWT
+        typeId:
+          type: integer
+          format: int32
+        type:
+          $ref: '#/components/schemas/PropertyType'
+        addressId:
+          type: integer
+          format: int32
+        address:
+          $ref: '#/components/schemas/Address'
+        title:
+          type: string
+        description:
+          type: string
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+        pricePerMonth:
+          type: number
+          format: decimal
+          minimum: 0
+        areaSqM:
+          type: integer
+          format: int32
+          minimum: 1
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+        bedrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        bathrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        isAvailable:
+          type: boolean
+        minRentDays:
+          type: integer
+          format: int32
+          minimum: 1
+        maxRentDays:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+          description: Генерируется сервером
+        updatedAt:
+          type: string
+          format: date-time
+          description: Обновляется сервером
+    PropertyFacility:
+      type: object
+      required:
+        - id
+        - propertyId
+        - facilityId
+      properties:
+        id:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        facilityId:
+          type: integer
+          format: int32
+    PropertyType:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        description:
+          type: string
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 8
+    Review:
+      type: object
+      required:
+        - id
+        - bookingId
+        - reviewerId
+        - targetType
+        - rating
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        reviewerId:
+          type: integer
+          format: int32
+        targetType:
+          $ref: '#/components/schemas/ReviewTargetType'
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        responseText:
+          type: string
+        responseDate:
+          type: string
+          format: date-time
+    ReviewTargetType:
+      type: string
+      enum:
+        - PROPERTY
+        - OWNER
+        - OCCUPIER
+    Role:
+      type: string
+      enum:
+        - ADMIN
+        - OWNER
+        - OCCUPIER
+    Transaction:
+      type: object
+      required:
+        - id
+        - bookingId
+        - paymentMethod
+        - status
+        - transactionDate
+        - paymentId
+        - currency
+        - amount
+        - feeAmount
+      properties:
+        id:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        paymentMethod:
+          type: string
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        transactionDate:
+          type: string
+          format: date-time
+        paymentId:
+          type: string
+        currency:
+          type: string
+        amount:
+          type: number
+          format: decimal
+          minimum: 0
+        feeAmount:
+          type: number
+          format: decimal
+          minimum: 0
+        refundedAmount:
+          type: number
+          format: decimal
+    TransactionStatus:
+      type: string
+      enum:
+        - PENDING
+        - SUCCESS
+        - FAILED
+        - REFUNDED
+    UserResponse:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - role
+        - isVerified
+        - isActive
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        firstName:
+          type: string
+        lastName:
+          type: string
+        middleName:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        isVerified:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: Bearer
