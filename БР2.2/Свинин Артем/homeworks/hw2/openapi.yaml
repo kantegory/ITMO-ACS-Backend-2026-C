@@ -70,10 +70,38 @@ paths:
                 - houseNumber
     get:
       operationId: AddressesApi_list
-      description: Получить список адресов
+      description: Получить список адресов с поиском
       parameters:
         - $ref: '#/components/parameters/PaginationParams.page'
         - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: search
+          in: query
+          required: false
+          description: Поиск по полному адресу (подстрока)
+          schema:
+            type: string
+          explode: false
+        - name: country
+          in: query
+          required: false
+          description: Фильтрация по стране
+          schema:
+            type: string
+          explode: false
+        - name: city
+          in: query
+          required: false
+          description: Фильтрация по городу
+          schema:
+            type: string
+          explode: false
+        - name: district
+          in: query
+          required: false
+          description: Фильтрация по району
+          schema:
+            type: string
+          explode: false
       responses:
         '200':
           description: Успешный ответ
@@ -358,7 +386,7 @@ paths:
                 - guestsCount
     get:
       operationId: BookingsApi_list
-      description: Получить список бронирований с фильтрацией
+      description: Получить список бронирований с фильтрацией (для администратора)
       parameters:
         - $ref: '#/components/parameters/PaginationParams.page'
         - $ref: '#/components/parameters/PaginationParams.pageSize'
@@ -423,6 +451,110 @@ paths:
                 $ref: '#/components/schemas/ApiError'
       tags:
         - Bookings
+  /bookings/incoming:
+    get:
+      operationId: BookingsApi_incoming
+      description: Получить список бронирований моих объектов как владельца (по JWT)
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          required: false
+          description: Фильтрация по объекту
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: status
+          in: query
+          required: false
+          description: Фильтрация по статусу
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
+  /bookings/my:
+    get:
+      operationId: BookingsApi_my
+      description: Получить список моих бронирований как арендатора (по JWT)
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: status
+          in: query
+          required: false
+          description: Фильтрация по статусу
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Bookings
   /bookings/{id}:
     get:
       operationId: BookingsApi_read
@@ -441,6 +573,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking'
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -466,6 +604,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Booking'
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -500,6 +644,12 @@ paths:
       responses:
         '204':
           description: Успешное выполнение без содержимого
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -545,10 +695,26 @@ paths:
                 - propertyId
     get:
       operationId: ChatsApi_list
-      description: Получить список чатов текущего пользователя
+      description: Получить все чаты с фильтрацией (для администратора)
       parameters:
         - $ref: '#/components/parameters/PaginationParams.page'
         - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          required: false
+          description: Фильтрация по объекту недвижимости
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: userId
+          in: query
+          required: false
+          description: Фильтрация по пользователю
+          schema:
+            type: integer
+            format: int32
+          explode: false
       responses:
         '200':
           description: Успешный ответ
@@ -583,6 +749,63 @@ paths:
                 $ref: '#/components/schemas/ApiError'
       tags:
         - Chats
+  /chats/my:
+    get:
+      operationId: ChatsApi_my
+      description: Получить список моих чатов (по JWT)
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          required: false
+          description: Фильтрация по объекту недвижимости
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: bookingId
+          in: query
+          required: false
+          description: Фильтрация по бронированию
+          schema:
+            type: integer
+            format: int32
+          explode: false
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chat'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Chats
   /chats/{id}:
     get:
       operationId: ChatsApi_read
@@ -601,6 +824,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Chat'
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -1014,6 +1243,13 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaginationParams.page'
         - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: search
+          in: query
+          required: false
+          description: Поиск по названию или описанию
+          schema:
+            type: string
+          explode: false
         - name: minPricePerDay
           in: query
           required: false
@@ -1085,15 +1321,31 @@ paths:
             items:
               $ref: '#/components/schemas/FacilityType'
           explode: false
-        - name: city
-          in: query
-          required: false
-          schema:
-            type: string
-          explode: false
         - name: country
           in: query
           required: false
+          description: Поиск по стране
+          schema:
+            type: string
+          explode: false
+        - name: city
+          in: query
+          required: false
+          description: Поиск по городу
+          schema:
+            type: string
+          explode: false
+        - name: district
+          in: query
+          required: false
+          description: Поиск по району
+          schema:
+            type: string
+          explode: false
+        - name: address
+          in: query
+          required: false
+          description: Поиск по полному адресу (подстрока)
           schema:
             type: string
           explode: false
@@ -1102,6 +1354,14 @@ paths:
           required: false
           schema:
             type: boolean
+          explode: false
+        - name: typeId
+          in: query
+          required: false
+          description: Фильтрация по типу недвижимости
+          schema:
+            type: integer
+            format: int32
           explode: false
       responses:
         '200':
@@ -1218,6 +1478,47 @@ paths:
                 - bedrooms
                 - bathrooms
                 - minRentDays
+  /properties/my:
+    get:
+      operationId: PropertiesApi_my
+      description: Получить список моих объектов недвижимости (по JWT)
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Property'
+                  total:
+                    type: integer
+                    format: int32
+                  page:
+                    type: integer
+                    format: int32
+                  pageSize:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Properties
   /properties/{id}:
     get:
       operationId: PropertiesApi_read
@@ -1261,6 +1562,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Property'
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -1325,6 +1632,12 @@ paths:
       responses:
         '204':
           description: Успешное выполнение без содержимого
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -1400,7 +1713,7 @@ paths:
   /property-facilities/{id}:
     delete:
       operationId: PropertyFacilitiesApi_remove
-      description: Удалить ��добство у объекта
+      description: Удалить удобство у объекта
       parameters:
         - name: id
           in: path
@@ -1559,7 +1872,7 @@ paths:
   /reviews:
     post:
       operationId: ReviewsApi_create
-      description: Ост��вить отзыв после завершения бронирования
+      description: Оставить отзыв после завершения бронирования
       parameters: []
       responses:
         '201':
@@ -1705,6 +2018,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Review'
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -1921,10 +2240,38 @@ paths:
   /users:
     get:
       operationId: UsersApi_list
-      description: Получить список пользователей с пагинацией
+      description: Получить список пользователей с поиском и фильтрацией
       parameters:
         - $ref: '#/components/parameters/PaginationParams.page'
         - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: search
+          in: query
+          required: false
+          description: Поиск по ФИО (имя, фамилия или отчество)
+          schema:
+            type: string
+          explode: false
+        - name: role
+          in: query
+          required: false
+          description: Фильтрация по роли
+          schema:
+            $ref: '#/components/schemas/Role'
+          explode: false
+        - name: isActive
+          in: query
+          required: false
+          description: Фильтрация по статусу активности
+          schema:
+            type: boolean
+          explode: false
+        - name: isVerified
+          in: query
+          required: false
+          description: Фильтрация по статусу верификации
+          schema:
+            type: boolean
+          explode: false
       responses:
         '200':
           description: Успешный ответ
@@ -1959,6 +2306,60 @@ paths:
                 $ref: '#/components/schemas/ApiError'
       tags:
         - Users
+  /users/me:
+    get:
+      operationId: UsersApi_me
+      description: Получить профиль текущего пользователя (по JWT)
+      parameters: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Users
+    patch:
+      operationId: UsersApi_updateMe
+      description: Обновить данные текущего пользователя
+      parameters: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Неавторизован - требуется аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                middleName:
+                  type: string
+                email:
+                  type: string
   /users/{id}:
     get:
       operationId: UsersApi_read
@@ -1987,7 +2388,7 @@ paths:
         - Users
     patch:
       operationId: UsersApi_update
-      description: Обновить данные пользователя
+      description: Обновить данные пользователя по ID (для администратора)
       parameters:
         - name: id
           in: path
@@ -2002,6 +2403,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserResponse'
+        '403':
+          description: Доступ запрещен - недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '404':
           description: Ресурс не найден
           content:
@@ -2025,6 +2432,10 @@ paths:
                   type: string
                 email:
                   type: string
+                role:
+                  $ref: '#/components/schemas/Role'
+                isActive:
+                  type: boolean
     delete:
       operationId: UsersApi_remove
       description: Удалить пользователя
@@ -2261,14 +2672,6 @@ components:
         addedAt:
           type: string
           format: date-time
-    ForbiddenResponse:
-      type: object
-      required:
-        - body
-      properties:
-        body:
-          $ref: '#/components/schemas/ApiError'
-      description: Доступ запрещен - недостаточно прав
     Image:
       type: object
       required:
