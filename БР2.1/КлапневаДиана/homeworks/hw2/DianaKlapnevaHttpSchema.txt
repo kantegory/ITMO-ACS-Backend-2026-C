@@ -1,0 +1,396 @@
+import "@typespec/http";
+import "@typespec/rest";
+import "@typespec/openapi3";
+
+using TypeSpec.Http;
+using TypeSpec.Rest;
+
+@service
+@server("/api/v1", "Сервер приложения для недвижимости")
+namespace RealEstateApi {
+
+  //ресурсы
+  model Deal_role {
+    landlord: "landlord",
+    tenant: "tenant",
+  }
+
+  model User {
+    id: int32;
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    deal_role?: Deal_role;
+    email: string;
+    password: string;
+    is_verified: boolean;
+    created_at: utcDateTime;
+    updated_at?: utcDateTime;
+    estates_ids?: int32[];
+    deals_ids?: int32[];
+    session_ids?: int32[];
+  }
+
+  model Estate {
+    id: int32;
+    user_id: int32;
+    address: string;
+    type: Estate_type;
+    room_amount: int32;
+    description?: string;
+    price: float64;
+    image_path?: string;
+    bath_type?: Bath_type;
+    fridge?: boolean;
+    washing_machine?: boolean;
+    internet?: boolean;
+    tv?: boolean;
+    furnished_rooms?: boolean;
+    furnished_kitchen?: boolean;
+    is_verified: boolean;
+    is_available: boolean;
+    created_at: utcDateTime;
+    updated_at?: utcDateTime;
+  }
+
+  model Estate_type {
+    apartment: "apartment",
+    cottage: "cottage",
+    room: "room"
+  }
+
+  model Bath_type {
+    shower: "shower",
+    bathtub: "bathtub"
+  }
+
+  model Deal {
+    id: int32;
+    landlord_id: int32;
+    tenant_id: int32;
+    period: string;
+    deal_status: Deal_status;
+    estates: Estate[];
+    is_published: boolean;
+    created_at: utcDateTime;
+    updated_at?: utcDateTime;
+  }
+
+  model Deal_status {
+    pending: "pending",
+    active: "active",
+    closed: "closed"
+  }
+
+  model Session {
+    id: int32;
+    user_id: int32;
+    created_at: utcDateTime;
+    updated_at?: utcDateTime;
+  }
+
+  model Message {
+    id: int32;
+    user_id: int32;
+    session_id: int32;
+    message: string;
+    attachment_file_path?: string;
+    is_reshared?: boolean;
+    created_at: utcDateTime;
+    updated_at?: utcDateTime;
+  }
+
+  //тела запросов - создание новых записей
+  model CreateUserRequest {
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    deal_role?: Deal_role;
+    email: string;
+    password: string;
+  }
+  
+  model CreateEstateRequest {
+    user_id: int32;
+    address: string;
+    type: Estate_type;
+    room_amount: int32;
+    description?: string;
+    price: float64;
+    image_path?: string;
+    bath_type?: Bath_type;
+    fridge?: boolean;
+    washing_machine?: boolean;
+    internet?: boolean;
+    tv?: boolean;
+    furnished_rooms?: boolean;
+    furnished_kitchen?: boolean;
+  }
+  
+  model CreateDealRequest {
+    landlord_id: int32;
+    tenant_id: int32;
+    period: string;
+    deal_status: Deal_status;
+    estate_ids: int32[];
+    is_published: boolean;
+  }
+  
+  model CreateSessionRequest {
+    user_id: int32;
+  }
+  
+  model CreateMessageRequest {
+    user_id: int32;
+    session_id: int32;
+    message: string;
+    attachment_file_path?: string;
+    is_reshared?: boolean;
+  }
+
+  //тела запросов - обновляем
+
+  model UpdateUserRequest {
+    first_name?: string;
+    middle_name?: string;
+    last_name?: string;
+    deal_role?: Deal_role;
+    email?: string;
+    password?: string;
+    is_verified?: boolean;
+  }
+  
+  model UpdateEstateRequest {
+    user_id?: int32;
+    address?: string;
+    type?: Estate_type;
+    room_amount?: int32;
+    description?: string;
+    price?: float64;
+    image_path?: string;
+    bath_type?: Bath_type;
+    fridge?: boolean;
+    washing_machine?: boolean;
+    internet?: boolean;
+    tv?: boolean;
+    furnished_rooms?: boolean;
+    furnished_kitchen?: boolean;
+    is_verified?: boolean;
+    is_available?: boolean;
+  }
+  
+  model UpdateDealRequest {
+    landlord_id?: int32;
+    tenant_id?: int32;
+    period?: string;
+    deal_status?: Deal_status;
+    estate_ids?: int32[];
+    is_published?: boolean;
+  }
+  
+
+  
+  model UpdateMessageRequest {
+    message?: string;
+    attachment_file_path?: string;
+    is_reshared?: boolean;
+  }
+
+  //фильтры для estate
+  model EstateFilterParams {
+    @query
+    user_id?: int32;
+    @query
+    type?: Estate_type;
+    @query
+    @minValue(0)
+    min_price?: float64;
+    @query
+    @maxValue(10000000)
+    max_price?: float64;
+    @query
+    min_rooms?: int32;
+    @query
+    max_rooms?: int32;
+    @query
+    has_fridge?: boolean;
+    @query
+    has_washing_machine?: boolean;
+    @query
+    has_internet?: boolean;
+    @query
+    has_tv?: boolean;
+    @query
+    furnished?: boolean;
+    @query
+    is_available?: boolean;
+    @query
+    is_verified?: boolean;
+    @query
+    bath_type?: Bath_type;
+  }
+
+  //ошибки
+  model NotFoundError {
+    @statusCode statusCode: 404;
+    error: {
+      code: "NOT_FOUND";
+      message: string;
+    };
+  }
+  
+  model ValidationError {
+    @statusCode statusCode: 422;
+    error: {
+      code: "VALIDATION_ERROR";
+      message: string;
+      details?: {
+        field: string;
+        message: string;
+      }[];
+    };
+  }
+  
+  
+  model ForbiddenError {
+    @statusCode statusCode: 403;
+    error: {
+      code: "FORBIDDEN";
+      message: string;
+    };
+  }
+
+  //user эндпойнты
+  @route("/users")
+  interface Users {
+    @post
+    createUser(
+      @body body: CreateUserRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body user: User;
+    } | ValidationError;
+    
+    @patch
+    @route("/{userId}")
+    updateUser(
+      @path userId: int32,
+      @body body: UpdateUserRequest
+    ): User | NotFoundError | ValidationError;
+    
+    @delete
+    @route("/{userId}")
+    deleteUser(
+      @path userId: int32
+    ): {
+      @statusCode statusCode: 204;
+    } | NotFoundError | ForbiddenError;
+  }
+
+  //estate эндпойнты
+  @route("/estates")
+  interface Estates {
+    @get
+    listEstates(
+      ...EstateFilterParams
+    ): Estate[] | ValidationError;
+    
+    @post
+    createEstate(
+      @body body: CreateEstateRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body estate: Estate;
+    } | ValidationError | NotFoundError;
+    
+    @patch
+    @route("/{estateId}")
+    updateEstate(
+      @path estateId: int32,
+      @body body: UpdateEstateRequest
+    ): Estate | NotFoundError | ValidationError;
+    
+    @delete
+    @route("/{estateId}")
+    deleteEstate(
+      @path estateId: int32
+    ): {
+      @statusCode statusCode: 204;
+    } | NotFoundError | ForbiddenError;
+  }
+
+  //deal эндпойнты
+  @route("/deals")
+  interface Deals {
+    @post
+    createDeal(
+      @body body: CreateDealRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body deal: Deal;
+    } | ValidationError | NotFoundError;
+    
+    @patch
+    @route("/{dealId}")
+    updateDeal(
+      @path dealId: int32,
+      @body body: UpdateDealRequest
+    ): Deal | NotFoundError | ValidationError;
+    
+    @delete
+    @route("/{dealId}")
+    deleteDeal(
+      @path dealId: int32
+    ): {
+      @statusCode statusCode: 204;
+    } | NotFoundError | ForbiddenError;
+  }
+
+  //session эндпойнты
+  @route("/sessions")
+  interface Sessions {
+    @post
+    createSession(
+      @body body: CreateSessionRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body session: Session;
+    } | ValidationError | NotFoundError;
+    
+    
+    @delete
+    @route("/{sessionId}")
+    deleteSession(
+      @path sessionId: int32
+    ): {
+      @statusCode statusCode: 204;
+    } | NotFoundError;
+  }
+
+  //session эндпойнты
+  @route("/messages")
+  interface Messages {
+    @post
+    createMessage(
+      @body body: CreateMessageRequest
+    ): {
+      @statusCode statusCode: 201;
+      @body message: Message;
+    } | ValidationError | NotFoundError;
+    
+    @patch
+    @route("/{messageId}")
+    updateMessage(
+      @path messageId: int32,
+      @body body: UpdateMessageRequest
+    ): Message | NotFoundError | ValidationError;
+    
+    @delete
+    @route("/{messageId}")
+    deleteMessage(
+      @path messageId: int32
+    ): {
+      @statusCode statusCode: 204;
+    } | NotFoundError | ForbiddenError;
+  }
+}
