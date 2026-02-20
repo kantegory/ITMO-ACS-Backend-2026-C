@@ -27,6 +27,27 @@ components:
       schema:
         type: string
       description: ID ресурса
+    restaurantId:
+      name: restaurantId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: ID ресторана
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: ID пользователя
+    cuisineId:
+      name: cuisineId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: ID кухни
     page:
       name: page
       in: query
@@ -52,11 +73,11 @@ components:
   schemas:
     UserRole:
       type: string
-      enum: [ADMIN, CLIENT]
+      enum: [ ADMIN, CLIENT ]
 
     BookingStatus:
       type: string
-      enum: [CREATED, CONFIRMED, CANCELLED, COMPLETED]
+      enum: [ CREATED, CONFIRMED, CANCELLED, COMPLETED ]
 
     ErrorResponse:
       type: object
@@ -118,7 +139,6 @@ components:
         code: 500
         message: "Internal server error occurred"
 
-    # ---------------- Users ----------------
     UserResponse:
       type: object
       properties:
@@ -131,7 +151,7 @@ components:
         isVerified: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, role, firstName, lastName, phone, email, isVerified, createdAt, updatedAt]
+      required: [ id, role, firstName, lastName, phone, email, isVerified, createdAt, updatedAt ]
 
     CreateUserDto:
       type: object
@@ -141,7 +161,7 @@ components:
         phone: { type: string }
         email: { type: string }
         password: { type: string }
-      required: [firstName, lastName, phone, email, password]
+      required: [ firstName, lastName, phone, email, password ]
 
     UpdateUserDto:
       type: object
@@ -153,7 +173,6 @@ components:
         email: { type: string }
         isVerified: { type: boolean }
 
-    # ---------------- Bookings ----------------
     BookingResponse:
       type: object
       properties:
@@ -167,7 +186,7 @@ components:
         status: { $ref: '#/components/schemas/BookingStatus' }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, restaurantId, tableId, userId, bookingTime, durationMinutes, guestsCount, status, createdAt, updatedAt]
+      required: [ id, restaurantId, tableId, userId, bookingTime, durationMinutes, guestsCount, status, createdAt, updatedAt ]
 
     CreateBookingDto:
       type: object
@@ -177,9 +196,8 @@ components:
         bookingTime: { type: string, format: date-time }
         durationMinutes: { type: integer }
         guestsCount: { type: integer }
-      required: [restaurantId, tableId, bookingTime, durationMinutes, guestsCount]
+      required: [ restaurantId, tableId, bookingTime, durationMinutes, guestsCount ]
 
-    # ---------------- Restaurants ----------------
     RestaurantResponse:
       type: object
       properties:
@@ -193,7 +211,7 @@ components:
           items: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, title, description, address, avgCheck, cuisineIds, createdAt, updatedAt]
+      required: [ id, title, description, address, avgCheck, cuisineIds, createdAt, updatedAt ]
 
     CreateRestaurantDto:
       type: object
@@ -205,7 +223,7 @@ components:
         cuisineIds:
           type: array
           items: { type: string }
-      required: [title, description, address, avgCheck, cuisineIds]
+      required: [ title, description, address, avgCheck, cuisineIds ]
 
     UpdateRestaurantDto:
       type: object
@@ -218,7 +236,6 @@ components:
           type: array
           items: { type: string }
 
-    # ---------------- Tables ----------------
     TableResponse:
       type: object
       properties:
@@ -228,7 +245,7 @@ components:
         seats: { type: integer }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, restaurantId, number, seats, createdAt, updatedAt]
+      required: [ id, restaurantId, number, seats, createdAt, updatedAt ]
 
     CreateTableDto:
       type: object
@@ -236,7 +253,7 @@ components:
         restaurantId: { type: string }
         number: { type: integer }
         seats: { type: integer }
-      required: [restaurantId, number, seats]
+      required: [ restaurantId, number, seats ]
 
     UpdateTableDto:
       type: object
@@ -244,7 +261,6 @@ components:
         number: { type: integer }
         seats: { type: integer }
 
-    # ---------------- Cuisines ----------------
     CuisineResponse:
       type: object
       properties:
@@ -252,20 +268,19 @@ components:
         name: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, name, createdAt, updatedAt]
+      required: [ id, name, createdAt, updatedAt ]
 
     CreateCuisineDto:
       type: object
       properties:
         name: { type: string }
-      required: [name]
+      required: [ name ]
 
     UpdateCuisineDto:
       type: object
       properties:
         name: { type: string }
 
-    # ---------------- Reviews ----------------
     ReviewResponse:
       type: object
       properties:
@@ -276,7 +291,7 @@ components:
         comment: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-      required: [id, restaurantId, userId, rating, comment, createdAt, updatedAt]
+      required: [ id, restaurantId, userId, rating, comment, createdAt, updatedAt ]
 
     CreateReviewDto:
       type: object
@@ -284,7 +299,7 @@ components:
         restaurantId: { type: string }
         rating: { type: integer, minimum: 1, maximum: 5 }
         comment: { type: string }
-      required: [restaurantId, rating, comment]
+      required: [ restaurantId, rating, comment ]
 
     UpdateReviewDto:
       type: object
@@ -292,12 +307,40 @@ components:
         rating: { type: integer, minimum: 1, maximum: 5 }
         comment: { type: string }
 
-# ---------------- Paths ----------------
+    MenuItemResponse:
+      type: object
+      properties:
+        id: { type: string }
+        restaurantId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        category: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [ id, restaurantId, name, price, category, createdAt, updatedAt ]
+
+    CreateMenuItemDto:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        category: { type: string }
+      required: [ name, price, category ]
+
+    UpdateMenuItemDto:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        price: { type: number, format: float }
+        category: { type: string }
+
 paths:
-  # ---------------- Users ----------------
   /api/users:
     get:
-      tags: [Users]
+      tags: [ Users ]
       summary: Получить список пользователей
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -313,7 +356,7 @@ paths:
                 items: { $ref: '#/components/schemas/UserResponse' }
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
     post:
-      tags: [Users]
+      tags: [ Users ]
       summary: Создать пользователя
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -333,7 +376,7 @@ paths:
 
   /api/users/{id}:
     get:
-      tags: [Users]
+      tags: [ Users ]
       summary: Получить пользователя по ID
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -347,7 +390,7 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
     put:
-      tags: [Users]
+      tags: [ Users ]
       summary: Обновить пользователя
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -367,7 +410,7 @@ paths:
         '404': { $ref: '#/components/schemas/NotFoundError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
     delete:
-      tags: [Users]
+      tags: [ Users ]
       summary: Удалить пользователя
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -378,26 +421,9 @@ paths:
         '403': { $ref: '#/components/schemas/ForbiddenError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
 
-  # ---------------- Bookings ----------------
   /api/bookings:
-    get:
-      tags: [Bookings]
-      summary: Получить список бронирований
-      parameters:
-        - $ref: '#/components/parameters/AuthHeader'
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/size'
-      responses:
-        '200':
-          description: Список бронирований
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: '#/components/schemas/BookingResponse' }
-        '401': { $ref: '#/components/schemas/UnauthorizedError' }
     post:
-      tags: [Bookings]
+      tags: [ Bookings ]
       summary: Создать бронирование
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -418,7 +444,7 @@ paths:
 
   /api/bookings/{id}:
     get:
-      tags: [Bookings]
+      tags: [ Bookings ]
       summary: Получить бронирование по ID
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -432,7 +458,7 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
     delete:
-      tags: [Bookings]
+      tags: [ Bookings ]
       summary: Удалить бронирование
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -442,26 +468,42 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '403': { $ref: '#/components/schemas/ForbiddenError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
-
-  # ---------------- Restaurants ----------------
-  /api/restaurants:
-    get:
-      tags: [Restaurants]
-      summary: Получить список ресторанов
+    patch:
+      tags: [ Bookings ]
+      summary: Изменить статус бронирования
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/size'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/BookingStatus'
+              required: [ status ]
       responses:
         '200':
+          description: Статус бронирования обновлен
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: '#/components/schemas/RestaurantResponse' }
+                $ref: '#/components/schemas/BookingResponse'
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '403': { $ref: '#/components/schemas/ForbiddenError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+        '409':
+          description: Некорректный переход статуса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+
+  /api/restaurants:
     post:
-      tags: [Restaurants]
+      tags: [ Restaurants ]
       summary: Создать ресторан
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -477,10 +519,50 @@ paths:
               schema: { $ref: '#/components/schemas/RestaurantResponse' }
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
+    get:
+      tags: [ Restaurants ]
+      summary: Поиск ресторанов с фильтрацией и сортировкой
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - name: cuisineId
+          in: query
+          schema:
+            type: string
+          description: Фильтр по кухне
+        - name: minAvgCheck
+          in: query
+          schema:
+            type: number
+            format: float
+          description: Минимальный средний чек
+        - name: maxAvgCheck
+          in: query
+          schema:
+            type: number
+            format: float
+          description: Максимальный средний чек
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [ avgCheck_asc, avgCheck_desc, createdAt_desc ]
+          description: Сортировка результатов
+      responses:
+        '200':
+          description: Список ресторанов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestaurantResponse'
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
 
   /api/restaurants/{id}:
     get:
-      tags: [Restaurants]
+      tags: [ Restaurants ]
       summary: Получить ресторан по ID
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -493,7 +575,7 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
     put:
-      tags: [Restaurants]
+      tags: [ Restaurants ]
       summary: Обновить ресторан
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -512,7 +594,7 @@ paths:
         '404': { $ref: '#/components/schemas/NotFoundError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
     delete:
-      tags: [Restaurants]
+      tags: [ Restaurants ]
       summary: Удалить ресторан
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -523,10 +605,121 @@ paths:
         '403': { $ref: '#/components/schemas/ForbiddenError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
 
-  # ---------------- Tables ----------------
+  /api/restaurants/{restaurantId}/reviews:
+    get:
+      tags: [ Reviews ]
+      summary: Получить все отзывы по ID ресторана
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/restaurantId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Список отзывов для указанного ресторана
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReviewResponse' }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
+  /api/restaurants/{restaurantId}/tables:
+    get:
+      tags: [ Tables ]
+      summary: Получить все столы в ресторане
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/restaurantId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Список столов в ресторане
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TableResponse' }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
+  /api/restaurants/{restaurantId}/available-tables:
+    get:
+      tags: [ Tables ]
+      summary: Поиск доступных столов в ресторане на указанное время
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/restaurantId'
+        - name: dateTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Дата и время бронирования
+        - name: guestsCount
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Количество гостей
+        - name: duration
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Длительность бронирования в минутах
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [ seats_asc, seats_desc ]
+          description: Сортировка по количеству мест
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Список доступных столов
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TableResponse' }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
+  /api/restaurants/{restaurantId}/bookings:
+    get:
+      tags: [ Bookings ]
+      summary: Получить все бронирования конкретного ресторана
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/restaurantId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+          description: Фильтр по статусу бронирования
+      responses:
+        '200':
+          description: Список бронирований ресторана
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BookingResponse' }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
   /api/tables:
     get:
-      tags: [Tables]
+      tags: [ Tables ]
       summary: Получить список столов
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -541,7 +734,7 @@ paths:
                 items: { $ref: '#/components/schemas/TableResponse' }
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
     post:
-      tags: [Tables]
+      tags: [ Tables ]
       summary: Создать стол
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -560,7 +753,7 @@ paths:
 
   /api/tables/{id}:
     get:
-      tags: [Tables]
+      tags: [ Tables ]
       summary: Получить стол по ID
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -573,7 +766,7 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
     put:
-      tags: [Tables]
+      tags: [ Tables ]
       summary: Обновить стол
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -592,7 +785,7 @@ paths:
         '404': { $ref: '#/components/schemas/NotFoundError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
     delete:
-      tags: [Tables]
+      tags: [ Tables ]
       summary: Удалить стол
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -603,10 +796,41 @@ paths:
         '403': { $ref: '#/components/schemas/ForbiddenError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
 
-  # ---------------- Cuisines ----------------
+  /api/tables/{id}/booked-slots:
+    get:
+      tags: [ Tables ]
+      summary: Получить занятые временные слоты стола
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/id'
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Дата для просмотра занятых слотов
+      responses:
+        '200':
+          description: Список занятых интервалов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    start:
+                      type: string
+                      format: date-time
+                    end:
+                      type: string
+                      format: date-time
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
   /api/cuisines:
     get:
-      tags: [Cuisines]
+      tags: [ Cuisines ]
       summary: Получить список кухонь
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -621,7 +845,7 @@ paths:
                 items: { $ref: '#/components/schemas/CuisineResponse' }
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
     post:
-      tags: [Cuisines]
+      tags: [ Cuisines ]
       summary: Создать кухню
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -640,7 +864,7 @@ paths:
 
   /api/cuisines/{id}:
     get:
-      tags: [Cuisines]
+      tags: [ Cuisines ]
       summary: Получить кухню по ID
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -653,7 +877,7 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
     put:
-      tags: [Cuisines]
+      tags: [ Cuisines ]
       summary: Обновить кухню
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -672,7 +896,7 @@ paths:
         '404': { $ref: '#/components/schemas/NotFoundError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
     delete:
-      tags: [Cuisines]
+      tags: [ Cuisines ]
       summary: Удалить кухню
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -683,10 +907,29 @@ paths:
         '403': { $ref: '#/components/schemas/ForbiddenError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
 
-  # ---------------- Reviews ----------------
+  /api/cuisines/{cuisineId}/restaurants:
+    get:
+      tags: [ Restaurants ]
+      summary: Получить все рестораны по ID кухни
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/cuisineId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Список ресторанов указанной кухни
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RestaurantResponse' }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
   /api/reviews:
     get:
-      tags: [Reviews]
+      tags: [ Reviews ]
       summary: Получить список отзывов
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -701,7 +944,7 @@ paths:
                 items: { $ref: '#/components/schemas/ReviewResponse' }
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
     post:
-      tags: [Reviews]
+      tags: [ Reviews ]
       summary: Создать отзыв
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -720,7 +963,7 @@ paths:
 
   /api/reviews/{id}:
     get:
-      tags: [Reviews]
+      tags: [ Reviews ]
       summary: Получить отзыв по ID
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -733,7 +976,7 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
     put:
-      tags: [Reviews]
+      tags: [ Reviews ]
       summary: Обновить отзыв
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
@@ -752,13 +995,55 @@ paths:
         '404': { $ref: '#/components/schemas/NotFoundError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
     delete:
-      tags: [Reviews]
+      tags: [ Reviews ]
       summary: Удалить отзыв
       parameters:
         - $ref: '#/components/parameters/AuthHeader'
         - $ref: '#/components/parameters/id'
       responses:
         '204': { description: "Отзыв удален" }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '403': { $ref: '#/components/schemas/ForbiddenError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
+  /api/users/{userId}/bookings:
+    get:
+      tags: [ Bookings ]
+      summary: Получить все бронирования пользователя
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/userId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Список бронирований указанного пользователя
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BookingResponse' }
+        '401': { $ref: '#/components/schemas/UnauthorizedError' }
+        '403': { $ref: '#/components/schemas/ForbiddenError' }
+        '404': { $ref: '#/components/schemas/NotFoundError' }
+
+  /api/users/{userId}/reviews:
+    get:
+      tags: [ Reviews ]
+      summary: Получить все отзывы пользователя
+      parameters:
+        - $ref: '#/components/parameters/AuthHeader'
+        - $ref: '#/components/parameters/userId'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Список отзывов указанного пользователя
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReviewResponse' }
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '403': { $ref: '#/components/schemas/ForbiddenError' }
         '404': { $ref: '#/components/schemas/NotFoundError' }
