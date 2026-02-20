@@ -751,6 +751,9 @@ paths:
         '401': { $ref: '#/components/schemas/UnauthorizedError' }
         '422': { $ref: '#/components/schemas/ValidationError' }
 
+
+
+
   /api/tables/{id}:
     get:
       tags: [ Tables ]
