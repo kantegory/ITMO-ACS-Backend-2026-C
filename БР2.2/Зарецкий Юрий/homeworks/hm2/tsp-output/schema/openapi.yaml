@@ -1,0 +1,3833 @@
+openapi: 3.1.0
+info:
+  title: Property Rental Service API
+  version: 1.0.1
+  description: |-
+    REST API для сервиса аренды недвижимости
+
+    Платформа позволяет пользователям:
+    - Регистрироваться и авторизовываться
+    - Размещать объекты недвижимости для аренды
+    - Искать и фильтровать объекты по различным параметрам
+    - Бронировать объекты и управлять сделками аренды
+    - Общаться через встроенный чат
+    - Оставлять отзывы об объектах и пользователях
+tags:
+  - name: Аутентификация
+  - name: Пользователи
+  - name: Справочники
+  - name: Недвижимость
+  - name: Фотографии
+  - name: Сделки аренды
+  - name: Сообщения
+  - name: Отзывы
+paths:
+  /auth/login:
+    post:
+      operationId: Auth_login
+      summary: Вход в систему
+      description: |-
+        Вход в систему
+
+        Аутентификация по email и паролю.
+        Возвращает JWT токены для последующих запросов.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/InternalServerError'
+      tags:
+        - Аутентификация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/logout:
+    post:
+      operationId: Auth_logout
+      summary: Выход из системы
+      description: |-
+        Выход из системы
+
+        Инвалидирует текущий refresh token.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Аутентификация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+  /auth/refresh:
+    post:
+      operationId: Auth_refresh
+      summary: Обновление токена
+      description: |-
+        Обновление JWT токена
+
+        Использует refresh token для получения новой пары токенов.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/InternalServerError'
+      tags:
+        - Аутентификация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+  /auth/register:
+    post:
+      operationId: Auth_register
+      summary: Регистрация нового пользователя
+      description: |-
+        Регистрация нового пользователя
+
+        Создаёт новую учётную запись пользователя.
+        После успешной регистрации автоматически выполняется вход.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictError'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/InternalServerError'
+      tags:
+        - Аутентификация
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+  /cities:
+    get:
+      operationId: Cities_list
+      summary: Список городов
+      description: |-
+        Получить список городов
+
+        Возвращает список всех доступных городов для фильтрации.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/City'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+      tags:
+        - Справочники
+    post:
+      operationId: Cities_create
+      summary: Создать город
+      description: Создать город (только для админов)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/City'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Справочники
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityCreate'
+  /cities/{cityId}:
+    get:
+      operationId: Cities_get
+      summary: Получить город
+      description: Получить город по ID
+      parameters:
+        - name: cityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/City'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Справочники
+    put:
+      operationId: Cities_update
+      summary: Обновить город
+      description: Обновить город (только для админов)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: cityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/City'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Справочники
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityCreate'
+    delete:
+      operationId: Cities_delete
+      summary: Удалить город
+      description: Удалить город (только для админов)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: cityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ConflictError'
+      tags:
+        - Справочники
+  /comforts:
+    get:
+      operationId: Comforts_list
+      summary: Список удобств
+      description: |-
+        Получить список удобств
+
+        Возвращает все доступные удобства для объектов.
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comfort'
+                required:
+                  - data
+      tags:
+        - Справочники
+    post:
+      operationId: Comforts_create
+      summary: Создать удобство
+      description: Создать удобство (только для админов)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Comfort'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Справочники
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComfortCreate'
+  /comforts/{comfortId}:
+    get:
+      operationId: Comforts_get
+      summary: Получить удобство
+      description: Получить удобство по ID
+      parameters:
+        - name: comfortId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Comfort'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Справочники
+    put:
+      operationId: Comforts_update
+      summary: Обновить удобство
+      description: Обновить удобство (только для админов)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: comfortId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Comfort'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Справочники
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComfortCreate'
+    delete:
+      operationId: Comforts_delete
+      summary: Удалить удобство
+      description: Удалить удобство (только для админов)
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: comfortId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Справочники
+  /conversations:
+    get:
+      operationId: Conversations_list
+      summary: Мои переписки
+      description: |-
+        Получить список переписок
+
+        Все переписки текущего пользователя.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConversationShort'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Сообщения
+    post:
+      operationId: Conversations_create
+      summary: Начать переписку
+      description: |-
+        Создать переписку
+
+        Начинает новую переписку с пользователем по поводу объекта.
+        Если переписка уже существует, возвращает существующую.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Conversation'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Conversation'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Сообщения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+  /conversations/unread-count:
+    get:
+      operationId: Conversations_getUnreadCount
+      summary: Количество непрочитанных
+      description: Получить количество непрочитанных сообщений
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUnread:
+                    type: integer
+                    format: int32
+                required:
+                  - totalUnread
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Сообщения
+  /conversations/{conversationId}:
+    get:
+      operationId: Conversations_get
+      summary: Получить переписку
+      description: |-
+        Получить переписку
+
+        Детальная информация о переписке.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Conversation'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Сообщения
+    delete:
+      operationId: Conversations_delete
+      summary: Удалить переписку
+      description: |-
+        Удалить переписку
+
+        Удаляет переписку для текущего пользователя.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Сообщения
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: Messages_list
+      summary: Сообщения переписки
+      description: |-
+        Получить сообщения переписки
+
+        Список сообщений с пагинацией (от новых к старым).
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Сообщения
+    post:
+      operationId: Messages_send
+      summary: Отправить сообщение
+      description: |-
+        Отправить сообщение
+
+        Добавляет новое сообщение в переписку.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Message'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Сообщения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+  /conversations/{conversationId}/messages/mark-read:
+    post:
+      operationId: Messages_markAsRead
+      summary: Пометить как прочитанные
+      description: |-
+        Пометить сообщения как прочитанные
+
+        Отмечает указанные сообщения как прочитанные.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Сообщения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessagesMarkRead'
+  /properties:
+    get:
+      operationId: Properties_list
+      summary: Поиск объектов недвижимости
+      description: |-
+        Поиск объектов недвижимости
+
+        Возвращает список объектов с фильтрацией по различным параметрам.
+        Доступен без авторизации.
+      parameters:
+        - $ref: '#/components/parameters/PropertyFilterParams.search'
+        - $ref: '#/components/parameters/PropertyFilterParams.cityId'
+        - $ref: '#/components/parameters/PropertyFilterParams.type'
+        - $ref: '#/components/parameters/PropertyFilterParams.priceMin'
+        - $ref: '#/components/parameters/PropertyFilterParams.priceMax'
+        - $ref: '#/components/parameters/PropertyFilterParams.roomsMin'
+        - $ref: '#/components/parameters/PropertyFilterParams.roomsMax'
+        - $ref: '#/components/parameters/PropertyFilterParams.areaMin'
+        - $ref: '#/components/parameters/PropertyFilterParams.areaMax'
+        - $ref: '#/components/parameters/PropertyFilterParams.guestsMin'
+        - $ref: '#/components/parameters/PropertyFilterParams.comfortIds'
+        - $ref: '#/components/parameters/PropertyFilterParams.availableFrom'
+        - $ref: '#/components/parameters/PropertyFilterParams.availableTo'
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+        - $ref: '#/components/parameters/SortParams.sortBy'
+        - $ref: '#/components/parameters/SortParams.sortOrder'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PropertyShort'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+      tags:
+        - Недвижимость
+    post:
+      operationId: Properties_create
+      summary: Создать объект
+      description: |-
+        Создать объект недвижимости
+
+        Создаёт новое объявление об аренде.
+        Требуется авторизация.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Property'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/InternalServerError'
+      tags:
+        - Недвижимость
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyCreate'
+  /properties/my:
+    get:
+      operationId: Properties_getMyProperties
+      summary: Мои объекты
+      description: |-
+        Получить объекты текущего пользователя
+
+        Список всех объектов, принадлежащих авторизованному пользователю.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          required: false
+          schema:
+            type: boolean
+          explode: false
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PropertyShort'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Недвижимость
+  /properties/user/{userId}:
+    get:
+      operationId: Properties_getUserProperties
+      summary: Объекты пользователя
+      description: |-
+        Получить объекты пользователя
+
+        Список всех активных объектов указанного пользователя.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PropertyShort'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Недвижимость
+  /properties/{propertyId}:
+    get:
+      operationId: Properties_get
+      summary: Детали объекта
+      description: |-
+        Получить детали объекта
+
+        Полная информация об объекте включая фото, удобства и владельца.
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Property'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Недвижимость
+    patch:
+      operationId: Properties_update
+      summary: Обновить объект
+      description: |-
+        Обновить объект недвижимости
+
+        Обновляет данные объекта.
+        Только владелец может редактировать.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Property'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Недвижимость
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyUpdate'
+    delete:
+      operationId: Properties_delete
+      summary: Удалить объект
+      description: |-
+        Удалить объект недвижимости
+
+        Удаляет объявление.
+        Только владелец может удалить.
+        Нельзя удалить если есть активные бронирования.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ConflictError'
+      tags:
+        - Недвижимость
+  /properties/{propertyId}/photos:
+    get:
+      operationId: PropertyPhotos_list
+      summary: Список фотографий объекта
+      description: Получить все фотографии объекта
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PropertyPhoto'
+                required:
+                  - data
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Фотографии
+    post:
+      operationId: PropertyPhotos_upload
+      summary: Загрузить фотографию
+      description: |-
+        Загрузить фотографию
+
+        Загружает новую фотографию для объекта.
+        Только владелец может загружать фото.
+        Максимум 20 фотографий на объект.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/PropertyPhoto'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        '413':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Фотографии
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PhotoUploadRequest'
+            encoding:
+              sortOrder:
+                contentType: text/plain
+              isMain:
+                contentType: text/plain
+  /properties/{propertyId}/photos/{photoId}:
+    patch:
+      operationId: PropertyPhotos_update
+      summary: Обновить фотографию
+      description: |-
+        Обновить данные фотографии
+
+        Изменяет порядок или устанавливает фото как главное.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/PropertyPhoto'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Фотографии
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoUpdate'
+    delete:
+      operationId: PropertyPhotos_delete
+      summary: Удалить фотографию
+      description: Удалить фотографию
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Фотографии
+  /rent-deals:
+    post:
+      operationId: RentDeals_create
+      summary: Создать заявку на аренду
+      description: |-
+        Создать заявку на аренду
+
+        Арендатор создаёт заявку на бронирование объекта.
+        Автоматически рассчитывается итоговая стоимость.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/RentDeal'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ConflictError'
+                  - $ref: '#/components/schemas/InternalServerError'
+      tags:
+        - Сделки аренды
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RentDealCreate'
+  /rent-deals/check-availability:
+    get:
+      operationId: RentDeals_checkAvailability
+      summary: Проверить доступность
+      description: |-
+        Проверить доступность объекта
+
+        Проверяет, свободен ли объект в указанные даты.
+      parameters:
+        - name: propertyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          explode: false
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                  conflictingDeals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentDealShort'
+                required:
+                  - available
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Сделки аренды
+  /rent-deals/property/{propertyId}:
+    get:
+      operationId: RentDeals_getByProperty
+      summary: Заявки по объекту
+      description: |-
+        Получить заявки по объекту
+
+        Список всех заявок на конкретный объект.
+        Доступно только владельцу объекта.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DealStatus'
+          explode: false
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentDeal'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Сделки аренды
+  /rent-deals/{dealId}:
+    get:
+      operationId: RentDeals_get
+      summary: Получить сделку
+      description: |-
+        Получить сделку по ID
+
+        Детальная информация о сделке.
+        Доступна только участникам сделки (арендатор или владелец).
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/RentDeal'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Сделки аренды
+  /rent-deals/{dealId}/status:
+    patch:
+      operationId: RentDeals_updateStatus
+      summary: Изменить статус сделки
+      description: |-
+        Изменить статус сделки
+
+        Владелец может одобрить или отклонить заявку.
+        Арендатор может отменить свою заявку.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/RentDeal'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ConflictError'
+      tags:
+        - Сделки аренды
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RentDealStatusUpdate'
+  /reviews/my:
+    get:
+      operationId: Reviews_getMyReviews
+      summary: Мои отзывы
+      description: |-
+        Мои отзывы
+
+        Список отзывов, оставленных текущим пользователем.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Отзывы
+  /reviews/property:
+    post:
+      operationId: Reviews_createPropertyReview
+      summary: Оставить отзыв об объекте
+      description: |-
+        Создать отзыв об объекте
+
+        Только пользователи с завершённой арендой могут оставлять отзывы.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Review'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ConflictError'
+      tags:
+        - Отзывы
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyReviewCreate'
+  /reviews/property/{propertyId}:
+    get:
+      operationId: Reviews_getPropertyReviews
+      summary: Отзывы об объекте
+      description: Получить отзывы об объекте
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+        - $ref: '#/components/parameters/SortParams.sortBy'
+        - $ref: '#/components/parameters/SortParams.sortOrder'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Отзывы
+  /reviews/user:
+    post:
+      operationId: Reviews_createUserReview
+      summary: Оставить отзыв о пользователе
+      description: |-
+        Создать отзыв о пользователе
+
+        Можно оставить отзыв только после завершённой сделки.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Review'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/ConflictError'
+      tags:
+        - Отзывы
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserReviewCreate'
+  /reviews/user/{userId}:
+    get:
+      operationId: Reviews_getUserReviews
+      summary: Отзывы о пользователе
+      description: Получить отзывы о пользователе
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Отзывы
+  /reviews/{reviewId}:
+    get:
+      operationId: Reviews_get
+      summary: Получить отзыв
+      description: Получить отзыв по ID
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Review'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Отзывы
+    patch:
+      operationId: Reviews_update
+      summary: Обновить отзыв
+      description: Обновить свой отзыв
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Review'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Отзывы
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewUpdate'
+    delete:
+      operationId: Reviews_delete
+      summary: Удалить отзыв
+      description: Удалить свой отзыв
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ForbiddenError'
+                  - $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Отзывы
+  /users/me:
+    get:
+      operationId: Users_getMe
+      summary: Получить свой профиль
+      description: |-
+        Получить текущего пользователя
+
+        Возвращает профиль авторизованного пользователя с расширенной статистикой.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/UserProfile'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Пользователи
+    patch:
+      operationId: Users_updateMe
+      summary: Обновить свой профиль
+      description: |-
+        Обновить профиль
+
+        Обновляет данные профиля текущего пользователя.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/User'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Пользователи
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+  /users/me/bookings:
+    get:
+      operationId: Users_getMyBookings
+      summary: Бронирования моих объектов (как владелец)
+      description: |-
+        История сделок пользователя (как владелец)
+
+        Список всех сделок по объектам текущего пользователя.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DealStatus'
+          explode: false
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentDealShort'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Пользователи
+  /users/me/password:
+    put:
+      operationId: Users_changePassword
+      summary: Сменить пароль
+      description: |-
+        Сменить пароль
+
+        Изменяет пароль текущего пользователя.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/UnauthorizedError'
+                  - $ref: '#/components/schemas/ValidationError'
+      tags:
+        - Пользователи
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChange'
+  /users/me/rentals:
+    get:
+      operationId: Users_getMyRentals
+      summary: Мои аренды (как арендатор)
+      description: |-
+        История сделок пользователя (как арендатор)
+
+        Список всех сделок, где текущий пользователь является арендатором.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DealStatus'
+          explode: false
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentDealShort'
+                    description: Массив данных
+                  pagination:
+                    allOf:
+                      - $ref: '#/components/schemas/PaginationMeta'
+                    description: Метаданные пагинации
+                description: Обёртка для списков с пагинацией
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+      tags:
+        - Пользователи
+  /users/{userId}:
+    get:
+      operationId: Users_getUser
+      summary: Получить профиль пользователя
+      description: |-
+        Получить профиль пользователя по ID
+
+        Публичная информация о пользователе.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/UserProfile'
+                    description: Данные
+                description: Обёртка для одиночного ответа
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+      tags:
+        - Пользователи
+components:
+  parameters:
+    PaginationParams.limit:
+      name: limit
+      in: query
+      required: false
+      description: Количество элементов на странице (макс. 100)
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+      explode: false
+    PaginationParams.page:
+      name: page
+      in: query
+      required: false
+      description: Номер страницы (начиная с 1)
+      schema:
+        type: integer
+        format: int32
+        default: 1
+      explode: false
+    PropertyFilterParams.areaMax:
+      name: areaMax
+      in: query
+      required: false
+      description: Максимальная площадь
+      schema:
+        type: number
+        format: float
+      explode: false
+    PropertyFilterParams.areaMin:
+      name: areaMin
+      in: query
+      required: false
+      description: Минимальная площадь
+      schema:
+        type: number
+        format: float
+        minimum: 1
+      explode: false
+    PropertyFilterParams.availableFrom:
+      name: availableFrom
+      in: query
+      required: false
+      description: Дата начала аренды (для проверки доступности)
+      schema:
+        type: string
+        format: date
+      explode: false
+    PropertyFilterParams.availableTo:
+      name: availableTo
+      in: query
+      required: false
+      description: Дата окончания аренды (для проверки доступности)
+      schema:
+        type: string
+        format: date
+      explode: false
+    PropertyFilterParams.cityId:
+      name: cityId
+      in: query
+      required: false
+      description: ID города
+      schema:
+        type: integer
+        format: int64
+      explode: false
+    PropertyFilterParams.comfortIds:
+      name: comfortIds
+      in: query
+      required: false
+      description: ID требуемых удобств (через запятую)
+      schema:
+        type: string
+      explode: false
+    PropertyFilterParams.guestsMin:
+      name: guestsMin
+      in: query
+      required: false
+      description: Минимальное количество гостей
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      explode: false
+    PropertyFilterParams.priceMax:
+      name: priceMax
+      in: query
+      required: false
+      description: Максимальная цена за сутки
+      schema:
+        type: number
+        format: decimal
+      explode: false
+    PropertyFilterParams.priceMin:
+      name: priceMin
+      in: query
+      required: false
+      description: Минимальная цена за сутки
+      schema:
+        type: number
+        format: decimal
+        minimum: 0
+      explode: false
+    PropertyFilterParams.roomsMax:
+      name: roomsMax
+      in: query
+      required: false
+      description: Максимальное количество комнат
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    PropertyFilterParams.roomsMin:
+      name: roomsMin
+      in: query
+      required: false
+      description: Минимальное количество комнат
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      explode: false
+    PropertyFilterParams.search:
+      name: search
+      in: query
+      required: false
+      description: Поиск по заголовку и описанию
+      schema:
+        type: string
+      explode: false
+    PropertyFilterParams.type:
+      name: type
+      in: query
+      required: false
+      description: Тип недвижимости
+      schema:
+        $ref: '#/components/schemas/PropertyType'
+      explode: false
+    SortParams.sortBy:
+      name: sortBy
+      in: query
+      required: false
+      description: Поле для сортировки
+      schema:
+        type: string
+      explode: false
+    SortParams.sortOrder:
+      name: sortOrder
+      in: query
+      required: false
+      description: Направление сортировки
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+      explode: false
+  schemas:
+    ApiError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+        - timestamp
+      properties:
+        statusCode:
+          type: integer
+          format: int32
+          description: HTTP статус код ошибки
+        error:
+          type: string
+          description: Краткое описание типа ошибки
+        message:
+          type: string
+          description: Детальное сообщение об ошибке
+        timestamp:
+          type: string
+          format: date-time
+          description: Временная метка ошибки
+        path:
+          type: string
+          description: Путь запроса, вызвавшего ошибку
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorDetail'
+          description: Детали валидации (для ошибок 422)
+      description: Базовая модель ошибки API
+    AuthResponse:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - tokenType
+        - expiresIn
+        - user
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token
+        refreshToken:
+          type: string
+          description: JWT Refresh Token для обновления access token
+        tokenType:
+          type: string
+          enum:
+            - Bearer
+          description: Тип токена
+        expiresIn:
+          type: integer
+          format: int32
+          description: Время жизни access token в секундах
+        user:
+          allOf:
+            - $ref: '#/components/schemas/User'
+          description: Данные пользователя
+      description: Ответ при успешной аутентификации
+    BadRequestError:
+      type: object
+      required:
+        - statusCode
+        - error
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 400
+        error:
+          type: string
+          enum:
+            - Bad Request
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 400 Bad Request - Некорректный запрос
+    City:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор города
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Название города
+      description: Город
+    CityCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Название города
+      description: Данные для создания/обновления города
+    Comfort:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор удобства
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Название удобства
+        icon:
+          type: string
+          description: Иконка удобства (название или URL)
+      description: Удобство (комфорт)
+    ComfortCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Название удобства
+        icon:
+          type: string
+          description: Иконка удобства
+      description: Данные для создания/обновления удобства
+    ConflictError:
+      type: object
+      required:
+        - statusCode
+        - error
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 409
+        error:
+          type: string
+          enum:
+            - Conflict
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 409 Conflict - Конфликт данных
+    Conversation:
+      type: object
+      required:
+        - id
+        - user1Id
+        - user1
+        - user2Id
+        - user2
+        - propertyId
+        - property
+        - unreadCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор переписки
+        user1Id:
+          type: integer
+          format: int64
+          description: ID первого участника
+        user1:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Первый участник
+        user2Id:
+          type: integer
+          format: int64
+          description: ID второго участника
+        user2:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Второй участник
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта недвижимости (тема переписки)
+        property:
+          allOf:
+            - $ref: '#/components/schemas/PropertyShort'
+          description: Объект недвижимости
+        lastMessage:
+          allOf:
+            - $ref: '#/components/schemas/MessageShort'
+          description: Последнее сообщение
+        unreadCount:
+          type: integer
+          format: int32
+          description: Количество непрочитанных сообщений
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего сообщения
+      description: Переписка между пользователями
+    ConversationCreate:
+      type: object
+      required:
+        - userId
+        - propertyId
+        - message
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: ID собеседника
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта недвижимости
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Первое сообщение
+      description: Данные для создания переписки
+    ConversationShort:
+      type: object
+      required:
+        - id
+        - otherUser
+        - property
+        - unreadCount
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID переписки
+        otherUser:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Собеседник
+        property:
+          allOf:
+            - $ref: '#/components/schemas/PropertyShort'
+          description: Объект недвижимости
+        lastMessage:
+          allOf:
+            - $ref: '#/components/schemas/MessageShort'
+          description: Последнее сообщение
+        unreadCount:
+          type: integer
+          format: int32
+          description: Количество непрочитанных
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего сообщения
+      description: Краткая информация о переписке (для списка)
+    DealStatus:
+      type: string
+      enum:
+        - requested
+        - approved
+        - cancelled
+      description: Статус сделки аренды
+    ForbiddenError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 403
+        error:
+          type: string
+          enum:
+            - Forbidden
+        message:
+          type: string
+          enum:
+            - У вас нет прав для выполнения данной операции.
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 403 Forbidden - Доступ запрещён
+    InternalServerError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 500
+        error:
+          type: string
+          enum:
+            - Internal Server Error
+        message:
+          type: string
+          enum:
+            - Произошла внутренняя ошибка сервера. Попробуйте позже.
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 500 Internal Server Error - Внутренняя ошибка сервера
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя
+        password:
+          type: string
+          format: password
+          description: Пароль
+      description: Данные для входа в систему
+    Message:
+      type: object
+      required:
+        - id
+        - conversationId
+        - senderId
+        - sender
+        - text
+        - isRead
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор сообщения
+        conversationId:
+          type: integer
+          format: int64
+          description: ID переписки
+        senderId:
+          type: integer
+          format: int64
+          description: ID отправителя
+        sender:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Отправитель
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Текст сообщения
+        isRead:
+          type: boolean
+          description: Сообщение прочитано получателем
+        createdAt:
+          type: string
+          format: date-time
+          description: Время отправки
+      description: Сообщение в переписке
+    MessageCreate:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Текст сообщения
+      description: Данные для отправки сообщения
+    MessageShort:
+      type: object
+      required:
+        - id
+        - text
+        - senderId
+        - isRead
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID сообщения
+        text:
+          type: string
+          maxLength: 100
+          description: Текст сообщения (обрезанный)
+        senderId:
+          type: integer
+          format: int64
+          description: ID отправителя
+        isRead:
+          type: boolean
+          description: Прочитано ли
+        createdAt:
+          type: string
+          format: date-time
+          description: Время отправки
+      description: Краткая информация о сообщении
+    MessagesMarkRead:
+      type: object
+      required:
+        - messageIds
+      properties:
+        messageIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: ID сообщений для пометки как прочитанных
+      description: Пометить сообщения как прочитанные
+    NotFoundError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 404
+        error:
+          type: string
+          enum:
+            - Not Found
+        message:
+          type: string
+          enum:
+            - Запрашиваемый ресурс не найден.
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 404 Not Found - Ресурс не найден
+    PaginationMeta:
+      type: object
+      required:
+        - currentPage
+        - perPage
+        - totalItems
+        - totalPages
+        - hasNextPage
+        - hasPrevPage
+      properties:
+        currentPage:
+          type: integer
+          format: int32
+          description: Текущая страница
+        perPage:
+          type: integer
+          format: int32
+          description: Количество элементов на странице
+        totalItems:
+          type: integer
+          format: int32
+          description: Общее количество элементов
+        totalPages:
+          type: integer
+          format: int32
+          description: Общее количество страниц
+        hasNextPage:
+          type: boolean
+          description: Есть ли следующая страница
+        hasPrevPage:
+          type: boolean
+          description: Есть ли предыдущая страница
+      description: Метаданные пагинации в ответе
+    PasswordChange:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          description: Текущий пароль
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+          format: password
+          description: Новый пароль
+      description: Данные для смены пароля
+    PhotoUpdate:
+      type: object
+      properties:
+        sortOrder:
+          type: integer
+          format: int32
+          description: Порядок отображения
+        isMain:
+          type: boolean
+          description: Установить как главное фото
+      description: Обновление данных фотографии
+    PhotoUploadRequest:
+      type: object
+      properties:
+        file: {}
+        sortOrder:
+          type: integer
+          format: int32
+        isMain:
+          type: boolean
+      required:
+        - file
+    PhotoUploadResponse:
+      type: object
+      required:
+        - id
+        - url
+        - sortOrder
+        - isMain
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID созданной фотографии
+        url:
+          type: string
+          description: URL фотографии
+        sortOrder:
+          type: integer
+          format: int32
+          description: Порядок отображения
+        isMain:
+          type: boolean
+          description: Является главным фото
+      description: Ответ при загрузке фотографии
+    Property:
+      type: object
+      required:
+        - id
+        - ownerId
+        - owner
+        - cityId
+        - city
+        - title
+        - description
+        - type
+        - pricePerDay
+        - address
+        - comforts
+        - photos
+        - isActive
+        - reviewsCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор объекта
+        ownerId:
+          type: integer
+          format: int64
+          description: ID владельца
+        owner:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Владелец объекта
+        cityId:
+          type: integer
+          format: int64
+          description: ID города
+        city:
+          allOf:
+            - $ref: '#/components/schemas/City'
+          description: Город
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+          description: Заголовок объявления
+        description:
+          type: string
+          maxLength: 5000
+          description: Подробное описание
+        type:
+          allOf:
+            - $ref: '#/components/schemas/PropertyType'
+          description: Тип недвижимости
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Цена за сутки в рублях
+        address:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Адрес объекта
+        roomsCount:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Количество комнат
+        area:
+          type: number
+          format: float
+          minimum: 1
+          description: Площадь в кв.м
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Максимальное количество гостей
+        comforts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comfort'
+          description: Список удобств
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertyPhoto'
+          description: Фотографии объекта
+        isActive:
+          type: boolean
+          description: Объект активен и доступен для бронирования
+        averageRating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+          description: Средний рейтинг
+        reviewsCount:
+          type: integer
+          format: int32
+          description: Количество отзывов
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания объявления
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего обновления
+      description: Объект недвижимости
+    PropertyCreate:
+      type: object
+      required:
+        - cityId
+        - title
+        - description
+        - type
+        - pricePerDay
+        - address
+      properties:
+        cityId:
+          type: integer
+          format: int64
+          description: ID города
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+          description: Заголовок объявления
+        description:
+          type: string
+          maxLength: 5000
+          description: Подробное описание
+        type:
+          allOf:
+            - $ref: '#/components/schemas/PropertyType'
+          description: Тип недвижимости
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Цена за сутки в рублях
+        address:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Адрес объекта
+        roomsCount:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Количество комнат
+        area:
+          type: number
+          format: float
+          minimum: 1
+          description: Площадь в кв.м
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Максимальное количество гостей
+        comfortIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: ID удобств
+      description: Данные для создания объекта недвижимости
+    PropertyPhoto:
+      type: object
+      required:
+        - id
+        - propertyId
+        - url
+        - sortOrder
+        - isMain
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID фотографии
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта
+        url:
+          type: string
+          description: URL фотографии
+        sortOrder:
+          type: integer
+          format: int32
+          description: Порядок отображения
+        isMain:
+          type: boolean
+          description: Является главным фото
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата загрузки
+      description: Фотография объекта недвижимости
+    PropertyReviewCreate:
+      type: object
+      required:
+        - propertyId
+        - rating
+        - comment
+      properties:
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта недвижимости
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          description: Оценка от 1 до 5
+        comment:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Текст отзыва
+      description: Данные для создания отзыва об объекте
+    PropertyShort:
+      type: object
+      required:
+        - id
+        - title
+        - type
+        - pricePerDay
+        - city
+        - address
+        - reviewsCount
+        - owner
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID объекта
+        title:
+          type: string
+          description: Заголовок
+        type:
+          allOf:
+            - $ref: '#/components/schemas/PropertyType'
+          description: Тип недвижимости
+        pricePerDay:
+          type: number
+          format: decimal
+          description: Цена за сутки
+        city:
+          allOf:
+            - $ref: '#/components/schemas/City'
+          description: Город
+        address:
+          type: string
+          description: Адрес
+        mainPhotoUrl:
+          type: string
+          description: URL главного фото
+        averageRating:
+          type: number
+          format: float
+          description: Средний рейтинг
+        reviewsCount:
+          type: integer
+          format: int32
+          description: Количество отзывов
+        owner:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Владелец
+      description: Краткая информация об объекте (для списков)
+    PropertyType:
+      type: string
+      enum:
+        - flat
+        - room
+        - house
+      description: Тип недвижимости
+    PropertyUpdate:
+      type: object
+      properties:
+        cityId:
+          type: integer
+          format: int64
+          description: ID города
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+          description: Заголовок объявления
+        description:
+          type: string
+          maxLength: 5000
+          description: Подробное описание
+        type:
+          allOf:
+            - $ref: '#/components/schemas/PropertyType'
+          description: Тип недвижимости
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Цена за сутки в рублях
+        address:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Адрес объекта
+        roomsCount:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Количество комнат
+        area:
+          type: number
+          format: float
+          minimum: 1
+          description: Площадь в кв.м
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Максимальное количество гостей
+        comfortIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: ID удобств
+        isActive:
+          type: boolean
+          description: Активность объявления
+      description: Данные для обновления объекта недвижимости
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh Token
+      description: Запрос на обновление токена
+    RentDeal:
+      type: object
+      required:
+        - id
+        - propertyId
+        - property
+        - tenantId
+        - tenant
+        - ownerId
+        - owner
+        - startDate
+        - endDate
+        - status
+        - totalPrice
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор сделки
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта недвижимости
+        property:
+          allOf:
+            - $ref: '#/components/schemas/PropertyShort'
+          description: Объект недвижимости
+        tenantId:
+          type: integer
+          format: int64
+          description: ID арендатора
+        tenant:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Арендатор
+        ownerId:
+          type: integer
+          format: int64
+          description: ID владельца
+        owner:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Владелец
+        startDate:
+          type: string
+          format: date
+          description: Дата начала аренды
+        endDate:
+          type: string
+          format: date
+          description: Дата окончания аренды
+        status:
+          allOf:
+            - $ref: '#/components/schemas/DealStatus'
+          description: Статус сделки
+        totalPrice:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Итоговая стоимость аренды
+        comment:
+          type: string
+          maxLength: 1000
+          description: Комментарий к заявке от арендатора
+        cancellationReason:
+          type: string
+          maxLength: 500
+          description: Причина отмены (если отменена)
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания заявки
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего обновления
+      description: Сделка аренды
+    RentDealCreate:
+      type: object
+      required:
+        - propertyId
+        - startDate
+        - endDate
+      properties:
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта недвижимости
+        startDate:
+          type: string
+          format: date
+          description: Дата начала аренды
+        endDate:
+          type: string
+          format: date
+          description: Дата окончания аренды
+        comment:
+          type: string
+          maxLength: 1000
+          description: Комментарий к заявке
+      description: Данные для создания заявки на аренду
+    RentDealShort:
+      type: object
+      required:
+        - id
+        - propertyId
+        - propertyTitle
+        - startDate
+        - endDate
+        - status
+        - totalPrice
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID сделки
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта
+        propertyTitle:
+          type: string
+          description: Заголовок объекта
+        propertyPhotoUrl:
+          type: string
+          description: URL фото объекта
+        startDate:
+          type: string
+          format: date
+          description: Дата начала
+        endDate:
+          type: string
+          format: date
+          description: Дата окончания
+        status:
+          allOf:
+            - $ref: '#/components/schemas/DealStatus'
+          description: Статус
+        totalPrice:
+          type: number
+          format: decimal
+          description: Итоговая стоимость
+      description: Краткая информация о сделке (для списков)
+    RentDealStatusUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - approved
+            - cancelled
+          description: Новый статус
+        cancellationReason:
+          type: string
+          maxLength: 500
+          description: Причина отмены (обязательна при отмене)
+      description: Данные для подтверждения/отклонения заявки
+    Review:
+      type: object
+      required:
+        - id
+        - authorId
+        - author
+        - rating
+        - comment
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор отзыва
+        propertyId:
+          type: integer
+          format: int64
+          description: ID объекта недвижимости (опционально)
+        property:
+          allOf:
+            - $ref: '#/components/schemas/PropertyShort'
+          description: Объект недвижимости
+        authorId:
+          type: integer
+          format: int64
+          description: ID автора отзыва
+        author:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Автор отзыва
+        targetUserId:
+          type: integer
+          format: int64
+          description: ID получателя отзыва (пользователь)
+        targetUser:
+          allOf:
+            - $ref: '#/components/schemas/UserShort'
+          description: Получатель отзыва
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          description: Оценка от 1 до 5
+        comment:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Текст отзыва
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата обновления
+      description: Отзыв
+    ReviewUpdate:
+      type: object
+      properties:
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          description: Оценка от 1 до 5
+        comment:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Текст отзыва
+      description: Данные для обновления отзыва
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Статус операции
+        message:
+          type: string
+          description: Сообщение
+      description: Успешный ответ без данных
+    TokenResponse:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - tokenType
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          description: Новый Access Token
+        refreshToken:
+          type: string
+          description: Новый Refresh Token
+        tokenType:
+          type: string
+          enum:
+            - Bearer
+          description: Тип токена
+        expiresIn:
+          type: integer
+          format: int32
+          description: Время жизни access token в секундах
+      description: Ответ с новыми токенами
+    UnauthorizedError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 401
+        error:
+          type: string
+          enum:
+            - Unauthorized
+        message:
+          type: string
+          enum:
+            - Требуется аутентификация. Предоставьте валидный JWT токен.
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 401 Unauthorized - Требуется аутентификация
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - fullName
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор пользователя
+        email:
+          type: string
+          format: email
+          description: Email пользователя (уникальный)
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Полное имя пользователя
+        phone:
+          type: string
+          pattern: ^\+?[0-9]{10,15}$
+          description: Номер телефона
+        avatarUrl:
+          type: string
+          description: URL аватара пользователя
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата регистрации
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего обновления профиля
+      description: Пользователь системы
+    UserCreate:
+      type: object
+      required:
+        - email
+        - password
+        - fullName
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          format: password
+          description: Пароль (минимум 8 символов)
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Полное имя пользователя
+        phone:
+          type: string
+          pattern: ^\+?[0-9]{10,15}$
+          description: Номер телефона
+      description: Данные для создания пользователя (регистрация)
+    UserProfile:
+      type: object
+      required:
+        - propertiesCount
+        - rentalsCount
+        - reviewsCount
+      properties:
+        propertiesCount:
+          type: integer
+          format: int32
+          description: Количество объектов в собственности
+        rentalsCount:
+          type: integer
+          format: int32
+          description: Количество завершённых сделок как арендатор
+        ownerRating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+          description: Средний рейтинг как владелец
+        tenantRating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+          description: Средний рейтинг как арендатор
+        reviewsCount:
+          type: integer
+          format: int32
+          description: Количество отзывов
+      allOf:
+        - $ref: '#/components/schemas/User'
+      description: Профиль пользователя с расширенной статистикой
+    UserReviewCreate:
+      type: object
+      required:
+        - targetUserId
+        - rating
+        - comment
+      properties:
+        targetUserId:
+          type: integer
+          format: int64
+          description: ID пользователя
+        propertyId:
+          type: integer
+          format: int64
+          description: ID связанного объекта (опционально)
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          description: Оценка от 1 до 5
+        comment:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Текст отзыва
+      description: Данные для создания отзыва о пользователе
+    UserShort:
+      type: object
+      required:
+        - id
+        - fullName
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID пользователя
+        fullName:
+          type: string
+          description: Полное имя
+        avatarUrl:
+          type: string
+          description: URL аватара
+      description: Краткая информация о пользователе (для вложенных объектов)
+    UserUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Полное имя пользователя
+        phone:
+          type: string
+          pattern: ^\+?[0-9]{10,15}$
+          description: Номер телефона
+        avatarUrl:
+          type: string
+          description: URL аватара
+      description: Данные для обновления профиля
+    ValidationError:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: number
+          enum:
+            - 422
+        error:
+          type: string
+          enum:
+            - Unprocessable Entity
+        message:
+          type: string
+          enum:
+            - Ошибка валидации данных.
+      allOf:
+        - $ref: '#/components/schemas/ApiError'
+      description: 422 Unprocessable Entity - Ошибка валидации
+    ValidationErrorDetail:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: Название поля с ошибкой
+        message:
+          type: string
+          description: Сообщение об ошибке
+        value:
+          type: string
+          description: Переданное значение
+      description: Детали ошибки валидации
+servers:
+  - url: /
+    description: ''
+    variables: {}

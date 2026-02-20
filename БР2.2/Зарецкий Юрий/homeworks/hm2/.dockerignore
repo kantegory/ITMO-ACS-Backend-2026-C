@@ -1,0 +1,5 @@
+node_modules
+tsp-output
+.git
+.gitignore
+*.md
