@@ -6,9 +6,18 @@ import "@typespec/openapi3";
 using TypeSpec.Rest;
 using TypeSpec.Http;
 
-// описываем сервис чтобы openapi не был пустым
-@service(#{title: "RestOratorAPI"})
+@service(#{ title: "RestOratorAPI" })
 namespace RestOratorAPI;
+
+
+// описываем bearer jwt авторизацию
+// в версии 1.9 схема объявляется как alias
+alias BearerAuth = {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "JWT"
+};
+
 
 // роли пользователей
 enum UserRole {
@@ -25,13 +34,19 @@ enum ReservationStatus {
   PASSED
 }
 
+// сортировка (asc или desc)
+enum SortOrder {
+  asc,
+  desc
+}
+
 // модель пользователя (таблица users)
 model User {
   id: int64;
   role: UserRole;
   first_name: string;
   last_name: string;
-  middle_name?: string; // необязательное поле
+  middle_name?: string;
   email: string;
   is_verified: boolean;
   created_at: utcDateTime;
@@ -62,7 +77,7 @@ model AuthResponse {
 // регион (таблица regions)
 model Region {
   id: int64;
-  external_id: int64; // id из api headhunter
+  external_id: int64;
   name: string;
 }
 
@@ -89,6 +104,7 @@ model Restaurant {
   address: string;
   price_category: string;
   phone: string;
+  average_rating?: float64;
   created_at: utcDateTime;
 }
 
@@ -146,6 +162,12 @@ namespace Users {
   @get
   @route("/{id}")
   op getUser(@path id: int64): User;
+
+  // получить текущего пользователя по access token
+  @get
+  @route("/me")
+  @useAuth(BearerAuth)
+  op getCurrentUser(): User;
 }
 
 
@@ -155,11 +177,15 @@ namespace Users {
 namespace Restaurants {
 
   // получить список ресторанов с фильтрацией
+  // добавлена сортировка по цене, рейтингу и поиск по названию
   @get
   op listRestaurants(
     @query city_id?: int64,
     @query cuisine_id?: int64,
-    @query price_category?: string
+    @query price_category?: string,
+    @query name?: string,
+    @query price_sort?: SortOrder,
+    @query rating_sort?: SortOrder
   ): Restaurant[];
 
   // получить ресторан по id
@@ -174,14 +200,32 @@ namespace Restaurants {
 @route("/reservations")
 namespace Reservations {
 
-  // создать бронирование
+  // создать бронирование (требуется авторизация)
   @post
+  @useAuth(BearerAuth)
   op createReservation(@body body: Reservation): Reservation;
 
-  // получить историю бронирований пользователя
+  // получить историю бронирований пользователя (admin only)
+  // backend должен проверить роль ADMIN после декодирования токена
   @get
   @route("/user/{userId}")
+  @useAuth(BearerAuth)
+  @doc("admin only endpoint - requires ADMIN role")
   op getUserReservations(@path userId: int64): Reservation[];
+
+  // получить свои бронирования по токену
+  // добавлен поиск по датам, ресторану, названию и сортировка по дате
+  @get
+  @route("/my")
+  @useAuth(BearerAuth)
+  @doc("Get current user's reservations with optional filters: date range, restaurant id, restaurant name")
+  op getMyReservations(
+    @query from_date?: utcDateTime,
+    @query to_date?: utcDateTime,
+    @query restaurant_id?: int64,
+    @query name?: string,
+    @query sort_by_date?: SortOrder
+  ): Reservation[];
 }
 
 
@@ -190,12 +234,17 @@ namespace Reservations {
 @route("/reviews")
 namespace Reviews {
 
-  // создать отзыв
+  // создать отзыв (требуется авторизация)
   @post
+  @useAuth(BearerAuth)
   op createReview(@body body: Review): Review;
 
   // получить отзывы ресторана
+  // добавлена сортировка по рейтингу
   @get
   @route("/restaurant/{restaurantId}")
-  op getRestaurantReviews(@path restaurantId: int64): Review[];
+  op getRestaurantReviews(
+    @path restaurantId: int64,
+    @query rating_sort?: SortOrder
+  ): Review[];
 }
