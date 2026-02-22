@@ -16,6 +16,19 @@ interface BookingsApi {
     | NotFoundError
     | UnauthorizedError;
 
+  @get
+  @route("/restaurants/{restaurantId}/bookings")
+  listRestaurantBookings(
+    @path restaurantId: string,
+    ...PaginationQuery,
+    @query dateFrom?: utcDateTime,
+    @query dateTo?: utcDateTime,
+    @query status?: BookingStatus
+  ): ApiResponse<PaginatedResponse<Booking>>
+    | NotFoundError
+    | UnauthorizedError
+    | ForbiddenError;
+
   @post
   @route("/restaurants/{restaurantId}/bookings")
   createBooking(

@@ -17,3 +17,8 @@ enum PriceLevel {
   MEDIUM_HIGH,
   HIGH
 }
+
+enum SortOrder {
+  ASC,
+  DESC
+}

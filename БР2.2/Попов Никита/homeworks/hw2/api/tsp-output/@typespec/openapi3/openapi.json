@@ -304,6 +304,39 @@
               "$ref": "#/components/schemas/PriceLevel"
             },
             "explode": false
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "priceLevel",
+                "rating",
+                "name",
+                "createdAt"
+              ]
+            },
+            "explode": false
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            },
+            "explode": false
           }
         ],
         "responses": {
@@ -434,6 +467,94 @@
         }
       }
     },
+    "/api/v1/restaurants/restaurants/{restaurantId}/available-slots": {
+      "get": {
+        "operationId": "RestaurantsApi_getAvailableSlots",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "guestCount",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "explode": false
+          },
+          {
+            "name": "durationMinutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AvailableSlotsResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404 — Не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ]
+      }
+    },
     "/api/v1/restaurants/{id}": {
       "get": {
         "operationId": "RestaurantsApi_getRestaurant",
@@ -493,6 +614,133 @@
       }
     },
     "/api/v1/restaurants/{restaurantId}/bookings": {
+      "get": {
+        "operationId": "BookingsApi_listRestaurantBookings",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.page"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.pageSize"
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BookingStatus"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "total",
+                        "page",
+                        "pageSize"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Booking"
+                          }
+                        },
+                        "total": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "format": "int32"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403 — Нет прав",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404 — Не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bookings"
+        ]
+      },
       "post": {
         "operationId": "BookingsApi_createBooking",
         "parameters": [
@@ -571,6 +819,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "categoryIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
           }
         ],
         "responses": {
@@ -684,6 +941,28 @@
           },
           {
             "$ref": "#/components/parameters/PaginationQuery.pageSize"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "rating",
+                "createdAt"
+              ]
+            },
+            "explode": false
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            },
+            "explode": false
           }
         ],
         "responses": {
@@ -937,6 +1216,21 @@
           }
         }
       },
+      "AvailableSlotsResponse": {
+        "type": "object",
+        "required": [
+          "slots"
+        ],
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeSlot"
+            },
+            "description": "Список доступных временных слотов"
+          }
+        }
+      },
       "Booking": {
         "type": "object",
         "required": [
@@ -1050,7 +1344,8 @@
           "name",
           "address",
           "city",
-          "priceLevel"
+          "priceLevel",
+          "capacity"
         ],
         "properties": {
           "name": {
@@ -1067,6 +1362,10 @@
           },
           "priceLevel": {
             "$ref": "#/components/schemas/PriceLevel"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -1218,6 +1517,7 @@
           "address",
           "city",
           "priceLevel",
+          "capacity",
           "createdAt"
         ],
         "properties": {
@@ -1238,6 +1538,10 @@
           },
           "priceLevel": {
             "$ref": "#/components/schemas/PriceLevel"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
           },
           "rating": {
             "type": "number",
@@ -1276,6 +1580,30 @@
             "type": "string"
           },
           "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SortOrder": {
+        "type": "string",
+        "enum": [
+          "ASC",
+          "DESC"
+        ]
+      },
+      "TimeSlot": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
             "type": "string",
             "format": "date-time"
           }

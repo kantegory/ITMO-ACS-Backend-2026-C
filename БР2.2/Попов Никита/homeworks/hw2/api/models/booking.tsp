@@ -21,3 +21,13 @@ model CreateBookingDto {
   guestCount: int32;
   comment?: string;
 }
+
+model TimeSlot {
+  from: utcDateTime;
+  to: utcDateTime;
+}
+
+model AvailableSlotsResponse {
+  /** Список доступных временных слотов */
+  slots: TimeSlot[];
+}

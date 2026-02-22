@@ -9,6 +9,7 @@ model Restaurant {
   address: string;
   city: string;
   priceLevel: PriceLevel;
+  capacity: int32;
   rating?: float32;
   createdAt: utcDateTime;
 }
@@ -19,4 +20,5 @@ model CreateRestaurantDto {
   address: string;
   city: string;
   priceLevel: PriceLevel;
+  capacity: int32;
 }

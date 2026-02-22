@@ -1,4 +1,5 @@
 import "../models/review.tsp";
+import "../models/enum.tsp";
 import "../models/error.tsp";
 
 namespace RestaurantApi;
@@ -12,7 +13,9 @@ interface ReviewsApi {
   @get
   listReviews(
     @path restaurantId: string,
-    ...PaginationQuery
+    ...PaginationQuery,
+    @query sortBy?: "rating" | "createdAt",
+    @query sortOrder?: SortOrder
   ): ApiResponse<PaginatedResponse<Review>>;
 
   @post

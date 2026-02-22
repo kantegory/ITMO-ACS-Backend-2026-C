@@ -12,6 +12,7 @@ interface MenuApi {
   @get
   listMenu(
     @path restaurantId: string,
+    @query categoryIds?: string
   ): ApiResponse<MenuItem[]>;
 
   @post
