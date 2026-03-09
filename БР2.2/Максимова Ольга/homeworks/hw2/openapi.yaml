@@ -1,0 +1,2204 @@
+openapi: 3.0.0
+info:
+  title: RentalAPI
+  version: 0.0.0
+tags:
+  - name: Auth
+  - name: User
+  - name: Accommodation
+  - name: Rents
+  - name: Messages
+  - name: Payment
+paths:
+  /api/accommodations:
+    get:
+      operationId: Accommodations_list
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - $ref: '#/components/parameters/SearchAccommodationsParams.city'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.district'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.accom_type'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.price_min'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.price_max'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.rooms_num'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.with_kids'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.with_pets'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.is_decorated'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.page'
+        - $ref: '#/components/parameters/SearchAccommodationsParams.limit'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchAccommodationsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Accommodation
+    post:
+      operationId: Accommodations_create
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccommodationResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Accommodation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccommodationRequest'
+  /api/accommodations/{id}:
+    get:
+      operationId: Accommodations_read
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccommodationResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Accommodation
+    patch:
+      operationId: Accommodations_update
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccommodationResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Accommodation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAccommodationRequest'
+    delete:
+      operationId: Accommodations_delete
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Accommodation
+  /api/accommodations/{id}/photos:
+    post:
+      operationId: Accommodations_uploadPhoto
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadPhotoResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Accommodation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadPhotoRequest'
+  /api/accommodations/{id}/photos/{photoId}:
+    delete:
+      operationId: Accommodations_deletePhoto
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Accommodation
+  /api/auth/login:
+    post:
+      operationId: Auth_login
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /api/auth/logout:
+    post:
+      operationId: Auth_logout
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Auth
+  /api/auth/register:
+    post:
+      operationId: Auth_register
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Conflict'
+                  - $ref: '#/components/schemas/Validation'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+  /api/messages:
+    get:
+      operationId: Messages_list
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Messages
+    post:
+      operationId: Messages_create
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+  /api/messages/conversation:
+    get:
+      operationId: Messages_getConversation
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: accom_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          explode: false
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          explode: false
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMessagesResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Messages
+  /api/messages/{id}:
+    get:
+      operationId: Messages_read
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Messages
+    patch:
+      operationId: Messages_markAsRead
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkAsReadRequest'
+    delete:
+      operationId: Messages_delete
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Messages
+  /api/payments:
+    get:
+      operationId: Payments_list
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Payment
+    post:
+      operationId: Payments_create
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+  /api/payments/rent/{rentId}:
+    get:
+      operationId: Payments_byRent
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: rentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Payment
+  /api/payments/{id}:
+    get:
+      operationId: Payments_read
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Payment
+  /api/rents:
+    get:
+      operationId: Rents_list
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Rents
+    post:
+      operationId: Rents_create
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/Conflict'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Rents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRentRequest'
+  /api/rents/accommodation/{accomId}:
+    get:
+      operationId: Rents_byAccommodation
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: accomId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Rents
+  /api/rents/{id}:
+    get:
+      operationId: Rents_read
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - Rents
+    patch:
+      operationId: Rents_update
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+                  - $ref: '#/components/schemas/Validation'
+      tags:
+        - Rents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRentStatusRequest'
+  /api/users:
+    get:
+      operationId: Users_list
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+          explode: false
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserNoPwd'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - User
+  /api/users/{id}:
+    get:
+      operationId: Users_read
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - User
+    patch:
+      operationId: Users_update
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+    delete:
+      operationId: Users_delete
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - User
+  /api/users/{id}/conversations:
+    get:
+      operationId: Users_getConversations
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConversationResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - User
+  /api/users/{id}/rents:
+    get:
+      operationId: Users_getRents
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            enum:
+              - Bearer {token}
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRentsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/Unauthorized'
+                  - $ref: '#/components/schemas/Forbidden'
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/ServerError'
+      tags:
+        - User
+components:
+  parameters:
+    SearchAccommodationsParams.accom_type:
+      name: accom_type
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/AccomType'
+      explode: false
+    SearchAccommodationsParams.city:
+      name: city
+      in: query
+      required: false
+      schema:
+        type: string
+      explode: false
+    SearchAccommodationsParams.district:
+      name: district
+      in: query
+      required: false
+      schema:
+        type: string
+      explode: false
+    SearchAccommodationsParams.is_decorated:
+      name: is_decorated
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    SearchAccommodationsParams.limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    SearchAccommodationsParams.page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    SearchAccommodationsParams.price_max:
+      name: price_max
+      in: query
+      required: false
+      schema:
+        type: number
+        format: float
+      explode: false
+    SearchAccommodationsParams.price_min:
+      name: price_min
+      in: query
+      required: false
+      schema:
+        type: number
+        format: float
+      explode: false
+    SearchAccommodationsParams.rooms_num:
+      name: rooms_num
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    SearchAccommodationsParams.with_kids:
+      name: with_kids
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    SearchAccommodationsParams.with_pets:
+      name: with_pets
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+  schemas:
+    AccomPhoto:
+      type: object
+      required:
+        - id
+        - accom_id
+        - photo_url
+      properties:
+        id:
+          type: integer
+          format: int64
+        accom_id:
+          type: integer
+          format: int64
+        photo_url:
+          type: string
+        sort_order:
+          type: integer
+          format: int32
+        is_main:
+          type: boolean
+    AccomType:
+      type: string
+      enum:
+        - flat
+        - house
+        - room
+        - townhouse
+        - dacha
+    Accommodation:
+      type: object
+      required:
+        - id
+        - landlord_id
+        - address_id
+        - accom_type
+        - title
+        - rooms_num
+        - is_decorated
+        - is_rented
+        - is_published
+      properties:
+        id:
+          type: integer
+          format: int64
+        landlord_id:
+          type: integer
+          format: int64
+        address_id:
+          type: integer
+          format: int64
+        accom_type:
+          $ref: '#/components/schemas/AccomType'
+        title:
+          type: string
+        description:
+          type: string
+        rooms_num:
+          type: integer
+          format: int32
+        living_space:
+          type: number
+          format: float
+        is_decorated:
+          type: boolean
+        is_rented:
+          type: boolean
+        is_published:
+          type: boolean
+    AccommodationBaseRequest:
+      type: object
+      required:
+        - accom_type
+        - title
+        - rooms_num
+        - is_decorated
+      properties:
+        accom_type:
+          $ref: '#/components/schemas/AccomType'
+        title:
+          type: string
+        description:
+          type: string
+        rooms_num:
+          type: integer
+          format: int32
+        living_space:
+          type: number
+          format: float
+        is_decorated:
+          type: boolean
+    AccommodationListItem:
+      type: object
+      required:
+        - id
+        - title
+        - address
+        - accom_type
+        - facilities
+        - price
+        - rooms_num
+        - is_rented
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        accom_type:
+          $ref: '#/components/schemas/AccomType'
+        facilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Facility'
+        price:
+          type: number
+          format: float
+        rooms_num:
+          type: integer
+          format: int32
+        living_space:
+          type: number
+          format: float
+        main_photo:
+          $ref: '#/components/schemas/AccomPhoto'
+        is_rented:
+          type: boolean
+    AccommodationResponse:
+      type: object
+      required:
+        - accommodation
+        - landlord
+        - address
+        - photos
+        - facilities
+        - rent_terms
+      properties:
+        accommodation:
+          $ref: '#/components/schemas/Accommodation'
+        landlord:
+          $ref: '#/components/schemas/UserResponse'
+        address:
+          $ref: '#/components/schemas/Address'
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccomPhoto'
+        facilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Facility'
+        rent_terms:
+          $ref: '#/components/schemas/RentTerms'
+    Address:
+      type: object
+      required:
+        - id
+        - city
+        - street
+        - house_num
+      properties:
+        id:
+          type: integer
+          format: int64
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+        house_num:
+          type: string
+        building:
+          type: integer
+          format: int32
+    AddressRequest:
+      type: object
+      required:
+        - city
+        - street
+        - house_num
+      properties:
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+        house_num:
+          type: string
+        building:
+          type: integer
+          format: int32
+    Conflict:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+          enum:
+            - 409
+        message:
+          type: string
+          enum:
+            - 'Conflict: Duplicate resource or constraint violation'
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    ConversationMessagesResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - limit
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageResponse'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        limit:
+          type: integer
+          format: int32
+    ConversationResponse:
+      type: object
+      required:
+        - accommodation_id
+        - accommodation_title
+        - other_user
+        - last_message
+        - unread_count
+      properties:
+        accommodation_id:
+          type: integer
+          format: int64
+        accommodation_title:
+          type: string
+        other_user:
+          type: object
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+          required:
+            - first_name
+            - last_name
+        last_message:
+          type: object
+          properties:
+            text:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+            is_read:
+              type: boolean
+          required:
+            - text
+            - created_at
+            - is_read
+        unread_count:
+          type: integer
+          format: int32
+    CreateAccommodationRequest:
+      type: object
+      required:
+        - address
+        - accommodation
+        - rent_terms
+        - facility_ids
+      properties:
+        address:
+          $ref: '#/components/schemas/AddressRequest'
+        accommodation:
+          $ref: '#/components/schemas/AccommodationBaseRequest'
+        rent_terms:
+          $ref: '#/components/schemas/RentTermsRequest'
+        facility_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+    CreatePaymentRequest:
+      type: object
+      required:
+        - rent_id
+        - amount
+      properties:
+        rent_id:
+          type: integer
+          format: int64
+        amount:
+          type: number
+          format: float
+    CreateRentRequest:
+      type: object
+      required:
+        - accom_id
+        - start_date
+        - end_date
+      properties:
+        accom_id:
+          type: integer
+          format: int64
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        exception:
+          type: string
+        exc_type:
+          type: string
+    Facility:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    FacilityActionRequest:
+      type: object
+      required:
+        - facility_id
+      properties:
+        facility_id:
+          type: integer
+          format: int64
+    Forbidden:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+          enum:
+            - 403
+        message:
+          type: string
+          enum:
+            - 'Forbidden: You do not have permission'
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    MarkAsReadRequest:
+      type: object
+      required:
+        - is_read
+      properties:
+        is_read:
+          type: boolean
+    Message:
+      type: object
+      required:
+        - id
+        - sender_id
+        - receiver_id
+        - mes_text
+        - mes_type
+        - created_at
+        - is_read
+        - is_delivered
+      properties:
+        id:
+          type: integer
+          format: int64
+        sender_id:
+          type: integer
+          format: int64
+        receiver_id:
+          type: integer
+          format: int64
+        mes_text:
+          type: string
+        mes_type:
+          $ref: '#/components/schemas/MessageType'
+        created_at:
+          type: string
+          format: date-time
+        is_read:
+          type: boolean
+        is_delivered:
+          type: boolean
+    MessageAttach:
+      type: object
+      required:
+        - id
+        - message_id
+        - file_url
+      properties:
+        id:
+          type: integer
+          format: int64
+        message_id:
+          type: integer
+          format: int64
+        file_url:
+          type: object
+    MessageResponse:
+      type: object
+      required:
+        - message
+        - sender
+        - receiver
+        - attachments
+      properties:
+        message:
+          $ref: '#/components/schemas/Message'
+        sender:
+          type: object
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+          required:
+            - first_name
+            - last_name
+        receiver:
+          type: object
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+          required:
+            - first_name
+            - last_name
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageAttach'
+    MessageType:
+      type: string
+      enum:
+        - text
+        - image
+        - file
+    NotFound:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+          enum:
+            - 404
+        message:
+          type: string
+          enum:
+            - "Not Found: Resource doesn't exist"
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    Payment:
+      type: object
+      required:
+        - id
+        - rent_id
+        - amount
+        - status
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        rent_id:
+          type: integer
+          format: int64
+        amount:
+          type: number
+          format: float
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        created_at:
+          type: string
+          format: date-time
+    PaymentResponse:
+      type: object
+      required:
+        - payment
+      properties:
+        payment:
+          $ref: '#/components/schemas/Payment'
+    PaymentStatus:
+      type: string
+      enum:
+        - successful
+        - pending
+        - failed
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - first_name
+        - last_name
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+    Rent:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - accom_id
+        - start_date
+        - end_date
+        - rent_status
+      properties:
+        id:
+          type: integer
+          format: int64
+        tenant_id:
+          type: integer
+          format: int64
+        accom_id:
+          type: integer
+          format: int64
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        rent_status:
+          $ref: '#/components/schemas/RentStatus'
+    RentResponse:
+      type: object
+      required:
+        - rent
+        - accommodation
+        - tenant
+        - landlord
+      properties:
+        rent:
+          $ref: '#/components/schemas/Rent'
+        accommodation:
+          $ref: '#/components/schemas/AccommodationListItem'
+        tenant:
+          $ref: '#/components/schemas/UserResponse'
+        landlord:
+          $ref: '#/components/schemas/UserResponse'
+    RentStatus:
+      type: string
+      enum:
+        - ongoing
+        - closed
+    RentTerms:
+      type: object
+      required:
+        - id
+        - accom_id
+        - price
+        - with_kids
+        - with_pets
+      properties:
+        id:
+          type: integer
+          format: int64
+        accom_id:
+          type: integer
+          format: int64
+        util_serv_pay:
+          type: string
+        price:
+          type: number
+          format: float
+        deposit:
+          type: number
+          format: float
+        commission:
+          type: number
+          format: float
+        with_kids:
+          type: boolean
+        with_pets:
+          type: boolean
+    RentTermsRequest:
+      type: object
+      required:
+        - price
+        - with_kids
+        - with_pets
+      properties:
+        util_serv_pay:
+          type: string
+        price:
+          type: number
+          format: float
+        deposit:
+          type: number
+          format: float
+        commission:
+          type: number
+          format: float
+        with_kids:
+          type: boolean
+        with_pets:
+          type: boolean
+    Role:
+      type: string
+      enum:
+        - admin
+        - user
+    SearchAccommodationsResponse:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - limit
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccommodationListItem'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        limit:
+          type: integer
+          format: int32
+    SendMessageRequest:
+      type: object
+      required:
+        - receiver_id
+        - accom_id
+        - mes_text
+      properties:
+        receiver_id:
+          type: integer
+          format: int64
+        accom_id:
+          type: integer
+          format: int64
+        mes_text:
+          type: string
+        mes_type:
+          $ref: '#/components/schemas/MessageType'
+        attachment_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+    ServerError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+          enum:
+            - 500
+        message:
+          type: string
+          enum:
+            - Internal server error occurred
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    Unauthorized:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+          enum:
+            - 401
+        message:
+          type: string
+          enum:
+            - 'Unauthorized: Invalid credentials or session expired'
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    UpdateAccommodationRequest:
+      type: object
+      required:
+        - facility_ids
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        rooms_num:
+          type: integer
+          format: int32
+        living_space:
+          type: number
+          format: float
+        is_decorated:
+          type: boolean
+        is_published:
+          type: boolean
+        rent_terms:
+          type: object
+          properties:
+            util_serv_pay:
+              type: string
+            price:
+              type: number
+              format: float
+            deposit:
+              type: number
+              format: float
+            commission:
+              type: number
+              format: float
+            with_kids:
+              type: boolean
+            with_pets:
+              type: boolean
+        facility_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+    UpdateProfileRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+    UpdateRentStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/RentStatus'
+    UploadPhotoRequest:
+      type: object
+      required:
+        - contentType
+        - file
+      properties:
+        contentType:
+          type: string
+          enum:
+            - multipart/form-data
+        file:
+          type: object
+    UploadPhotoResponse:
+      type: object
+      required:
+        - id
+        - photo_url
+      properties:
+        id:
+          type: integer
+          format: int64
+        photo_url:
+          type: string
+    User:
+      type: object
+      required:
+        - id
+        - role
+        - first_name
+        - last_name
+        - email
+        - is_verified
+      properties:
+        id:
+          type: integer
+          format: int64
+        role:
+          $ref: '#/components/schemas/Role'
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        is_verified:
+          type: boolean
+    UserNoPwd:
+      type: object
+      required:
+        - id
+        - role
+        - first_name
+        - last_name
+        - is_verified
+      properties:
+        id:
+          type: integer
+          format: int64
+        role:
+          $ref: '#/components/schemas/Role'
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        is_verified:
+          type: boolean
+    UserRentsResponse:
+      type: object
+      required:
+        - as_tenant
+        - as_landlord
+      properties:
+        as_tenant:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentResponse'
+        as_landlord:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentResponse'
+    UserResponse:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+      properties:
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+    Validation:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: number
+          enum:
+            - 422
+        message:
+          type: string
+          enum:
+            - Validation failed for the provided data
+      allOf:
+        - $ref: '#/components/schemas/Error'
+servers:
+  - url: http://localhost:8000
+    variables: {}
