@@ -7,13 +7,22 @@ import { useExpressServer } from 'routing-controllers';
 import SETTINGS from './config/settings';
 import dataSource from './config/data-source';
 import { useSwagger } from './swagger';
+
 import AuthController from './controllers/auth.controller';
+import UserController from './controllers/user.controller';
+import CityController from './controllers/city.controller';
+import ComfortController from './controllers/comfort.controller';
+import PropertyController from './controllers/property.controller';
+import PropertyPhotoController from './controllers/property-photo.controller';
+import RentDealController from './controllers/rent-deal.controller';
+import ConversationController from './controllers/conversation.controller';
+import MessageController from './controllers/message.controller';
+import ReviewController from './controllers/review.controller';
 
 class App {
     public port: number;
     public host: string;
     public protocol: string;
-    public controllersPath: string;
 
     private app: express.Application;
 
@@ -21,13 +30,10 @@ class App {
         port = SETTINGS.APP_PORT,
         host = SETTINGS.APP_HOST,
         protocol = SETTINGS.APP_PROTOCOL,
-        controllersPath = SETTINGS.APP_CONTROLLERS_PATH,
     ) {
         this.port = port;
         this.host = host;
         this.protocol = protocol;
-
-        this.controllersPath = controllersPath;
 
         this.app = this.configureApp();
     }
@@ -41,8 +47,18 @@ class App {
 
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
-            // controllers: [__dirname + this.controllersPath],
-            controllers: [AuthController],
+            controllers: [
+                AuthController,
+                UserController,
+                CityController,
+                ComfortController,
+                PropertyController,
+                PropertyPhotoController,
+                RentDealController,
+                ConversationController,
+                MessageController,
+                ReviewController,
+            ],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,
