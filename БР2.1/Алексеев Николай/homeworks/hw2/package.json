@@ -1,0 +1,25 @@
+{
+  "name": "hw2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tsp compile .",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@typespec/compiler": "latest",
+    "@typespec/http": "latest",
+    "@typespec/http-client-js": "latest",
+    "@typespec/http-client-python": "latest",
+    "@typespec/openapi": "latest",
+    "@typespec/openapi3": "latest",
+    "@typespec/rest": "latest",
+    "express": "^5.1.0",
+    "js-yaml": "^4.1.0",
+    "swagger-ui-express": "^5.0.1",
+    "redoc-express": "latest"
+  },
+  "author": "",
+  "license": "ISC"
+}
