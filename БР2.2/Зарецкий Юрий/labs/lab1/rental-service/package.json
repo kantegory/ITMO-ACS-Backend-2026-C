@@ -7,13 +7,14 @@
     "build": "npx tsc",
     "prestart": "npm run build",
     "start": "node dist/app.js",
-    "dev": "npx tsx --env-file=.env --watch  src/app.ts",
+    "dev": "tsc && node --env-file=.env dist/app.js",
     "format": "prettier --write \"src/**/*.ts\""
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.10.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "class-validator-jsonschema": "^5.0.1",
