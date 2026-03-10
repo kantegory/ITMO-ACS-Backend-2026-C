@@ -32,8 +32,8 @@ export function useSwagger(
                 },
             },
             info: {
-                title: 'Boilerplate API documentation',
-                description: 'API documentation for boilerplate',
+                title: 'Rental Service API',
+                description: 'REST API for property rental service',
                 version: '1.0.0',
             },
         });
