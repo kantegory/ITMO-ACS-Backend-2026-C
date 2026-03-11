@@ -1,0 +1,938 @@
+openapi: '3.0.0'
+info:
+  title: Real Estate API
+  description: API for user authentication, property management, and messaging
+  version: '1.0.0'
+paths:
+  /auth/register:
+    post:
+      operationId: registerUser
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                email:
+                  type: string
+      responses:
+        "200":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          description: Invalid input data
+        "409":
+          description: User already exists
+        "500":
+          description: Internal server error
+  /auth/login:
+    post:
+      operationId: loginUser
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "400":
+          description: Invalid input data
+        "401":
+          description: Unauthorized - invalid credentials
+        "500":
+          description: Internal server error
+  /users/{id}:
+    get:
+      operationId: getUserById
+      summary: Retrieve a single user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A single user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+  /cities:
+    get:
+      operationId: getAllCities
+      summary: Retrieve all cities
+      responses:
+        "200":
+          description: A list of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+        "500":
+          description: Internal server error
+    post:
+      operationId: createCity
+      summary: Create a new city
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                city_name:
+                  type: string
+      responses:
+        "201":
+          description: City created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        "400":
+          description: Invalid input data
+        "500":
+          description: Internal server error
+  /properties:
+    get:
+      operationId: getAllProperties
+      summary: Retrieve all properties
+      responses:
+        "200":
+          description: A list of properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Property'
+        "500":
+          description: Internal server error
+    post:
+      operationId: createProperty
+      summary: Create a new property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                type:
+                  type: string
+                adress:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                status:
+                  type: string
+                owner_id:
+                  type: integer
+                city_id:
+                  type: integer
+      responses:
+        "201":
+          description: Property created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        "400":
+          description: Invalid input data
+        "500":
+          description: Internal server error
+  /properties/{id}:
+    get:
+      operationId: getPropertyById
+      summary: Retrieve a single property by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A single property
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+    patch:
+      operationId: updateProperty
+      summary: Update an existing property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                adress:
+                  type: string
+                status:
+                  type: string
+                type:
+                  type: string
+      responses:
+        "200":
+          description: Property updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+    delete:
+      operationId: deleteProperty
+      summary: Delete a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Property deleted successfully
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+  /properties/{id}/photos:
+    get:
+      operationId: getPropertyPhotos
+      summary: Retrieve photos for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of photos for the property
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyPhoto'
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+    post:
+      operationId: createPropertyPhoto
+      summary: Add a photo to a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image_url:
+                  type: string
+      responses:
+        "201":
+          description: Photo added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PropertyPhoto'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+  /photos/{id}:
+    delete:
+      operationId: deletePhoto
+      summary: Delete a photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Photo deleted successfully
+        "404":
+          description: Photo not found
+        "500":
+          description: Internal server error
+  /properties/{id}/facilities:
+    get:
+      operationId: getPropertyFacilities
+      summary: Retrieve facilities for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of facilities for the property
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Facility'
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+    post:
+      operationId: createPropertyFacility
+      summary: Add a facility to a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                facility_type:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        "201":
+          description: Facility added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facility'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+  /facilities/{id}:
+    put:
+      operationId: updateFacility
+      summary: Update a facility
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                facility_type:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        "200":
+          description: Facility updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Facility'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Facility not found
+        "500":
+          description: Internal server error
+    delete:
+      operationId: deleteFacility
+      summary: Delete a facility
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Facility deleted successfully
+        "404":
+          description: Facility not found
+        "500":
+          description: Internal server error
+  /properties/{id}/bookings:
+    get:
+      operationId: getPropertyBookings
+      summary: Retrieve bookings for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of bookings for the property
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+    post:
+      operationId: createPropertyBooking
+      summary: Create a booking for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        "201":
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+  /users/{id}/bookings:
+    get:
+      operationId: getUserBookings
+      summary: Retrieve bookings for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of bookings for the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+  /bookings/{id}:
+    put:
+      operationId: updateBooking
+      summary: Update a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        "200":
+          description: Booking updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Booking not found
+        "500":
+          description: Internal server error
+    delete:
+      operationId: deleteBooking
+      summary: Delete a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Booking deleted successfully
+        "404":
+          description: Booking not found
+        "500":
+          description: Internal server error
+  /properties/{id}/reviews:
+    get:
+      operationId: getPropertyReviews
+      summary: Retrieve reviews for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of reviews for the property
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+  /bookings/{id}/reviews:
+    post:
+      operationId: createBookingReview
+      summary: Create a review for a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        "201":
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Booking not found
+        "500":
+          description: Internal server error
+  /properties/{id}/chats:
+    get:
+      operationId: getPropertyChats
+      summary: Retrieve chats for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of chats for the property
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chat'
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+    post:
+      operationId: createPropertyChat
+      summary: Create a chat for a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        "201":
+          description: Chat created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Property not found
+        "500":
+          description: Internal server error
+  /users/{id}/chats:
+    get:
+      operationId: getUserChats
+      summary: Retrieve chats for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of chats for the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chat'
+        "404":
+          description: User not found
+        "500":
+          description: Internal server error
+  /chats/{chatId}/messages:
+    get:
+      operationId: getChatMessages
+      summary: Retrieve messages in a chat
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of messages in the chat
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        "404":
+          description: Chat not found
+        "500":
+          description: Internal server error
+    post:
+      operationId: createChatMessage
+      summary: Create a message in a chat
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sender_id:
+                  type: integer
+                content:
+                  type: string
+      responses:
+        "201":
+          description: Message created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        "400":
+          description: Invalid input data
+        "404":
+          description: Chat not found
+        "500":
+          description: Internal server error
+  /messages/{id}:
+    delete:
+      operationId: deleteMessage
+      summary: Delete a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Message deleted successfully
+        "404":
+          description: Message not found
+        "500":
+          description: Internal server error
+components:
+  schemas:
+    User:
+      type: object
+      description: A user of the system
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date
+    Property:
+      type: object
+      description: A real estate property
+      properties:
+        id:
+          type: integer
+        owner_id:
+          type: integer
+        city_id:
+          type: integer
+        description:
+          type: string
+        type:
+          type: string
+        adress:
+          type: string
+        title:
+          type: string
+        price:
+          type: number
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date
+    Message:
+      type: object
+      description: A message between users
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        chat_id:
+          type: integer
+        content:
+          type: string
+        sent_at:
+          type: string
+          format: date
+    Booking:
+      type: object
+      description: A booking for a property
+      properties:
+        id:
+          type: integer
+        property_id:
+          type: integer
+        tenant_id:
+          type: integer
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        total_price:
+          type: number
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date
+    BookingRequest:
+      type: object
+      description: Booking request payload
+      properties:
+        tenant_id:
+          type: integer
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        total_price:
+          type: number
+        status:
+          type: string
+    Review:
+      type: object
+      description: A review for a property
+      properties:
+        id:
+          type: integer
+        booking_id:
+          type: integer
+        author_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date
+    ReviewRequest:
+      type: object
+      description: Review request payload
+      properties:
+        author_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+    Chat:
+      type: object
+      description: A chat related to a property
+      properties:
+        chat_id:
+          type: integer
+        sender_id:
+          type: integer
+        reciever_id:
+          type: integer
+        property_id:
+          type: integer
+    ChatRequest:
+      type: object
+      description: Chat creation request payload
+      properties:
+        sender_id:
+          type: integer
+        reciever_id:
+          type: integer
+        property_id:
+          type: integer
+    PropertyPhoto:
+      type: object
+      description: A photo of a property
+      properties:
+        id:
+          type: integer
+        property_id:
+          type: integer
+        image_url:
+          type: string
+    Facility:
+      type: object
+      description: A facility of a property
+      properties:
+        id:
+          type: integer
+        property_id:
+          type: integer
+        facility_type:
+          type: string
+        amount:
+          type: number
+    City:
+      type: object
+      description: A city
+      properties:
+        id:
+          type: integer
+        city_name:
+          type: string
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/zxc-271/RentalService/1.0.0
