@@ -3,6 +3,8 @@ info:
   title: Real Estate API
   description: API for user authentication, property management, and messaging
   version: '1.0.0'
+security:
+  - bearerAuth: []
 paths:
   /auth/register:
     post:
@@ -289,12 +291,15 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
-                image_url:
+                property_id:
+                  type: integer
+                image:
                   type: string
+                  format: binary
       responses:
         "201":
           description: Photo added successfully
@@ -750,6 +755,11 @@ paths:
         "500":
           description: Internal server error
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     User:
       type: object
@@ -801,8 +811,6 @@ components:
       properties:
         id:
           type: integer
-        user_id:
-          type: integer
         chat_id:
           type: integer
         content:
@@ -817,8 +825,6 @@ components:
         id:
           type: integer
         property_id:
-          type: integer
-        tenant_id:
           type: integer
         start_date:
           type: string
@@ -857,8 +863,6 @@ components:
           type: integer
         booking_id:
           type: integer
-        author_id:
-          type: integer
         rating:
           type: integer
           minimum: 1
@@ -872,8 +876,6 @@ components:
       type: object
       description: Review request payload
       properties:
-        author_id:
-          type: integer
         rating:
           type: integer
           minimum: 1
@@ -910,8 +912,9 @@ components:
           type: integer
         property_id:
           type: integer
-        image_url:
+        image:
           type: string
+          format: binary
     Facility:
       type: object
       description: A facility of a property
