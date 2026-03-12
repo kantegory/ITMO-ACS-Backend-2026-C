@@ -10,7 +10,7 @@ import {
     Patch,
     UseBefore,
     Req,
-    QueryParams,
+    QueryParam,
 } from 'routing-controllers';
 
 import EntityController from '../common/entity-controller';
@@ -20,10 +20,10 @@ import { User } from '../models/user.entity';
 import { Review } from '../models/review.entity';
 import {
     CreateUserDto,
-    ListUsersQueryDto,
     PatchUserDto,
     UpdateUserDto,
 } from '../dto/user.dto';
+import { UserType } from '../models/enums';
 
 import authMiddleware, {
     RequestWithUser,
@@ -36,11 +36,15 @@ import dataSource from '../config/data-source';
 })
 class UserController extends BaseController {
     @Get('')
-    async getAll(@QueryParams() query: ListUsersQueryDto) {
-        const limit = query.limit || 20;
-        const offset = query.offset || 0;
+    async getAll(
+        @QueryParam('type', { required: false, type: String }) type?: UserType,
+        @QueryParam('limit', { required: false, type: Number }) limitRaw?: number,
+        @QueryParam('offset', { required: false, type: Number }) offsetRaw?: number,
+    ) {
+        const limit = this.parseIntOrDefault(limitRaw, 20, 1);
+        const offset = this.parseIntOrDefault(offsetRaw, 0, 0);
 
-        const where = query.type ? { type: query.type } : {};
+        const where = type ? { type } : {};
         const [data, total] = await this.repository.findAndCount({
             where,
             take: limit,
@@ -161,6 +165,23 @@ class UserController extends BaseController {
             phone: user.phone,
             type: user.type,
         };
+    }
+
+    private parseIntOrDefault(
+        raw: number | undefined,
+        fallback: number,
+        min: number,
+    ): number {
+        if (raw === undefined) {
+            return fallback;
+        }
+
+        const parsed = Number(raw);
+        if (!Number.isInteger(parsed) || parsed < min) {
+            return fallback;
+        }
+
+        return parsed;
     }
 }
 

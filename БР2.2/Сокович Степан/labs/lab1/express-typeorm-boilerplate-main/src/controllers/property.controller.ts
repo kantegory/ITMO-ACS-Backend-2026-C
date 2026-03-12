@@ -6,14 +6,14 @@ import {
     NotFoundError,
     Param,
     Post,
-    QueryParams,
+    QueryParam,
     Req,
     UseBefore,
 } from 'routing-controllers';
 import EntityController from '../common/entity-controller';
 import BaseController from '../common/base-controller';
 import { Property } from '../models/property.entity';
-import { ListPropertiesQueryDto, CreatePhotoDto, CreatePropertyDto } from '../dto/property.dto';
+import { CreatePhotoDto, CreatePropertyDto } from '../dto/property.dto';
 import authMiddleware, { RequestWithUser } from '../middlewares/auth.middleware';
 import { Amenity } from '../models/amenity.entity';
 import { EstateType } from '../models/estate-type.entity';
@@ -28,26 +28,45 @@ import { In } from 'typeorm';
 })
 class PropertyController extends BaseController {
     @Get('')
-    async list(@QueryParams() query: ListPropertiesQueryDto) {
+    async list(
+        @QueryParam('city', { required: false, type: String }) city?: string,
+        @QueryParam('typeId', { required: false, type: Number }) typeIdRaw?: number,
+        @QueryParam('minPrice', { required: false, type: Number }) minPriceRaw?: number,
+        @QueryParam('maxPrice', { required: false, type: Number }) maxPriceRaw?: number,
+        @QueryParam('amenityIds', {
+            required: false,
+            type: Number,
+            isArray: true,
+        })
+        amenityIdsRaw?: number[] | number,
+        @QueryParam('limit', { required: false, type: Number }) limitRaw?: number,
+        @QueryParam('offset', { required: false, type: Number }) offsetRaw?: number,
+    ) {
+        const typeId = this.parseOptionalInt(typeIdRaw);
+        const minPrice = this.parseOptionalInt(minPriceRaw);
+        const maxPrice = this.parseOptionalInt(maxPriceRaw);
+        const limit = this.parseIntOrDefault(limitRaw, 20, 1);
+        const offset = this.parseIntOrDefault(offsetRaw, 0, 0);
+
         const qb = this.repository
             .createQueryBuilder('property')
             .leftJoinAndSelect('property.amenities', 'amenity')
             .leftJoinAndSelect('property.type', 'type');
 
-        if (query.city) {
-            qb.andWhere('property.city ILIKE :city', { city: `%${query.city}%` });
+        if (city) {
+            qb.andWhere('property.city ILIKE :city', { city: `%${city}%` });
         }
-        if (query.typeId) {
-            qb.andWhere('property.type_id = :typeId', { typeId: query.typeId });
+        if (typeId !== undefined) {
+            qb.andWhere('property.type_id = :typeId', { typeId });
         }
-        if (query.minPrice !== undefined) {
-            qb.andWhere('property.price >= :minPrice', { minPrice: query.minPrice });
+        if (minPrice !== undefined) {
+            qb.andWhere('property.price >= :minPrice', { minPrice });
         }
-        if (query.maxPrice !== undefined) {
-            qb.andWhere('property.price <= :maxPrice', { maxPrice: query.maxPrice });
+        if (maxPrice !== undefined) {
+            qb.andWhere('property.price <= :maxPrice', { maxPrice });
         }
 
-        const amenityIds = this.normalizeAmenityIds(query);
+        const amenityIds = this.normalizeAmenityIds(amenityIdsRaw);
         if (amenityIds.length > 0) {
             qb.innerJoin('property.amenities', 'af', 'af.id IN (:...amenityIds)', {
                 amenityIds,
@@ -60,8 +79,8 @@ class PropertyController extends BaseController {
                 });
         }
 
-        qb.take(query.limit || 20)
-            .skip(query.offset || 0)
+        qb.take(limit)
+            .skip(offset)
             .orderBy('property.id', 'ASC');
 
         const [data, total] = await qb.getManyAndCount();
@@ -154,8 +173,7 @@ class PropertyController extends BaseController {
         return await photoRepository.save(photo);
     }
 
-    private normalizeAmenityIds(query: ListPropertiesQueryDto): number[] {
-        const raw = query.amenityIds;
+    private normalizeAmenityIds(raw: number[] | number | undefined): number[] {
         if (!raw) {
             return [];
         }
@@ -164,6 +182,28 @@ class PropertyController extends BaseController {
         const parsed = list.map((item) => Number(item)).filter((item) => Number.isInteger(item));
 
         return Array.from(new Set(parsed));
+    }
+
+    private parseOptionalInt(raw: number | undefined): number | undefined {
+        if (raw === undefined) {
+            return undefined;
+        }
+
+        const parsed = Number(raw);
+        return Number.isInteger(parsed) ? parsed : undefined;
+    }
+
+    private parseIntOrDefault(raw: number | undefined, fallback: number, min: number): number {
+        if (raw === undefined) {
+            return fallback;
+        }
+
+        const parsed = Number(raw);
+        if (!Number.isInteger(parsed) || parsed < min) {
+            return fallback;
+        }
+
+        return parsed;
     }
 
     private async loadAmenities(amenityIds: number[]): Promise<Amenity[]> {
