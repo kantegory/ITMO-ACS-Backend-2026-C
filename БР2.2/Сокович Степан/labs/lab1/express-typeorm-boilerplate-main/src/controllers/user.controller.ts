@@ -150,8 +150,11 @@ class UserController extends BaseController {
         return { data };
     }
 
-    private assertUserCanEdit(currentUserId: number, targetUserId: number): void {
-        if (currentUserId !== targetUserId) {
+    private assertUserCanEdit(
+        currentUserId: number,
+        targetUserId: number | string,
+    ): void {
+        if (Number(currentUserId) !== Number(targetUserId)) {
             throw new ForbiddenError('You can edit only your profile');
         }
     }
