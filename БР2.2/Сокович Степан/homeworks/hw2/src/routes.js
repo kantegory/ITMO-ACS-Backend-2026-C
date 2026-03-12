@@ -30,6 +30,19 @@ router.patch("/users/:id", (req, res) => {
   res.status(200).json({ ok: true, id: req.params.id, patched: true });
 });
 
+router.get("/amenities", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    data: [
+      { id: 1, name: "Посудомоечная машина" },
+      { id: 2, name: "Стиральная машина" },
+      { id: 3, name: "Wi-Fi" },
+      { id: 4, name: "Кондиционер" },
+      { id: 5, name: "Парковка" },
+    ],
+  });
+});
+
 router.get("/properties", (req, res) => {
   res.status(200).json({ ok: true, data: [] });
 });

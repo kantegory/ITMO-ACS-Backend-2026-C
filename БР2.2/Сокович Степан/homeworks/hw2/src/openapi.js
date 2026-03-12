@@ -16,6 +16,7 @@ const openApiSpec = {
     { name: "Авторизация", description: "Аутентификация и регистрация" },
     { name: "Пользователи", description: "Управление данными пользователей" },
     { name: "Недвижимость", description: "Управление объектами недвижимости" },
+    { name: "Удобства", description: "Справочник удобств (посудомойка, стиральная машина и т.д.)" },
     { name: "Сделки", description: "Жизненный цикл сделок аренды" },
     { name: "Чаты", description: "Чаты между арендодателем и арендатором" },
     { name: "Отзывы", description: "Отзывы пользователей" },
@@ -204,6 +205,7 @@ const openApiSpec = {
           { name: "typeId", in: "query", schema: { type: "integer" } },
           { name: "minPrice", in: "query", schema: { type: "integer" } },
           { name: "maxPrice", in: "query", schema: { type: "integer" } },
+          { name: "amenityIds", in: "query", description: "Фильтр по ID удобств (объект должен иметь все перечисленные)", schema: { type: "array", items: { type: "integer" } }, style: "form", explode: true },
           { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
           { name: "offset", in: "query", schema: { type: "integer", default: 0 } },
         ],
@@ -294,6 +296,30 @@ const openApiSpec = {
           },
           400: { $ref: "#/components/responses/BadRequest" },
           404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/amenities": {
+      get: {
+        tags: ["Удобства"],
+        summary: "Получить справочник удобств",
+        responses: {
+          200: {
+            description: "Список удобств (посудомойка, стиральная машина, Wi‑Fi и т.д.)",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Amenity" },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -714,6 +740,14 @@ const openApiSpec = {
         },
         required: ["id", "name"],
       },
+      Amenity: {
+        type: "object",
+        properties: {
+          id: { type: "integer" },
+          name: { type: "string" },
+        },
+        required: ["id", "name"],
+      },
       Photo: {
         type: "object",
         properties: {
@@ -743,6 +777,11 @@ const openApiSpec = {
           city: { type: "string" },
           address: { type: "string" },
           typeId: { type: "integer" },
+          amenityIds: {
+            type: "array",
+            items: { type: "integer" },
+            description: "ID удобств (посудомойка, стиральная машина и т.д.)",
+          },
         },
         required: ["id", "name", "price", "ownerId", "city", "typeId"],
       },
@@ -756,6 +795,11 @@ const openApiSpec = {
               photos: {
                 type: "array",
                 items: { $ref: "#/components/schemas/Photo" },
+              },
+              amenities: {
+                type: "array",
+                items: { $ref: "#/components/schemas/Amenity" },
+                description: "Список удобств объекта",
               },
             },
           },
@@ -771,6 +815,11 @@ const openApiSpec = {
           city: { type: "string" },
           address: { type: "string" },
           typeId: { type: "integer" },
+          amenityIds: {
+            type: "array",
+            items: { type: "integer" },
+            description: "ID удобств",
+          },
         },
         required: ["name", "price", "city", "address", "typeId"],
       },
