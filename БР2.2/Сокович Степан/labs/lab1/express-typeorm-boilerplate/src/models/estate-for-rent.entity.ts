@@ -13,6 +13,9 @@ import { EstateType } from './estate-type.entity';
 import { Photo } from './photo.entity';
 import { Deal } from './deal.entity';
 
+import { ManyToMany, JoinTable } from 'typeorm';
+import { Amenity } from './amentity.entity';
+
 @Entity('estate_for_rent')
 export class EstateForRent extends BaseEntity {
     @PrimaryGeneratedColumn('increment', { type: 'bigint' })
@@ -87,4 +90,18 @@ export class EstateForRent extends BaseEntity {
 
     @OneToMany(() => Deal, (deal) => deal.estate)
     deals: Deal[];
+
+    @ManyToMany(() => Amenity, (amenity) => amenity.estates)
+    @JoinTable({
+        name: 'estate_amenities',
+        joinColumn: {
+            name: 'estate_id',
+            referencedColumnName: 'id',
+        },
+        inverseJoinColumn: {
+            name: 'amenity_id',
+            referencedColumnName: 'id',
+        },
+    })
+    amenities: Amenity[];
 }
