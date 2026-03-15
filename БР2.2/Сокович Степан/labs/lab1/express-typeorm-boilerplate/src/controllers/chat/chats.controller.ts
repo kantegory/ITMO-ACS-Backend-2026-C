@@ -77,7 +77,7 @@ class ChatsController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
     async createChatMessage(
         @Param('id') id: number,
-        @Body() body: CreateMessageDto,
+        @Body({ type: CreateMessageDto }) body: CreateMessageDto,
     ): Promise<MessageResponseDto> {
         const chat = await this.repository.findOneBy({ id: String(id) });
         if (!chat) {
@@ -123,7 +123,7 @@ class ChatsController extends BaseController {
     @ResponseSchema(ChatResponseDto, { statusCode: 201 })
     @ResponseSchema(ErrorResponseDto, { statusCode: 400 })
     async createChat(
-        @Body() body: CreateChatDto,
+        @Body({ type: CreateChatDto }) body: CreateChatDto,
     ): Promise<ChatResponseDto> {
         const { user1Id, user2Id } = body;
 

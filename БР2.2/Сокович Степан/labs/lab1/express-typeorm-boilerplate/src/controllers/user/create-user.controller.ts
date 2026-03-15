@@ -6,6 +6,8 @@ import bcrypt from 'bcrypt';
 import EntityController from '../../common/entity-controller';
 import BaseController from '../../common/base-controller';
 import { User, UserType } from '../../models/user.entity';
+import { Review } from '../../models/review.entity';
+import { ReviewsListResponseDto } from '../review/dto';
 
 export class GetUsersQueryDto {
     @IsOptional()
@@ -153,7 +155,7 @@ class UsersController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 400 })
     @ResponseSchema(ErrorResponseDto, { statusCode: 409 })
     async createUser(
-        @Body() body: CreateUserDto,
+        @Body({ type: CreateUserDto }) body: CreateUserDto,
     ): Promise<UserResponseDto> {
         const { name, email, phone, password, type } = body;
 
@@ -215,7 +217,7 @@ class UsersController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
     async updateUser(
         @Param('id') id: number,
-        @Body() body: UpdateUserDto,
+        @Body({ type: UpdateUserDto }) body: UpdateUserDto,
     ): Promise<UserResponseDto> {
         const user = await this.repository.findOneBy({ id: String(id) });
 
@@ -249,7 +251,7 @@ class UsersController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
     async patchUser(
         @Param('id') id: number,
-        @Body() body: PatchUserDto,
+        @Body({ type: PatchUserDto }) body: PatchUserDto,
     ): Promise<UserResponseDto> {
         const user = await this.repository.findOneBy({ id: String(id) });
 
@@ -282,6 +284,36 @@ class UsersController extends BaseController {
             email: updatedUser.email,
             phone: updatedUser.phone,
             type: updatedUser.type,
+        };
+    }
+
+    @Get('/:id/reviews')
+    @OpenAPI({ summary: 'Получить отзывы пользователя' })
+    @ResponseSchema(ReviewsListResponseDto, { statusCode: 200 })
+    @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
+    async getUserReviews(
+        @Param('id') id: number,
+    ): Promise<ReviewsListResponseDto> {
+        const user = await this.repository.findOneBy({ id: String(id) });
+        if (!user) {
+            throw new HttpError(404, 'User not found');
+        }
+
+        const reviewRepository = this.repository.manager.getRepository(Review);
+        const reviews = await reviewRepository.find({
+            where: { targetId: String(id) },
+            order: { createdAt: 'DESC' },
+        });
+
+        return {
+            data: reviews.map((review) => ({
+                id: review.id,
+                authorId: review.authorId,
+                targetId: review.targetId,
+                rating: Number(review.rating),
+                createdAt: review.createdAt,
+                text: review.text,
+            })),
         };
     }
 

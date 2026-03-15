@@ -51,7 +51,7 @@ class PropertiesController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 400 })
     @ResponseSchema(ErrorResponseDto, { statusCode: 401 })
     async createProperty(
-        @Body() body: CreatePropertyDto,
+        @Body({ type: CreatePropertyDto }) body: CreatePropertyDto,
         @Req() request: RequestWithUser,
     ): Promise<PropertyResponseDto> {
         const { name, price, deposit, description, city, address, typeId, amenityIds } = body;
@@ -159,7 +159,7 @@ class PropertiesController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
     async addPropertyPhoto(
         @Param('id') id: number,
-        @Body() body: CreatePropertyPhotoDto,
+        @Body({ type: CreatePropertyPhotoDto }) body: CreatePropertyPhotoDto,
     ): Promise<PropertyPhotoDto> {
         const property = await this.repository.findOneBy({ id: String(id) });
         if (!property) {

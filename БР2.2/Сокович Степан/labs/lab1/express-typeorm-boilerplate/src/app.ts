@@ -14,6 +14,7 @@ import AmenitiesController from './controllers/amenity/amenities.controller';
 import DealsController from './controllers/deal/deals.controller';
 import ChatsController from './controllers/chat/chats.controller';
 import MessagesController from './controllers/message/messages.controller';
+import ReviewsController from './controllers/review/reviews.controller';
 
 class App {
     public port: number;
@@ -45,7 +46,7 @@ class App {
 
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
-            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController, DealsController, ChatsController, MessagesController],
+            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController, DealsController, ChatsController, MessagesController, ReviewsController],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,

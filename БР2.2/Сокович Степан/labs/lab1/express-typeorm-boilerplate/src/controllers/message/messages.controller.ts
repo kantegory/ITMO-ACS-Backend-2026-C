@@ -19,7 +19,7 @@ class MessagesController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
     async patchMessage(
         @Param('id') id: number,
-        @Body() body: UpdateMessageDto,
+        @Body({ type: UpdateMessageDto }) body: UpdateMessageDto,
     ): Promise<MessageResponseDto> {
         const message = await this.repository.findOneBy({ id: String(id) }) as Message | null;
         if (!message) {

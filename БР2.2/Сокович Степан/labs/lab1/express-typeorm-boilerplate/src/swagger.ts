@@ -43,6 +43,12 @@ export function useSwagger(
         return app;
     } catch (error) {
         console.error('Ошибка настройки Swagger:', error);
+        try {
+            const { openApiSpec } = require('../../../../homeworks/hw2/src/openapi.js');
+            app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+        } catch (fallbackError) {
+            console.error('Ошибка fallback Swagger:', fallbackError);
+        }
         return app;
     }
 }

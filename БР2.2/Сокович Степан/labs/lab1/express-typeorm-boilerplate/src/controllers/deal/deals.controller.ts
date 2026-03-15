@@ -47,7 +47,7 @@ class DealsController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 400 })
     @ResponseSchema(ErrorResponseDto, { statusCode: 409 })
     async createDeal(
-        @Body() body: CreateDealDto,
+        @Body({ type: CreateDealDto }) body: CreateDealDto,
     ): Promise<DealResponseDto> {
         const { estateId, landlordId, tenantId, startTime, endTime } = body;
 
@@ -127,7 +127,7 @@ class DealsController extends BaseController {
     @ResponseSchema(ErrorResponseDto, { statusCode: 404 })
     async updateDealStatus(
         @Param('id') id: number,
-        @Body() body: UpdateDealStatusDto,
+        @Body({ type: UpdateDealStatusDto }) body: UpdateDealStatusDto,
     ): Promise<DealResponseDto> {
         const deal = await this.repository.findOneBy({ id: String(id) }) as Deal | null;
         if (!deal) {
