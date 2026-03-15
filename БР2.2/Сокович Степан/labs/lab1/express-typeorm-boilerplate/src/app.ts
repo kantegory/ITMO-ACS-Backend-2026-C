@@ -12,6 +12,8 @@ import PropertiesController from './controllers/property/properties.controller';
 import UsersController from './controllers/user/create-user.controller';
 import AmenitiesController from './controllers/amenity/amenities.controller';
 import DealsController from './controllers/deal/deals.controller';
+import ChatsController from './controllers/chat/chats.controller';
+import MessagesController from './controllers/message/messages.controller';
 
 class App {
     public port: number;
@@ -38,15 +40,12 @@ class App {
 
     private configureApp(): express.Application {
         let app = express();
-
-        // middlewares section
         app.use(cors());
         app.use(express.json());
 
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
-            // controllers: [__dirname + this.controllersPath],
-            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController, DealsController],
+            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController, DealsController, ChatsController, MessagesController],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,
@@ -59,7 +58,6 @@ class App {
     }
 
     public start(): void {
-        // establish database connection
         dataSource
             .initialize()
             .then(() => {
