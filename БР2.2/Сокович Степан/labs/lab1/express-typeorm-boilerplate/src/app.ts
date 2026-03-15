@@ -8,6 +8,8 @@ import SETTINGS from './config/settings';
 import dataSource from './config/data-source';
 import { useSwagger } from './swagger';
 import AuthController from './controllers/auth.controller';
+import PropertiesController from './controllers/property/properties.controller';
+import UsersController from './controllers/user/create-user.controller';
 
 class App {
     public port: number;
@@ -42,7 +44,7 @@ class App {
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
             // controllers: [__dirname + this.controllersPath],
-            controllers: [AuthController],
+            controllers: [AuthController, PropertiesController, UsersController],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,
