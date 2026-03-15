@@ -11,6 +11,7 @@ import AuthController from './controllers/auth.controller';
 import PropertiesController from './controllers/property/properties.controller';
 import UsersController from './controllers/user/create-user.controller';
 import AmenitiesController from './controllers/amenity/amenities.controller';
+import DealsController from './controllers/deal/deals.controller';
 
 class App {
     public port: number;
@@ -45,7 +46,7 @@ class App {
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
             // controllers: [__dirname + this.controllersPath],
-            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController],
+            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController, DealsController],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,
