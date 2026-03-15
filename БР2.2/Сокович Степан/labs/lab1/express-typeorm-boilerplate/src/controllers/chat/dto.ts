@@ -1,11 +1,17 @@
 import { IsInt, IsString, Length, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
+export enum ApiMessageStatus {
+    SENT = 'отправлено',
+    RECEIVED = 'получено',
+    READ = 'прочитано',
+}
+
 export class ChatResponseDto {
-    id: string;
+    id: number;
     createdAt: Date;
-    user1Id: string;
-    user2Id: string;
+    user1Id: number;
+    user2Id: number;
 }
 
 export class ChatsListResponseDto {
@@ -25,13 +31,13 @@ export class CreateChatDto {
 }
 
 export class MessageResponseDto {
-    id: string;
+    id: number;
     createdAt: Date;
     text: string;
-    sentBy: string;
-    status: string;
+    sentBy: number;
+    status: ApiMessageStatus;
     edited: boolean;
-    chatId: string;
+    chatId: number;
 }
 
 export class MessagesListResponseDto {

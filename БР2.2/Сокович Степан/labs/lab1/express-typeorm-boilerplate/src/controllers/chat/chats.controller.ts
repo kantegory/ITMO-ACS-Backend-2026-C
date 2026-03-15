@@ -8,6 +8,7 @@ import { Chat } from '../../models/chat.entity';
 import { Message, MessageStatus } from '../../models/message.entity';
 import { User } from '../../models/user.entity';
 import {
+    ApiMessageStatus,
     ChatResponseDto,
     ChatsListResponseDto,
     CreateChatDto,
@@ -16,6 +17,12 @@ import {
     MessageResponseDto,
     MessagesListResponseDto,
 } from './dto';
+
+const modelToApiMessageStatus: Record<MessageStatus, ApiMessageStatus> = {
+    [MessageStatus.SENT]: ApiMessageStatus.SENT,
+    [MessageStatus.RECEIVED]: ApiMessageStatus.RECEIVED,
+    [MessageStatus.READ]: ApiMessageStatus.READ,
+};
 
 @EntityController({
     baseRoute: '/chats',
@@ -30,10 +37,10 @@ class ChatsController extends BaseController {
 
         return {
             data: chats.map((chat) => ({
-                id: chat.id,
+                id: Number(chat.id),
                 createdAt: chat.createdAt,
-                user1Id: chat.user1Id,
-                user2Id: chat.user2Id,
+                user1Id: Number(chat.user1Id),
+                user2Id: Number(chat.user2Id),
             })),
         };
     }
@@ -47,7 +54,7 @@ class ChatsController extends BaseController {
     ): Promise<MessagesListResponseDto> {
         const chat = await this.repository.findOneBy({ id: String(id) });
         if (!chat) {
-            throw new HttpError(404, 'Chat not found');
+            throw new HttpError(404, 'Чат не найден');
         }
 
         const messageRepository = dataSource.getRepository(Message);
@@ -58,13 +65,13 @@ class ChatsController extends BaseController {
 
         return {
             data: messages.map((message) => ({
-                id: message.id,
+                id: Number(message.id),
                 createdAt: message.createdAt,
                 text: message.text,
-                sentBy: message.sentBy,
-                status: message.status,
+                sentBy: Number(message.sentBy),
+                status: modelToApiMessageStatus[message.status],
                 edited: message.edited,
-                chatId: message.chatId,
+                chatId: Number(message.chatId),
             })),
         };
     }
@@ -81,18 +88,18 @@ class ChatsController extends BaseController {
     ): Promise<MessageResponseDto> {
         const chat = await this.repository.findOneBy({ id: String(id) });
         if (!chat) {
-            throw new HttpError(404, 'Chat not found');
+            throw new HttpError(404, 'Чат не найден');
         }
 
         const userRepository = dataSource.getRepository(User);
         const sender = await userRepository.findOneBy({ id: String(body.sentBy) });
         if (!sender) {
-            throw new HttpError(400, 'sentBy is invalid');
+            throw new HttpError(400, 'Некорректный идентификатор отправителя');
         }
 
         const senderId = String(body.sentBy);
         if (senderId !== chat.user1Id && senderId !== chat.user2Id) {
-            throw new HttpError(400, 'Sender is not a member of this chat');
+            throw new HttpError(400, 'Отправитель не является участником чата');
         }
 
         const messageRepository = dataSource.getRepository(Message);
@@ -107,13 +114,13 @@ class ChatsController extends BaseController {
         const savedMessage = await messageRepository.save(message);
 
         return {
-            id: savedMessage.id,
+            id: Number(savedMessage.id),
             createdAt: savedMessage.createdAt,
             text: savedMessage.text,
-            sentBy: savedMessage.sentBy,
-            status: savedMessage.status,
+            sentBy: Number(savedMessage.sentBy),
+            status: modelToApiMessageStatus[savedMessage.status],
             edited: savedMessage.edited,
-            chatId: savedMessage.chatId,
+            chatId: Number(savedMessage.chatId),
         };
     }
 
@@ -128,7 +135,7 @@ class ChatsController extends BaseController {
         const { user1Id, user2Id } = body;
 
         if (user1Id === user2Id) {
-            throw new HttpError(400, 'user1Id and user2Id must be different');
+            throw new HttpError(400, 'Идентификаторы пользователей должны отличаться');
         }
 
         const userRepository = dataSource.getRepository(User);
@@ -138,7 +145,7 @@ class ChatsController extends BaseController {
         ]);
 
         if (!user1 || !user2) {
-            throw new HttpError(400, 'user1Id or user2Id is invalid');
+            throw new HttpError(400, 'Некорректный идентификатор одного из пользователей');
         }
 
         const existingChat = await this.repository
@@ -150,7 +157,7 @@ class ChatsController extends BaseController {
             .getOne();
 
         if (existingChat) {
-            throw new HttpError(400, 'Chat already exists for these users');
+            throw new HttpError(400, 'Чат между этими пользователями уже существует');
         }
 
         const chat = this.repository.create({
@@ -161,10 +168,10 @@ class ChatsController extends BaseController {
         const savedChat = await this.repository.save(chat) as Chat;
 
         return {
-            id: savedChat.id,
+            id: Number(savedChat.id),
             createdAt: savedChat.createdAt,
-            user1Id: savedChat.user1Id,
-            user2Id: savedChat.user2Id,
+            user1Id: Number(savedChat.user1Id),
+            user2Id: Number(savedChat.user2Id),
         };
     }
 }

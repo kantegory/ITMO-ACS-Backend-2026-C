@@ -93,7 +93,7 @@ export class PatchUserDto {
 }
 
 export class UserResponseDto {
-    id: string;
+    id: number;
     createdAt: Date;
     name: string;
     email: string;
@@ -137,7 +137,7 @@ class UsersController extends BaseController {
 
         return {
             data: (users as User[]).map((user) => ({
-                id: user.id,
+                id: Number(user.id),
                 createdAt: user.createdAt,
                 name: user.name,
                 email: user.email,
@@ -162,7 +162,7 @@ class UsersController extends BaseController {
         const existingUser = await this.repository.findOneBy({ email });
 
         if (existingUser) {
-            throw new HttpError(409, 'User with this email already exists');
+            throw new HttpError(409, 'Пользователь с таким адресом электронной почты уже существует');
         }
         const hashedPw = await bcrypt.hash(password, 10);
 
@@ -177,7 +177,7 @@ class UsersController extends BaseController {
         const savedUser = await this.repository.save(user) as User;
 
         return {
-            id: savedUser.id,
+            id: Number(savedUser.id),
             createdAt: savedUser.createdAt,
             name: savedUser.name,
             email: savedUser.email,
@@ -197,11 +197,11 @@ class UsersController extends BaseController {
         const user = await this.repository.findOneBy({ id: String(id) });
 
         if (!user) {
-            throw new HttpError(404, 'User not found');
+            throw new HttpError(404, 'Пользователь не найден');
         }
 
         return {
-            id: user.id,
+            id: Number(user.id),
             createdAt: user.createdAt,
             name: user.name,
             email: user.email,
@@ -222,7 +222,7 @@ class UsersController extends BaseController {
         const user = await this.repository.findOneBy({ id: String(id) });
 
         if (!user) {
-            throw new HttpError(404, 'User not found');
+            throw new HttpError(404, 'Пользователь не найден');
         }
 
         const { name, email, phone, type } = body;
@@ -235,7 +235,7 @@ class UsersController extends BaseController {
         const updatedUser = await this.repository.save(user) as User;
 
         return {
-            id: updatedUser.id,
+            id: Number(updatedUser.id),
             createdAt: updatedUser.createdAt,
             name: updatedUser.name,
             email: updatedUser.email,
@@ -256,7 +256,7 @@ class UsersController extends BaseController {
         const user = await this.repository.findOneBy({ id: String(id) });
 
         if (!user) {
-            throw new HttpError(404, 'User not found');
+            throw new HttpError(404, 'Пользователь не найден');
         }
 
         if (body.name !== undefined) {
@@ -278,7 +278,7 @@ class UsersController extends BaseController {
         const updatedUser = await this.repository.save(user) as User;
 
         return {
-            id: updatedUser.id,
+            id: Number(updatedUser.id),
             createdAt: updatedUser.createdAt,
             name: updatedUser.name,
             email: updatedUser.email,
@@ -296,7 +296,7 @@ class UsersController extends BaseController {
     ): Promise<ReviewsListResponseDto> {
         const user = await this.repository.findOneBy({ id: String(id) });
         if (!user) {
-            throw new HttpError(404, 'User not found');
+            throw new HttpError(404, 'Пользователь не найден');
         }
 
         const reviewRepository = this.repository.manager.getRepository(Review);
@@ -307,9 +307,9 @@ class UsersController extends BaseController {
 
         return {
             data: reviews.map((review) => ({
-                id: review.id,
-                authorId: review.authorId,
-                targetId: review.targetId,
+                id: Number(review.id),
+                authorId: Number(review.authorId),
+                targetId: Number(review.targetId),
                 rating: Number(review.rating),
                 createdAt: review.createdAt,
                 text: review.text,

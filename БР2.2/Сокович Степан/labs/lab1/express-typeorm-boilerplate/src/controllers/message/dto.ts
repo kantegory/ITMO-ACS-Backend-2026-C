@@ -1,6 +1,6 @@
 import { IsString, Length } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MessageStatus } from '../../models/message.entity';
+import { ApiMessageStatus } from '../chat/dto';
 
 export class UpdateMessageDto {
     @IsString()
@@ -10,13 +10,13 @@ export class UpdateMessageDto {
 }
 
 export class MessageResponseDto {
-    id: string;
+    id: number;
     createdAt: Date;
     text: string;
-    sentBy: string;
-    status: MessageStatus;
+    sentBy: number;
+    status: ApiMessageStatus;
     edited: boolean;
-    chatId: string;
+    chatId: number;
 }
 
 export class ErrorResponseDto {

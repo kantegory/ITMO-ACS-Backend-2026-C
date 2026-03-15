@@ -57,12 +57,12 @@ class PropertiesController extends BaseController {
         const { name, price, deposit, description, city, address, typeId, amenityIds } = body;
 
         if (!request.user?.id) {
-            throw new HttpError(401, 'Unauthorized');
+            throw new HttpError(401, 'Не авторизован');
         }
 
         const estateType = await dataSource.getRepository(EstateType).findOneBy({ id: typeId });
         if (!estateType) {
-            throw new HttpError(400, 'Invalid typeId');
+            throw new HttpError(400, 'Некорректный идентификатор типа недвижимости');
         }
 
         const amenities = await dataSource
@@ -70,7 +70,7 @@ class PropertiesController extends BaseController {
             .findBy({ id: In(amenityIds) });
 
         if (amenities.length !== amenityIds.length) {
-            throw new HttpError(400, 'One or more amenityIds are invalid');
+            throw new HttpError(400, 'Один или несколько идентификаторов удобств некорректны');
         }
 
         const property = this.repository.create({
@@ -88,13 +88,13 @@ class PropertiesController extends BaseController {
         const savedProperty = (await this.repository.save(property)) as EstateForRent;
 
         return {
-            id: savedProperty.id,
+            id: Number(savedProperty.id),
             createdAt: savedProperty.createdAt,
             name: savedProperty.name,
             price: savedProperty.price,
             deposit: savedProperty.deposit,
             description: savedProperty.description,
-            ownerId: savedProperty.ownerId,
+            ownerId: Number(savedProperty.ownerId),
             city: savedProperty.city,
             address: savedProperty.address,
             typeId: savedProperty.typeId,
@@ -118,17 +118,17 @@ class PropertiesController extends BaseController {
             .getOne() as EstateForRent | null;
 
         if (!property) {
-            throw new HttpError(404, 'Property not found');
+            throw new HttpError(404, 'Объект недвижимости не найден');
         }
 
         return {
-            id: property.id,
+            id: Number(property.id),
             createdAt: property.createdAt,
             name: property.name,
             price: property.price,
             deposit: property.deposit,
             description: property.description,
-            ownerId: property.ownerId,
+            ownerId: Number(property.ownerId),
             city: property.city,
             address: property.address,
             typeId: property.typeId,
@@ -140,8 +140,8 @@ class PropertiesController extends BaseController {
                 }
                 : null,
             photos: property.photos?.map((photo) => ({
-                id: photo.id,
-                propertyId: photo.propertyId,
+                id: Number(photo.id),
+                propertyId: Number(photo.propertyId),
                 photoAddr: photo.photoAddr,
             })) ?? [],
             amenities: property.amenities?.map((amenity) => ({
@@ -163,7 +163,7 @@ class PropertiesController extends BaseController {
     ): Promise<PropertyPhotoDto> {
         const property = await this.repository.findOneBy({ id: String(id) });
         if (!property) {
-            throw new HttpError(404, 'Property not found');
+            throw new HttpError(404, 'Объект недвижимости не найден');
         }
 
         const photoRepository = dataSource.getRepository(Photo);
@@ -175,8 +175,8 @@ class PropertiesController extends BaseController {
         const savedPhoto = await photoRepository.save(photo);
 
         return {
-            id: savedPhoto.id,
-            propertyId: savedPhoto.propertyId,
+            id: Number(savedPhoto.id),
+            propertyId: Number(savedPhoto.propertyId),
             photoAddr: savedPhoto.photoAddr,
         };
     }
@@ -223,13 +223,13 @@ class PropertiesController extends BaseController {
 
         return {
             data: (properties as EstateForRent[]).map((property) => ({
-                id: property.id,
+                id: Number(property.id),
                 createdAt: property.createdAt,
                 name: property.name,
                 price: property.price,
                 deposit: property.deposit,
                 description: property.description,
-                ownerId: property.ownerId,
+                ownerId: Number(property.ownerId),
                 city: property.city,
                 address: property.address,
                 typeId: property.typeId,

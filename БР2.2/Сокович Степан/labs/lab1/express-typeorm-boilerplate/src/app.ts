@@ -15,6 +15,7 @@ import DealsController from './controllers/deal/deals.controller';
 import ChatsController from './controllers/chat/chats.controller';
 import MessagesController from './controllers/message/messages.controller';
 import ReviewsController from './controllers/review/reviews.controller';
+import errorMiddleware from './middlewares/error.middleware';
 
 class App {
     public port: number;
@@ -49,10 +50,11 @@ class App {
             controllers: [AuthController, PropertiesController, UsersController, AmenitiesController, DealsController, ChatsController, MessagesController, ReviewsController],
             validation: true,
             classTransformer: true,
-            defaultErrorHandler: true,
+            defaultErrorHandler: false,
         };
 
         app = useExpressServer(app, options);
+        app.use(errorMiddleware);
         app = useSwagger(app, options);
 
         return app;

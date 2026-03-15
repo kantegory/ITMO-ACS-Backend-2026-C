@@ -26,12 +26,12 @@ class ReviewsController extends BaseController {
     ): Promise<ReviewResponseDto> {
         const authorId = String(request.user?.id ?? '');
         if (!authorId) {
-            throw new HttpError(400, 'Author is not provided');
+            throw new HttpError(400, 'Автор не определен');
         }
 
         const targetId = String(body.targetId);
         if (authorId === targetId) {
-            throw new HttpError(400, 'You cannot review yourself');
+            throw new HttpError(400, 'Нельзя оставить отзыв самому себе');
         }
 
         const userRepository = dataSource.getRepository(User);
@@ -41,7 +41,7 @@ class ReviewsController extends BaseController {
         ]);
 
         if (!author || !target) {
-            throw new HttpError(400, 'authorId or targetId is invalid');
+            throw new HttpError(400, 'Некорректный идентификатор автора или получателя отзыва');
         }
 
         const review = this.repository.create({
@@ -54,9 +54,9 @@ class ReviewsController extends BaseController {
         const savedReview = await this.repository.save(review) as Review;
 
         return {
-            id: savedReview.id,
-            authorId: savedReview.authorId,
-            targetId: savedReview.targetId,
+            id: Number(savedReview.id),
+            authorId: Number(savedReview.authorId),
+            targetId: Number(savedReview.targetId),
             rating: Number(savedReview.rating),
             createdAt: savedReview.createdAt,
             text: savedReview.text,

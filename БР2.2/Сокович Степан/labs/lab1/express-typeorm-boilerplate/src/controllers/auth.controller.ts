@@ -1,4 +1,4 @@
-import { Body, Post, HttpCode } from 'routing-controllers';
+import { Body, HttpCode, HttpError, Post } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 import { IsEmail, IsEnum, IsOptional, IsString, Length } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -60,6 +60,10 @@ class ErrorResponseDto {
     @IsString()
     @Type(() => String)
     message: string;
+
+    @IsString()
+    @Type(() => String)
+    code: string;
 }
 
 @EntityController({
@@ -72,15 +76,16 @@ class AuthController extends BaseController {
     @OpenAPI({ summary: 'Регистрация нового пользователя' })
     @ResponseSchema(AuthResponseDto, { statusCode: 201 })
     @ResponseSchema(ErrorResponseDto, { statusCode: 400 })
+    @ResponseSchema(ErrorResponseDto, { statusCode: 409 })
     async register(
         @Body({ type: RegisterDto }) registerData: RegisterDto,
-    ): Promise<AuthResponseDto | ErrorResponseDto> {
+    ): Promise<AuthResponseDto> {
         const { name, email, phone, password, type } = registerData;
 
         const existingUser = await this.repository.findOneBy({ email });
 
         if (existingUser) {
-            return { message: 'User with this email already exists' };
+            throw new HttpError(409, 'Пользователь с таким адресом электронной почты уже существует');
         }
 
         const hashedPw = await bcrypt.hash(password, 10);
@@ -110,21 +115,22 @@ class AuthController extends BaseController {
     @OpenAPI({ summary: 'Login' })
     @ResponseSchema(AuthResponseDto, { statusCode: 200 })
     @ResponseSchema(ErrorResponseDto, { statusCode: 400 })
+    @ResponseSchema(ErrorResponseDto, { statusCode: 401 })
     async login(
         @Body({ type: LoginDto }) loginData: LoginDto,
-    ): Promise<AuthResponseDto | ErrorResponseDto> {
+    ): Promise<AuthResponseDto> {
         const { email, password } = loginData;
         const user = await this.repository.findOneBy({ email });
 
         if (!user) {
-            return { message: 'User is not found' };
+            throw new HttpError(401, 'Неверный адрес электронной почты или пароль');
         }
 
         const userPassword = user.hashedPw;
         const isPasswordCorrect = checkPassword(userPassword, password);
 
         if (!isPasswordCorrect) {
-            return { message: 'Password or email is incorrect' };
+            throw new HttpError(401, 'Неверный адрес электронной почты или пароль');
         }
 
         const accessToken = jwt.sign(

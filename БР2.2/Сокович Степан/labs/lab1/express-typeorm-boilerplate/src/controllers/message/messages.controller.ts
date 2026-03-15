@@ -3,9 +3,16 @@ import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 
 import EntityController from '../../common/entity-controller';
 import BaseController from '../../common/base-controller';
-import { Message } from '../../models/message.entity';
+import { Message, MessageStatus } from '../../models/message.entity';
+import { ApiMessageStatus } from '../chat/dto';
 
 import { ErrorResponseDto, MessageResponseDto, UpdateMessageDto } from './dto';
+
+const modelToApiMessageStatus: Record<MessageStatus, ApiMessageStatus> = {
+    [MessageStatus.SENT]: ApiMessageStatus.SENT,
+    [MessageStatus.RECEIVED]: ApiMessageStatus.RECEIVED,
+    [MessageStatus.READ]: ApiMessageStatus.READ,
+};
 
 @EntityController({
     baseRoute: '/messages',
@@ -23,7 +30,7 @@ class MessagesController extends BaseController {
     ): Promise<MessageResponseDto> {
         const message = await this.repository.findOneBy({ id: String(id) }) as Message | null;
         if (!message) {
-            throw new HttpError(404, 'Message not found');
+            throw new HttpError(404, 'Сообщение не найдено');
         }
 
         message.text = body.text;
@@ -32,13 +39,13 @@ class MessagesController extends BaseController {
         const updatedMessage = await this.repository.save(message) as Message;
 
         return {
-            id: updatedMessage.id,
+            id: Number(updatedMessage.id),
             createdAt: updatedMessage.createdAt,
             text: updatedMessage.text,
-            sentBy: updatedMessage.sentBy,
-            status: updatedMessage.status,
+            sentBy: Number(updatedMessage.sentBy),
+            status: modelToApiMessageStatus[updatedMessage.status],
             edited: updatedMessage.edited,
-            chatId: updatedMessage.chatId,
+            chatId: Number(updatedMessage.chatId),
         };
     }
 }

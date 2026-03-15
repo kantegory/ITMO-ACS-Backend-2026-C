@@ -94,13 +94,13 @@ export class GetPropertiesQueryDto {
 }
 
 export class PropertyResponseDto {
-    id: string;
+    id: number;
     createdAt: Date;
     name: string;
     price: number;
     deposit: number;
     description: string;
-    ownerId: string;
+    ownerId: number;
     city: string;
     address: string;
     typeId: number;
@@ -113,8 +113,8 @@ export class PropertyTypeDto {
 }
 
 export class PropertyPhotoDto {
-    id: string;
-    propertyId: string;
+    id: number;
+    propertyId: number;
     photoAddr: string;
 }
 

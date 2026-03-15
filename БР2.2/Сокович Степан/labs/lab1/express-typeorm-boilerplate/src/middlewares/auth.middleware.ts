@@ -19,13 +19,19 @@ const authMiddleware = (
     const { headers } = request;
     const { authorization } = headers;
 
-    try {
-        const [, accessToken] = authorization.split(' ');
+    if (!authorization || typeof authorization !== 'string') {
+        return response
+            .status(401)
+            .send({ message: 'Не авторизован: токен не передан', code: 'UNAUTHORIZED' });
+    }
 
-        if (!accessToken) {
+    try {
+        const [tokenType, accessToken] = authorization.split(' ');
+
+        if (!accessToken || tokenType !== 'Bearer') {
             return response
                 .status(401)
-                .send({ message: 'Unauthorized: no token provided' });
+                .send({ message: 'Не авторизован: токен не передан', code: 'UNAUTHORIZED' });
         }
 
         const { user }: JwtPayloadWithUser = jwt.verify(
@@ -40,8 +46,8 @@ const authMiddleware = (
         console.error(error);
 
         return response
-            .status(403)
-            .send({ message: 'Forbidden: token is invalid or expired' });
+            .status(401)
+            .send({ message: 'Не авторизован: токен недействителен или истек', code: 'UNAUTHORIZED' });
     }
 };
 

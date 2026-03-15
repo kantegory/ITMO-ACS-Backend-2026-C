@@ -2,6 +2,12 @@ import { IsDateString, IsEnum, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DealStatus } from '../../models/deal.entity';
 
+export enum ApiDealStatus {
+    REQUESTED = 'запрошена',
+    CONFIRMED = 'подтверждена',
+    CANCELLED = 'отменена',
+}
+
 export class CreateDealDto {
     @Type(() => Number)
     @IsInt()
@@ -26,14 +32,14 @@ export class CreateDealDto {
 }
 
 export class DealResponseDto {
-    id: string;
+    id: number;
     createdAt: Date;
-    landlordId: string;
-    tenantId: string;
+    landlordId: number;
+    tenantId: number;
     startTime: Date;
     endTime: Date;
-    estateId: string;
-    status: DealStatus;
+    estateId: number;
+    status: ApiDealStatus;
 }
 
 export class DealsListResponseDto {
@@ -46,6 +52,6 @@ export class ErrorResponseDto {
 }
 
 export class UpdateDealStatusDto {
-    @IsEnum(DealStatus)
-    status: DealStatus;
+    @IsEnum(ApiDealStatus)
+    status: ApiDealStatus;
 }

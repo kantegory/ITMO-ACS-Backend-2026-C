@@ -7,7 +7,6 @@ import {
 import { User } from './user.entity';
 
 import hashPassword from '../utils/hash-password';
-import checkPassword from '../utils/check-password';
 
 @EventSubscriber()
 export class UserSubscriber implements EntitySubscriberInterface<User> {
@@ -21,25 +20,23 @@ export class UserSubscriber implements EntitySubscriberInterface<User> {
                 (col) => col.propertyName,
             );
 
-            const isPasswordChanged = !checkPassword(
-                event.databaseEntity.password,
-                event.entity.password,
-            );
+            const hasPlaintextHash =
+                !!event.entity.hashedPw && !event.entity.hashedPw.startsWith('$2');
 
-            if (changedColumns.includes('password') && isPasswordChanged) {
-                event.entity.password = hashPassword(event.entity.password);
-            } else {
-                event.entity.password = event.databaseEntity.password;
+            if (changedColumns.includes('hashedPw') && hasPlaintextHash) {
+                event.entity.hashedPw = hashPassword(event.entity.hashedPw);
+            } else if (!event.entity.hashedPw) {
+                event.entity.hashedPw = event.databaseEntity.hashedPw;
             }
         }
     }
 
     async beforeInsert(event: InsertEvent<User>) {
         if (
-            event.entity.password &&
-            !event.entity.password.startsWith('$2b$')
+            event.entity.hashedPw &&
+            !event.entity.hashedPw.startsWith('$2')
         ) {
-            event.entity.password = hashPassword(event.entity.password);
+            event.entity.hashedPw = hashPassword(event.entity.hashedPw);
         }
     }
 }

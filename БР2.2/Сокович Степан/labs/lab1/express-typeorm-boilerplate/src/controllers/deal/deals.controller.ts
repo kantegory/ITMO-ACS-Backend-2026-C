@@ -8,12 +8,25 @@ import { Deal, DealStatus } from '../../models/deal.entity';
 import { EstateForRent } from '../../models/estate-for-rent.entity';
 import { User, UserType } from '../../models/user.entity';
 import {
+    ApiDealStatus,
     CreateDealDto,
     DealResponseDto,
     DealsListResponseDto,
     ErrorResponseDto,
     UpdateDealStatusDto,
 } from './dto';
+
+const modelToApiStatus: Record<DealStatus, ApiDealStatus> = {
+    [DealStatus.REQUESTED]: ApiDealStatus.REQUESTED,
+    [DealStatus.CONFIRMED]: ApiDealStatus.CONFIRMED,
+    [DealStatus.CANCELLED]: ApiDealStatus.CANCELLED,
+};
+
+const apiToModelStatus: Record<ApiDealStatus, DealStatus> = {
+    [ApiDealStatus.REQUESTED]: DealStatus.REQUESTED,
+    [ApiDealStatus.CONFIRMED]: DealStatus.CONFIRMED,
+    [ApiDealStatus.CANCELLED]: DealStatus.CANCELLED,
+};
 
 @EntityController({
     baseRoute: '/deals',
@@ -28,14 +41,14 @@ class DealsController extends BaseController {
 
         return {
             data: deals.map((deal) => ({
-                id: deal.id,
+                id: Number(deal.id),
                 createdAt: deal.createdAt,
-                landlordId: deal.landlordId,
-                tenantId: deal.tenantId,
+                landlordId: Number(deal.landlordId),
+                tenantId: Number(deal.tenantId),
                 startTime: deal.startTime,
                 endTime: deal.endTime,
-                estateId: deal.estateId,
-                status: deal.status,
+                estateId: Number(deal.estateId),
+                status: modelToApiStatus[deal.status],
             })),
         };
     }
@@ -54,11 +67,11 @@ class DealsController extends BaseController {
         const startDate = new Date(startTime);
         const endDate = new Date(endTime);
         if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
-            throw new HttpError(400, 'startTime must be earlier than endTime');
+            throw new HttpError(400, 'Время начала должно быть раньше времени окончания');
         }
 
         if (landlordId === tenantId) {
-            throw new HttpError(400, 'landlordId and tenantId must be different');
+            throw new HttpError(400, 'Идентификаторы арендодателя и арендатора должны отличаться');
         }
 
         const userRepository = dataSource.getRepository(User);
@@ -71,15 +84,15 @@ class DealsController extends BaseController {
         ]);
 
         if (!landlord || !tenant || !estate) {
-            throw new HttpError(400, 'landlordId, tenantId or estateId is invalid');
+            throw new HttpError(400, 'Некорректный идентификатор арендодателя, арендатора или недвижимости');
         }
 
         if (landlord.type !== UserType.LANDLORD || tenant.type !== UserType.TENANT) {
-            throw new HttpError(400, 'Invalid user roles for deal participants');
+            throw new HttpError(400, 'Некорректные роли пользователей для сделки');
         }
 
         if (estate.ownerId !== String(landlordId)) {
-            throw new HttpError(400, 'estate does not belong to landlordId');
+            throw new HttpError(400, 'Объект недвижимости не принадлежит указанному арендодателю');
         }
 
         const activeStatuses = [DealStatus.REQUESTED, DealStatus.CONFIRMED];
@@ -94,7 +107,7 @@ class DealsController extends BaseController {
             .getOne();
 
         if (overlappingDeal) {
-            throw new HttpError(409, 'Deal time conflicts with an existing booking');
+            throw new HttpError(409, 'Время сделки пересекается с уже существующей бронью');
         }
 
         const deal = this.repository.create({
@@ -109,14 +122,14 @@ class DealsController extends BaseController {
         const savedDeal = await this.repository.save(deal) as Deal;
 
         return {
-            id: savedDeal.id,
+            id: Number(savedDeal.id),
             createdAt: savedDeal.createdAt,
-            landlordId: savedDeal.landlordId,
-            tenantId: savedDeal.tenantId,
+            landlordId: Number(savedDeal.landlordId),
+            tenantId: Number(savedDeal.tenantId),
             startTime: savedDeal.startTime,
             endTime: savedDeal.endTime,
-            estateId: savedDeal.estateId,
-            status: savedDeal.status,
+            estateId: Number(savedDeal.estateId),
+            status: modelToApiStatus[savedDeal.status],
         };
     }
 
@@ -131,21 +144,21 @@ class DealsController extends BaseController {
     ): Promise<DealResponseDto> {
         const deal = await this.repository.findOneBy({ id: String(id) }) as Deal | null;
         if (!deal) {
-            throw new HttpError(404, 'Deal not found');
+            throw new HttpError(404, 'Сделка не найдена');
         }
 
-        deal.status = body.status;
+        deal.status = apiToModelStatus[body.status];
         const updatedDeal = await this.repository.save(deal) as Deal;
 
         return {
-            id: updatedDeal.id,
+            id: Number(updatedDeal.id),
             createdAt: updatedDeal.createdAt,
-            landlordId: updatedDeal.landlordId,
-            tenantId: updatedDeal.tenantId,
+            landlordId: Number(updatedDeal.landlordId),
+            tenantId: Number(updatedDeal.tenantId),
             startTime: updatedDeal.startTime,
             endTime: updatedDeal.endTime,
-            estateId: updatedDeal.estateId,
-            status: updatedDeal.status,
+            estateId: Number(updatedDeal.estateId),
+            status: modelToApiStatus[updatedDeal.status],
         };
     }
 }

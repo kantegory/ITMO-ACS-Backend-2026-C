@@ -20,9 +20,9 @@ export class CreateReviewDto {
 }
 
 export class ReviewResponseDto {
-    id: string;
-    authorId: string;
-    targetId: string;
+    id: number;
+    authorId: number;
+    targetId: number;
     rating: number;
     createdAt: Date;
     text: string;
