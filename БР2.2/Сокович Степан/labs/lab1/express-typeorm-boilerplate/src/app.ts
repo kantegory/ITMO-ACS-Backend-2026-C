@@ -10,6 +10,7 @@ import { useSwagger } from './swagger';
 import AuthController from './controllers/auth.controller';
 import PropertiesController from './controllers/property/properties.controller';
 import UsersController from './controllers/user/create-user.controller';
+import AmenitiesController from './controllers/amenity/amenities.controller';
 
 class App {
     public port: number;
@@ -44,7 +45,7 @@ class App {
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
             // controllers: [__dirname + this.controllersPath],
-            controllers: [AuthController, PropertiesController, UsersController],
+            controllers: [AuthController, PropertiesController, UsersController, AmenitiesController],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,
