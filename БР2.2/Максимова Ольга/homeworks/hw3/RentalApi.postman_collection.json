@@ -1,0 +1,547 @@
+{
+  "info": {
+    "_postman_id": "6653f417-be3f-4530-9bdc-d8fbcd7c62f3",
+    "name": "RentalApi",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53038356",
+    "_collection_link": "https://go.postman.co/collection/53038356-6653f417-be3f-4530-9bdc-d8fbcd7c62f3?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "/api/auth/register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Регистрация успешна\", function () {    ",
+              "    const jsonData = pm.response.json();",
+              "    ",
+              "    pm.expect(jsonData).to.have.property('token');",
+              "    pm.expect(jsonData).to.have.property('user');",
+              "    pm.expect(jsonData.user).to.have.property('id');",
+              "    ",
+              "    pm.collectionVariables.set(\"accessToken\", jsonData.token);",
+              "    pm.collectionVariables.set(\"user_id\", jsonData.user.id);",
+              "    pm.collectionVariables.set(\"user_role\", jsonData.user.role);",
+              "    pm.collectionVariables.set(\"email\", jsonData.user.email);",
+              "    ",
+              "});",
+              "",
+              "pm.test(\"Переменные сохранены\", function () {",
+              "    pm.expect(pm.collectionVariables.get(\"accessToken\")).to.exist;",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"TestPass123\",\n  \"first_name\": \"Тест\",\n  \"last_name\": \"Пользователь\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/auth/register",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/api/auth/login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Успешный вход\", function () {    ",
+              "    const jsonData = pm.response.json();",
+              "    pm.response.to.have.jsonBody('token');",
+              "",
+              "    pm.collectionVariables.set(\"accessToken\", jsonData.token);",
+              "});",
+              "",
+              "pm.test(\"Токен валиден\", function () {",
+              "    pm.expect(pm.collectionVariables.get(\"accessToken\")).to.not.be.null;",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"TestPass123\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/auth/login",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/api/accommodations",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Список объявлений\", function () {    ",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.items).to.be.an('array');",
+              "    ",
+              "    if (jsonData.items.length > 0) {",
+              "        const randomAccom = jsonData.items[Math.floor(Math.random() * jsonData.items.length)];",
+              "        pm.collectionVariables.set(\"accomID\", randomAccom.id);",
+              "    }",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/accommodations",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "accommodations"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/api/accommodations/{id}",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"id landord\", function () {    ",
+              "    const jsonData = pm.response.json();",
+              "    pm.collectionVariables.set(\"landlordID\", jsonData.landlord_id);",
+              "    }",
+              ");"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/accommodations/{{accomID}}",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "accommodations",
+            "{{accomID}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/api/messages",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"есть все поля\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.message).to.have.property('id');",
+              "    pm.expect(response.message).to.have.property('sender_id');",
+              "    pm.expect(response.message).to.have.property('receiver_id');",
+              "    pm.expect(response.message).to.have.property('mes_text');",
+              "    pm.expect(response.message.is_read).to.be.false;",
+              "    pm.expect(response.message.is_delivered).to.be.false;",
+              "});",
+              "",
+              "",
+              "pm.test(\"id получателя совпадает\", function () {",
+              "    const response = pm.response.json();",
+              "    const requestData = JSON.parse(pm.request.body.raw);",
+              "    pm.expect(response.receiver.id).to.equal(requestData.receiver_id);",
+              "});",
+              "",
+              "pm.test(\"текст сообщения совпадает\", function () {",
+              "    const response = pm.response.json();",
+              "    const requestData = JSON.parse(pm.request.body.raw);",
+              "    pm.expect(response.message.mes_text).to.equal(requestData.mes_text);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"receiver_id\": {{landlordID}},\n  \"accom_id\": {{accomID}},\n  \"mes_text\": \"купить\",\n  \"mes_type\": \"text\",\n  \"attachment_ids\": [\n    0\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/messages",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "messages"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "api/messages/me",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Есть все поля\", function () {",
+              "    const response = pm.response.json();",
+              "    pm.expect(response).to.have.property('items');",
+              "    pm.expect(response).to.have.property('total');",
+              "    pm.expect(response.items).to.be.an('array');",
+              "    pm.expect(response.total).to.be.a('number');",
+              "});",
+              "",
+              "pm.test(\"в сообщениях есть все поля\", function () {",
+              "    const response = pm.response.json();",
+              "    response.items.forEach(item => {",
+              "        pm.expect(item).to.have.property('id');",
+              "        pm.expect(item).to.have.property('sender_id');",
+              "        pm.expect(item).to.have.property('receiver_id');",
+              "        pm.expect(item).to.have.property('mes_text');",
+              "        pm.expect(item).to.have.property('mes_type');",
+              "        pm.expect(item).to.have.property('is_read');",
+              "        pm.expect(item).to.have.property('is_delivered');",
+              "        pm.expect(item).to.have.property('sender');",
+              "        pm.expect(item).to.have.property('receiver');",
+              "    });",
+              "});",
+              "",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/messages/me",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "messages",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "api/rents",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Успешное добавление аренды\", function () {    ",
+              "    const jsonData = pm.response.json();",
+              "    pm.collectionVariables.set(\"rentID\", Number(jsonData.rent.id));",
+              "});",
+              "",
+              "pm.test(\"Аренда добавлена\", function () {",
+              "    pm.expect(pm.collectionVariables.get(\"rentID\")).to.not.be.null;",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"accom_id\": {{accomID}},\n  \"start_date\": \"2026-05-01\",\n  \"end_date\": \"2026-05-05\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/rents",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "rents"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/api/auth/logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Успешный выход\", function () {",
+              "    pm.response.to.have.status(204);",
+              "",
+              "    pm.collectionVariables.set(\"accessToken\", null);",
+              "    ",
+              "    const tokenValue = pm.collectionVariables.get(\"accessToken\");",
+              "    pm.expect(tokenValue).to.be.null;",
+              "    ",
+              "    pm.collectionVariables.set(\"accomID\", null);",
+              "    pm.collectionVariables.set(\"landlordID\", null);",
+              "});",
+              "",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{protocol}}://{{host}}/api/auth/logout",
+          "protocol": "{{protocol}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "user_role",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "accomID",
+      "value": ""
+    },
+    {
+      "key": "landlordID",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "rentID",
+      "value": ""
+    }
+  ]
+}
