@@ -1,0 +1,22 @@
+{
+  "name": "hw2-rental-api-design",
+  "version": "1.0.0",
+  "description": "ДЗ2: проектирование API сервиса аренды жилья со Swagger",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "express",
+    "swagger",
+    "openapi",
+    "itmo"
+  ],
+  "author": "Сокович Степан",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.21.2",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
+
