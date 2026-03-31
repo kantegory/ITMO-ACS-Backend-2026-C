@@ -1,0 +1,1063 @@
+openapi: 3.0.0
+info:
+  title: (title)
+  version: 0.0.0
+tags: []
+paths:
+  /deals:
+    post:
+      operationId: Deals_createDeal
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDealRequest'
+  /deals/{dealId}:
+    patch:
+      operationId: Deals_updateDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDealRequest'
+    delete:
+      operationId: Deals_deleteDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+  /estates:
+    get:
+      operationId: Estates_listEstates
+      parameters:
+        - $ref: '#/components/parameters/EstateFilterParams.user_id'
+        - $ref: '#/components/parameters/EstateFilterParams.type'
+        - $ref: '#/components/parameters/EstateFilterParams.min_price'
+        - $ref: '#/components/parameters/EstateFilterParams.max_price'
+        - $ref: '#/components/parameters/EstateFilterParams.min_rooms'
+        - $ref: '#/components/parameters/EstateFilterParams.max_rooms'
+        - $ref: '#/components/parameters/EstateFilterParams.has_fridge'
+        - $ref: '#/components/parameters/EstateFilterParams.has_washing_machine'
+        - $ref: '#/components/parameters/EstateFilterParams.has_internet'
+        - $ref: '#/components/parameters/EstateFilterParams.has_tv'
+        - $ref: '#/components/parameters/EstateFilterParams.furnished'
+        - $ref: '#/components/parameters/EstateFilterParams.is_available'
+        - $ref: '#/components/parameters/EstateFilterParams.is_verified'
+        - $ref: '#/components/parameters/EstateFilterParams.bath_type'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estate'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    post:
+      operationId: Estates_createEstate
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Estate'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEstateRequest'
+  /estates/{estateId}:
+    patch:
+      operationId: Estates_updateEstate
+      parameters:
+        - name: estateId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Estate'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEstateRequest'
+    delete:
+      operationId: Estates_deleteEstate
+      parameters:
+        - name: estateId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+  /messages:
+    post:
+      operationId: Messages_createMessage
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+  /messages/{messageId}:
+    patch:
+      operationId: Messages_updateMessage
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMessageRequest'
+    delete:
+      operationId: Messages_deleteMessage
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+  /sessions:
+    post:
+      operationId: Sessions_createSession
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+  /sessions/{sessionId}:
+    delete:
+      operationId: Sessions_deleteSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+  /users:
+    post:
+      operationId: Users_createUser
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+  /users/{userId}:
+    patch:
+      operationId: Users_updateUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '422':
+          description: Client error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+    delete:
+      operationId: Users_deleteUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+components:
+  parameters:
+    EstateFilterParams.bath_type:
+      name: bath_type
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Bath_type'
+      explode: false
+    EstateFilterParams.furnished:
+      name: furnished
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.has_fridge:
+      name: has_fridge
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.has_internet:
+      name: has_internet
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.has_tv:
+      name: has_tv
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.has_washing_machine:
+      name: has_washing_machine
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.is_available:
+      name: is_available
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.is_verified:
+      name: is_verified
+      in: query
+      required: false
+      schema:
+        type: boolean
+      explode: false
+    EstateFilterParams.max_price:
+      name: max_price
+      in: query
+      required: false
+      schema:
+        type: number
+        format: double
+        maximum: 10000000
+      explode: false
+    EstateFilterParams.max_rooms:
+      name: max_rooms
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    EstateFilterParams.min_price:
+      name: min_price
+      in: query
+      required: false
+      schema:
+        type: number
+        format: double
+        minimum: 0
+      explode: false
+    EstateFilterParams.min_rooms:
+      name: min_rooms
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+    EstateFilterParams.type:
+      name: type
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/Estate_type'
+      explode: false
+    EstateFilterParams.user_id:
+      name: user_id
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+      explode: false
+  schemas:
+    Bath_type:
+      type: object
+      required:
+        - shower
+        - bathtub
+      properties:
+        shower:
+          type: string
+          enum:
+            - shower
+        bathtub:
+          type: string
+          enum:
+            - bathtub
+    CreateDealRequest:
+      type: object
+      required:
+        - landlord_id
+        - tenant_id
+        - period
+        - deal_status
+        - estate_ids
+        - is_published
+      properties:
+        landlord_id:
+          type: integer
+          format: int32
+        tenant_id:
+          type: integer
+          format: int32
+        period:
+          type: string
+        deal_status:
+          $ref: '#/components/schemas/Deal_status'
+        estate_ids:
+          type: array
+          items:
+            type: integer
+            format: int32
+        is_published:
+          type: boolean
+    CreateEstateRequest:
+      type: object
+      required:
+        - user_id
+        - address
+        - type
+        - room_amount
+        - price
+      properties:
+        user_id:
+          type: integer
+          format: int32
+        address:
+          type: string
+        type:
+          $ref: '#/components/schemas/Estate_type'
+        room_amount:
+          type: integer
+          format: int32
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        image_path:
+          type: string
+        bath_type:
+          $ref: '#/components/schemas/Bath_type'
+        fridge:
+          type: boolean
+        washing_machine:
+          type: boolean
+        internet:
+          type: boolean
+        tv:
+          type: boolean
+        furnished_rooms:
+          type: boolean
+        furnished_kitchen:
+          type: boolean
+    CreateMessageRequest:
+      type: object
+      required:
+        - user_id
+        - session_id
+        - message
+      properties:
+        user_id:
+          type: integer
+          format: int32
+        session_id:
+          type: integer
+          format: int32
+        message:
+          type: string
+        attachment_file_path:
+          type: string
+        is_reshared:
+          type: boolean
+    CreateSessionRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: integer
+          format: int32
+    CreateUserRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+        - password
+      properties:
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        deal_role:
+          $ref: '#/components/schemas/Deal_role'
+        email:
+          type: string
+        password:
+          type: string
+    Deal:
+      type: object
+      required:
+        - id
+        - landlord_id
+        - tenant_id
+        - period
+        - deal_status
+        - estates
+        - is_published
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+        landlord_id:
+          type: integer
+          format: int32
+        tenant_id:
+          type: integer
+          format: int32
+        period:
+          type: string
+        deal_status:
+          $ref: '#/components/schemas/Deal_status'
+        estates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Estate'
+        is_published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Deal_role:
+      type: object
+      required:
+        - landlord
+        - tenant
+      properties:
+        landlord:
+          type: string
+          enum:
+            - landlord
+        tenant:
+          type: string
+          enum:
+            - tenant
+    Deal_status:
+      type: object
+      required:
+        - pending
+        - active
+        - closed
+      properties:
+        pending:
+          type: string
+          enum:
+            - pending
+        active:
+          type: string
+          enum:
+            - active
+        closed:
+          type: string
+          enum:
+            - closed
+    Estate:
+      type: object
+      required:
+        - id
+        - user_id
+        - address
+        - type
+        - room_amount
+        - price
+        - is_verified
+        - is_available
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+        user_id:
+          type: integer
+          format: int32
+        address:
+          type: string
+        type:
+          $ref: '#/components/schemas/Estate_type'
+        room_amount:
+          type: integer
+          format: int32
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        image_path:
+          type: string
+        bath_type:
+          $ref: '#/components/schemas/Bath_type'
+        fridge:
+          type: boolean
+        washing_machine:
+          type: boolean
+        internet:
+          type: boolean
+        tv:
+          type: boolean
+        furnished_rooms:
+          type: boolean
+        furnished_kitchen:
+          type: boolean
+        is_verified:
+          type: boolean
+        is_available:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Estate_type:
+      type: object
+      required:
+        - apartment
+        - cottage
+        - room
+      properties:
+        apartment:
+          type: string
+          enum:
+            - apartment
+        cottage:
+          type: string
+          enum:
+            - cottage
+        room:
+          type: string
+          enum:
+            - room
+    ForbiddenError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - FORBIDDEN
+            message:
+              type: string
+          required:
+            - code
+            - message
+    Message:
+      type: object
+      required:
+        - id
+        - user_id
+        - session_id
+        - message
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+        user_id:
+          type: integer
+          format: int32
+        session_id:
+          type: integer
+          format: int32
+        message:
+          type: string
+        attachment_file_path:
+          type: string
+        is_reshared:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    NotFoundError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - NOT_FOUND
+            message:
+              type: string
+          required:
+            - code
+            - message
+    Session:
+      type: object
+      required:
+        - id
+        - user_id
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+        user_id:
+          type: integer
+          format: int32
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UpdateDealRequest:
+      type: object
+      properties:
+        landlord_id:
+          type: integer
+          format: int32
+        tenant_id:
+          type: integer
+          format: int32
+        period:
+          type: string
+        deal_status:
+          $ref: '#/components/schemas/Deal_status'
+        estate_ids:
+          type: array
+          items:
+            type: integer
+            format: int32
+        is_published:
+          type: boolean
+    UpdateEstateRequest:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int32
+        address:
+          type: string
+        type:
+          $ref: '#/components/schemas/Estate_type'
+        room_amount:
+          type: integer
+          format: int32
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        image_path:
+          type: string
+        bath_type:
+          $ref: '#/components/schemas/Bath_type'
+        fridge:
+          type: boolean
+        washing_machine:
+          type: boolean
+        internet:
+          type: boolean
+        tv:
+          type: boolean
+        furnished_rooms:
+          type: boolean
+        furnished_kitchen:
+          type: boolean
+        is_verified:
+          type: boolean
+        is_available:
+          type: boolean
+    UpdateMessageRequest:
+      type: object
+      properties:
+        message:
+          type: string
+        attachment_file_path:
+          type: string
+        is_reshared:
+          type: boolean
+    UpdateUserRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        deal_role:
+          $ref: '#/components/schemas/Deal_role'
+        email:
+          type: string
+        password:
+          type: string
+        is_verified:
+          type: boolean
+    User:
+      type: object
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - password
+        - is_verified
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int32
+        first_name:
+          type: string
+        middle_name:
+          type: string
+        last_name:
+          type: string
+        deal_role:
+          $ref: '#/components/schemas/Deal_role'
+        email:
+          type: string
+        password:
+          type: string
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        estates_ids:
+          type: array
+          items:
+            type: integer
+            format: int32
+        deals_ids:
+          type: array
+          items:
+            type: integer
+            format: int32
+        session_ids:
+          type: array
+          items:
+            type: integer
+            format: int32
+    ValidationError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+                required:
+                  - field
+                  - message
+          required:
+            - code
+            - message
+servers:
+  - url: /api/v1
+    description: Сервер приложения для недвижимости
+    variables: {}
