@@ -7,6 +7,27 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+
+export class AuthResponseDto {
+    @IsString()
+    @Type(() => String)
+    accessToken: string;
+
+    @IsString()
+    @Type(() => String)
+    refreshToken: string;
+
+    @IsString()
+    @Type(() => String)
+    tokenType: string;
+}
+
+export class ErrorResponseDto {
+    @IsString()
+    @Type(() => String)
+    message: string;
+}
+
 export class RegisterDto {
     @IsEmail()
     @Type(() => String)

@@ -1,7 +1,5 @@
 import { Body, Post, HttpCode, UseBefore, Req } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
-import { IsString } from 'class-validator';
-import { Type } from 'class-transformer';
 import jwt from 'jsonwebtoken';
 
 import SETTINGS from '../config/settings';
@@ -10,30 +8,11 @@ import EntityController from '../common/entity-controller';
 import BaseController from '../common/base-controller';
 
 import { User } from '../models/user.entity';
-import { RegisterDto, LoginDto, RefreshTokenDto } from '../dto/auth.dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, AuthResponseDto, ErrorResponseDto } from '../dto/auth.dto';
 
 import checkPassword from '../utils/check-password';
 import authMiddleware, { RequestWithUser } from '../middlewares/auth.middleware';
 
-class AuthResponseDto {
-    @IsString()
-    @Type(() => String)
-    accessToken: string;
-
-    @IsString()
-    @Type(() => String)
-    refreshToken: string;
-
-    @IsString()
-    @Type(() => String)
-    tokenType: string;
-}
-
-class ErrorResponseDto {
-    @IsString()
-    @Type(() => String)
-    message: string;
-}
 
 function generateTokens(userId: number) {
     const accessToken = jwt.sign(
