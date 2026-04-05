@@ -1,0 +1,441 @@
+{
+  "info": {
+    "_postman_id": "9f44f208-5556-4de8-a09b-76d46603ce21",
+    "name": "Backend HW3 API",
+    "description": "Комплексный сценарий для API аренды жилья: регистрация -> вход -> создание объекта -> сделка -> чат -> сообщение -> отзыв.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "runId", "value": "" },
+    { "key": "landlordEmail", "value": "" },
+    { "key": "tenantEmail", "value": "" },
+    { "key": "defaultPassword", "value": "secret123" },
+    { "key": "accessToken", "value": "" },
+    { "key": "landlordId", "value": "" },
+    { "key": "tenantId", "value": "" },
+    { "key": "propertyId", "value": "" },
+    { "key": "dealId", "value": "" },
+    { "key": "chatId", "value": "" },
+    { "key": "messageId", "value": "" },
+    { "key": "typeId", "value": "1" },
+    { "key": "amenityId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "01 Регистрация арендодателя",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const now = Date.now().toString();",
+              "pm.collectionVariables.set('runId', now);",
+              "pm.collectionVariables.set('landlordEmail', `landlord_${now}@test.local`);",
+              "pm.collectionVariables.set('tenantEmail', `tenant_${now}@test.local`);",
+              "pm.collectionVariables.set('accessToken', '');",
+              "pm.collectionVariables.set('landlordId', '');",
+              "pm.collectionVariables.set('tenantId', '');",
+              "pm.collectionVariables.set('propertyId', '');",
+              "pm.collectionVariables.set('dealId', '');",
+              "pm.collectionVariables.set('chatId', '');",
+              "pm.collectionVariables.set('messageId', '');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('accessToken exists', function () {",
+              "  pm.expect(body).to.have.property('accessToken');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Landlord {{runId}}\",\n  \"email\": \"{{landlordEmail}}\",\n  \"password\": \"{{defaultPassword}}\",\n  \"type\": \"landlord\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/register"
+      }
+    },
+    {
+      "name": "02 Регистрация арендатора",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Tenant {{runId}}\",\n  \"email\": \"{{tenantEmail}}\",\n  \"password\": \"{{defaultPassword}}\",\n  \"type\": \"tenant\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/register"
+      }
+    },
+    {
+      "name": "03 Вход арендодателя",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', body.accessToken);",
+              "pm.test('Token saved', function () {",
+              "  pm.expect(pm.collectionVariables.get('accessToken')).to.be.a('string').and.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{landlordEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "04 Получение пользователей и сохранение ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "const users = body.data || [];",
+              "const landlord = users.find(u => u.email === pm.collectionVariables.get('landlordEmail'));",
+              "const tenant = users.find(u => u.email === pm.collectionVariables.get('tenantEmail'));",
+              "pm.test('Landlord found', function () { pm.expect(landlord).to.exist; });",
+              "pm.test('Tenant found', function () { pm.expect(tenant).to.exist; });",
+              "if (landlord) pm.collectionVariables.set('landlordId', String(landlord.id));",
+              "if (tenant) pm.collectionVariables.set('tenantId', String(tenant.id));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/users"
+      }
+    },
+    {
+      "name": "05 Получение списка удобств",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('data is array', function () {",
+              "  pm.expect(body.data).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/amenities"
+      }
+    },
+    {
+      "name": "06 Создание объекта недвижимости",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('propertyId', String(body.id));",
+              "pm.test('propertyId saved', function () {",
+              "  pm.expect(pm.collectionVariables.get('propertyId')).to.match(/^\\d+$/);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Flat {{runId}}\",\n  \"price\": 1000,\n  \"deposit\": 500,\n  \"description\": \"Тестовое объявление\",\n  \"city\": \"Санкт-Петербург\",\n  \"address\": \"Невский проспект, 1\",\n  \"typeId\": {{typeId}},\n  \"amenityIds\": [{{amenityId}}]\n}"
+        },
+        "url": "{{baseUrl}}/properties"
+      }
+    },
+    {
+      "name": "07 Добавление фото объекта",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"photoAddr\": \"https://example.com/property/{{propertyId}}.jpg\"\n}"
+        },
+        "url": "{{baseUrl}}/properties/{{propertyId}}/photos"
+      }
+    },
+    {
+      "name": "08 Создание сделки",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('dealId', String(body.id));",
+              "pm.test('deal status is запрошена', function () {",
+              "  pm.expect(body.status).to.eql('запрошена');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estateId\": {{propertyId}},\n  \"landlordId\": {{landlordId}},\n  \"tenantId\": {{tenantId}},\n  \"startTime\": \"2026-12-01T10:00:00.000Z\",\n  \"endTime\": \"2026-12-10T10:00:00.000Z\"\n}"
+        },
+        "url": "{{baseUrl}}/deals"
+      }
+    },
+    {
+      "name": "09 Обновление статуса сделки",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('deal status is подтверждена', function () {",
+              "  pm.expect(body.status).to.eql('подтверждена');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"подтверждена\"\n}"
+        },
+        "url": "{{baseUrl}}/deals/{{dealId}}/status"
+      }
+    },
+    {
+      "name": "10 Создание чата",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('chatId', String(body.id));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user1Id\": {{landlordId}},\n  \"user2Id\": {{tenantId}}\n}"
+        },
+        "url": "{{baseUrl}}/chats"
+      }
+    },
+    {
+      "name": "11 Отправка сообщения в чат",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('messageId', String(body.id));",
+              "pm.test('message status is отправлено', function () {",
+              "  pm.expect(body.status).to.eql('отправлено');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Привет, это тестовое сообщение\",\n  \"sentBy\": {{landlordId}}\n}"
+        },
+        "url": "{{baseUrl}}/chats/{{chatId}}/messages"
+      }
+    },
+    {
+      "name": "12 Редактирование сообщения",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('message edited is true', function () {",
+              "  pm.expect(body.edited).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Отредактированное тестовое сообщение\"\n}"
+        },
+        "url": "{{baseUrl}}/messages/{{messageId}}"
+      }
+    },
+    {
+      "name": "13 Создание отзыва",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('review has author and target', function () {",
+              "  pm.expect(body).to.have.property('authorId');",
+              "  pm.expect(body).to.have.property('targetId');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetId\": {{tenantId}},\n  \"rating\": 4.5,\n  \"text\": \"Отличный пользователь\"\n}"
+        },
+        "url": "{{baseUrl}}/reviews"
+      }
+    },
+    {
+      "name": "14 Получение отзывов пользователя",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('reviews list exists', function () {",
+              "  pm.expect(body.data).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/users/{{tenantId}}/reviews"
+      }
+    }
+  ]
+}
