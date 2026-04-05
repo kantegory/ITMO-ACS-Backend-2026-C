@@ -1,0 +1,181 @@
+name: rental-lab2
+
+services:
+  identity-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: identity_db
+    volumes:
+      - identity_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental-network
+
+  property-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: property_rental_db
+    volumes:
+      - property_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d property_rental_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental-network
+
+  engagement-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: engagement_db
+    volumes:
+      - engagement_db_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d engagement_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental-network
+
+  kafka:
+    image: docker.io/bitnami/kafka:3.7
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+    volumes:
+      - kafka_data:/bitnami/kafka
+    networks:
+      - rental-network
+
+  identity-service:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      DB_HOST: identity-db
+      DB_PORT: "5432"
+      DB_NAME: identity_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ./identity-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv sync --locked && exec uv run uvicorn --host 0.0.0.0 --port 8000 --reload
+        --no-access-log --log-config uvicornlogs.json app.main:app
+    depends_on:
+      identity-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - rental-network
+
+  property-service:
+    build:
+      context: ./property-service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    environment:
+      DB_HOST: property-db
+      DB_PORT: "5432"
+      DB_NAME: property_rental_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ./property-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv sync --locked && exec uv run uvicorn --host 0.0.0.0 --port 8000 --reload
+        --no-access-log --log-config uvicornlogs.json app.main:app
+    depends_on:
+      property-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - rental-network
+
+  engagement-service:
+    build:
+      context: ./engagement-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      DB_HOST: engagement-db
+      DB_PORT: "5432"
+      DB_NAME: engagement_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      IDENTITY_SERVICE_URL: http://identity-service:8000
+      PROPERTY_SERVICE_URL: http://property-service:8000
+    volumes:
+      - ./engagement-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv sync --locked && exec uv run uvicorn --host 0.0.0.0 --port 8000 --reload
+        --no-access-log --log-config uvicornlogs.json app.main:app
+    depends_on:
+      engagement-db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      property-service:
+        condition: service_started
+    networks:
+      - rental-network
+
+volumes:
+  identity_db_data:
+  property_db_data:
+  engagement_db_data:
+  kafka_data:
+
+networks:
+  rental-network:
+    name: rental-network

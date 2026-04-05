@@ -1,12 +1,12 @@
 from functools import cache
 from importlib.metadata import version
 
+from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.enums import Env, LogMode
 
-# TODO: Указать название проекта
-__version__ = version("template-cursor-rules")
+__version__ = version("property-service")
 
 
 class Settings(BaseSettings):
@@ -15,9 +15,33 @@ class Settings(BaseSettings):
     log_mode: LogMode = LogMode.PRETTY
     sentry_dsn: str | None = None
 
-    # TODO: Указать настройки
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "property_rental_db"
+    db_user: str = "postgres"
+    db_password: str = "postgres"  # noqa: S105
+
+    jwt_secret_key: str = "secret"  # noqa: S105
+    jwt_access_token_lifetime: int = 300
+
+    service_auth_token: str = "service-secret"  # noqa: S105
+
+    kafka_bootstrap_servers: str = "localhost:9092"
 
     model_config = SettingsConfigDict(env_file=".env")
+
+    @property
+    def db_dsn(self) -> str:
+        dsn = PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            username=self.db_user,
+            password=self.db_password,
+            host=self.db_host,
+            port=self.db_port,
+            path=f"/{self.db_name}",
+        )
+
+        return dsn.encoded_string()
 
 
 @cache

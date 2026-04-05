@@ -5,11 +5,7 @@ from app.container import Container
 
 container = Container()
 
-settings = container.settings()
 app = container.app()
-
-# TODO: Подключить роутеры здесь
-# app.include_router(router=some_router)
 
 app.mount(path="/metrics", app=make_asgi_app())
 
