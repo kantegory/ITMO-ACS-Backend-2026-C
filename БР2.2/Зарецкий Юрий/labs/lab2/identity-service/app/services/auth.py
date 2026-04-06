@@ -46,17 +46,17 @@ class AuthService:
         expire = datetime.now(UTC) + timedelta(seconds=self._settings.jwt_access_token_lifetime)
         payload = {"sub": str(user_id), "exp": int(expire.timestamp()), "type": "access"}
 
-        return cast("str", jwt.encode(payload, self._settings.jwt_secret_key, algorithm="HS256"))
+        return cast("str", jwt.encode(payload, self._settings.jwt_secret_key.get_secret_value(), algorithm="HS256"))
 
     def _create_refresh_token(self, user_id: int) -> str:
         expire = datetime.now(UTC) + timedelta(seconds=self._settings.jwt_refresh_token_lifetime)
         payload = {"sub": str(user_id), "exp": int(expire.timestamp()), "type": "refresh"}
 
-        return cast("str", jwt.encode(payload, self._settings.jwt_secret_key, algorithm="HS256"))
+        return cast("str", jwt.encode(payload, self._settings.jwt_secret_key.get_secret_value(), algorithm="HS256"))
 
     def validate_access_token(self, token: str) -> int:
         try:
-            payload = jwt.decode(token, self._settings.jwt_secret_key, algorithms=["HS256"])
+            payload = jwt.decode(token, self._settings.jwt_secret_key.get_secret_value(), algorithms=["HS256"])
         except JWTError:
             logger.info("Отклонён некорректный access-токен")
 
@@ -115,7 +115,7 @@ class AuthService:
         try:
             payload = jwt.decode(
                 data.refresh_token,
-                self._settings.jwt_secret_key,
+                self._settings.jwt_secret_key.get_secret_value(),
                 algorithms=["HS256"],
             )
         except JWTError:
@@ -134,7 +134,7 @@ class AuthService:
         user_id = int(sub)
         user = await self._users_repo.get_by_id(user_id)
 
-        if user is None or user.id is None:
+        if user is None:
             logger.info("Refresh-токен для несуществующего пользователя", user_id=user_id)
 
             raise InvalidTokenError

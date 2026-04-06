@@ -33,5 +33,5 @@ async def verify_service_token(
     token: Annotated[str | None, Depends(service_token_header)],
     settings: Annotated[Settings, Depends(Provide[Container.settings])],
 ) -> None:
-    if token is None or token != settings.service_auth_token:
+    if token is None or token != settings.service_auth_token.get_secret_value():
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Недостаточно прав для сервисного доступа")
