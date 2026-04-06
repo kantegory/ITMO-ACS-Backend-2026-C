@@ -1,0 +1,12 @@
+node_modules
+dist
+npm-debug.log
+Dockerfile*
+docker-compose*.yml
+.git
+.gitignore
+.vscode
+docs
+postman
+openapi.yaml
+*.tar.gz
