@@ -10,3 +10,15 @@ class Env(StrEnum):
 class LogMode(StrEnum):
     PRETTY = "pretty"
     JSON = "json"
+
+
+class PropertyType(StrEnum):
+    FLAT = "flat"
+    ROOM = "room"
+    HOUSE = "house"
+
+
+class DealStatus(StrEnum):
+    REQUESTED = "requested"
+    APPROVED = "approved"
+    CANCELLED = "cancelled"

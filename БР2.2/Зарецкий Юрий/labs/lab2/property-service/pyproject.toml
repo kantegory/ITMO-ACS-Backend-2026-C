@@ -38,7 +38,22 @@ packages = ["app"]
 [tool.ruff]
 line-length = 120
 lint.select = ["ALL"]
-lint.ignore = ["D", "FA", "RUF001", "RUF002", "RUF003"]
+lint.ignore = ["D", "FA", "RUF001", "RUF002", "RUF003", "S105"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/db/**/*.py" = [
+    "PLR0912",
+    "PLR0913",
+    "C901",
+    "SIM108",
+    "TC001",
+    "TC002",
+    "TC003",
+]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["jose"]
+ignore_missing_imports = true
