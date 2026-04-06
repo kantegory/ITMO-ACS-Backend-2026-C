@@ -5,6 +5,13 @@ import structlog
 from app.db.deals import DealsRepo, RentDeal
 from app.db.properties import PropertiesRepo
 from app.enums import DealStatus
+from app.events.consts import (
+    DEAL_CREATED_EVENT,
+    DEAL_STATUS_CHANGED_EVENT,
+    RENTAL_DEAL_EVENTS_TOPIC,
+)
+from app.events.producer import EventProducer
+from app.events.schemas import DealCreatedPayload, DealStatusChangedPayload
 from app.schemas.dto import RentDealCreateDTO, require_deal_timestamps
 from app.schemas.queries import DealsForPropertyQuery
 from app.schemas.requests import CreateRentDealRequest, UpdateDealStatusRequest
@@ -32,9 +39,15 @@ logger = structlog.get_logger()
 
 
 class DealsService:
-    def __init__(self, deals_repo: DealsRepo, properties_repo: PropertiesRepo) -> None:
+    def __init__(
+        self,
+        deals_repo: DealsRepo,
+        properties_repo: PropertiesRepo,
+        event_producer: EventProducer,
+    ) -> None:
         self._deals_repo = deals_repo
         self._properties_repo = properties_repo
+        self._event_producer = event_producer
 
     def _to_response(self, deal: RentDeal) -> RentDealResponse:
         created_at, updated_at = require_deal_timestamps(deal.created_at, deal.updated_at)
@@ -99,6 +112,12 @@ class DealsService:
         )
 
         logger.info("Создана заявка на аренду", deal_id=deal.id, property_id=data.property_id)
+
+        await self._event_producer.send(
+            topic=RENTAL_DEAL_EVENTS_TOPIC,
+            event_type=DEAL_CREATED_EVENT,
+            payload=DealCreatedPayload.from_deal(deal).model_dump(),
+        )
 
         return self._to_response(deal)
 
@@ -186,6 +205,12 @@ class DealsService:
             raise DealNotFoundError
 
         logger.info("Обновлён статус сделки", deal_id=deal_id, status=data.status.value)
+
+        await self._event_producer.send(
+            topic=RENTAL_DEAL_EVENTS_TOPIC,
+            event_type=DEAL_STATUS_CHANGED_EVENT,
+            payload=DealStatusChangedPayload.from_deal(updated).model_dump(),
+        )
 
         return self._to_response(updated)
 

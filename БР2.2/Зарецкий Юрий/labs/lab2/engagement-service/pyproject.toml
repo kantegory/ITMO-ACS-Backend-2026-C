@@ -57,5 +57,5 @@ lint.ignore = ["D", "FA", "RUF001", "RUF002", "RUF003", "S105"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["jose"]
+module = ["aiokafka", "jose"]
 ignore_missing_imports = true

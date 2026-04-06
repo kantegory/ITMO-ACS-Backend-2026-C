@@ -1,0 +1,9 @@
+IDENTITY_USER_EVENTS_TOPIC = "identity.user.events"
+RENTAL_PROPERTY_EVENTS_TOPIC = "rental.property.events"
+RENTAL_DEAL_EVENTS_TOPIC = "rental.deal.events"
+
+PROPERTY_CREATED_EVENT = "PropertyCreated"
+PROPERTY_UPDATED_EVENT = "PropertyUpdated"
+PROPERTY_DELETED_EVENT = "PropertyDeleted"
+DEAL_CREATED_EVENT = "DealCreated"
+DEAL_STATUS_CHANGED_EVENT = "DealStatusChanged"

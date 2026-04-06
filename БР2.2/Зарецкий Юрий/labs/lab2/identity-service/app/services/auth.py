@@ -8,6 +8,9 @@ from jose import JWTError, jwt
 
 from app.consts import OAUTH2_TOKEN_TYPE
 from app.db.users import User, UsersRepo
+from app.events.consts import IDENTITY_USER_EVENTS_TOPIC, USER_CREATED_EVENT
+from app.events.producer import EventProducer
+from app.events.schemas import UserCreatedPayload
 from app.schemas.requests import LoginRequest, RefreshTokenRequest, RegisterRequest
 from app.schemas.responses import AuthResponse, TokensResponse, UserResponse
 from app.services.errors import EmailAlreadyRegisteredError, InvalidCredentialsError, InvalidTokenError
@@ -20,9 +23,10 @@ BCRYPT_LEGACY_UTF8_PREFIX_LEN = 72
 
 
 class AuthService:
-    def __init__(self, users_repo: UsersRepo, settings: Settings) -> None:
+    def __init__(self, users_repo: UsersRepo, settings: Settings, event_producer: EventProducer) -> None:
         self._users_repo = users_repo
         self._settings = settings
+        self._event_producer = event_producer
 
     def hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
@@ -96,6 +100,12 @@ class AuthService:
         )
 
         logger.info("Зарегистрирован пользователь", user_id=user.id)
+
+        await self._event_producer.send(
+            topic=IDENTITY_USER_EVENTS_TOPIC,
+            event_type=USER_CREATED_EVENT,
+            payload=UserCreatedPayload.from_user(user).model_dump(),
+        )
 
         return self._build_auth_response(user)
 

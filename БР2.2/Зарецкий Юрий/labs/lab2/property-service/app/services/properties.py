@@ -5,6 +5,18 @@ from app.db.comforts import ComfortsRepo
 from app.db.photos import PhotosRepo, PropertyPhoto
 from app.db.properties import PropertiesRepo, Property
 from app.enums import PropertyType
+from app.events.consts import (
+    PROPERTY_CREATED_EVENT,
+    PROPERTY_DELETED_EVENT,
+    PROPERTY_UPDATED_EVENT,
+    RENTAL_PROPERTY_EVENTS_TOPIC,
+)
+from app.events.producer import EventProducer
+from app.events.schemas import (
+    PropertyCreatedPayload,
+    PropertyDeletedPayload,
+    PropertyUpdatedPayload,
+)
 from app.schemas.dto import require_property_timestamps
 from app.schemas.queries import PropertyCatalogQuery
 from app.schemas.requests import CreatePropertyRequest, UpdatePropertyRequest
@@ -35,11 +47,13 @@ class PropertiesService:
         cities_repo: CitiesRepo,
         comforts_repo: ComfortsRepo,
         photos_repo: PhotosRepo,
+        event_producer: EventProducer,
     ) -> None:
         self._properties_repo = properties_repo
         self._cities_repo = cities_repo
         self._comforts_repo = comforts_repo
         self._photos_repo = photos_repo
+        self._event_producer = event_producer
 
     def _to_response(
         self,
@@ -159,6 +173,12 @@ class PropertiesService:
 
         logger.info("Создан объект", property_id=prop.id, owner_id=owner_id)
 
+        await self._event_producer.send(
+            topic=RENTAL_PROPERTY_EVENTS_TOPIC,
+            event_type=PROPERTY_CREATED_EVENT,
+            payload=PropertyCreatedPayload.from_property(prop).model_dump(),
+        )
+
         return await self.get_detail(prop.id)
 
     async def update(self, user_id: int, property_id: int, data: UpdatePropertyRequest) -> PropertyDetailResponse:
@@ -183,6 +203,12 @@ class PropertiesService:
 
         logger.info("Обновлён объект", property_id=property_id)
 
+        await self._event_producer.send(
+            topic=RENTAL_PROPERTY_EVENTS_TOPIC,
+            event_type=PROPERTY_UPDATED_EVENT,
+            payload=PropertyUpdatedPayload.from_property(updated).model_dump(),
+        )
+
         return await self.get_detail(property_id)
 
     async def delete(self, user_id: int, property_id: int) -> None:
@@ -196,6 +222,12 @@ class PropertiesService:
 
         await self._properties_repo.delete(property_id)
         logger.info("Удалён объект", property_id=property_id)
+
+        await self._event_producer.send(
+            topic=RENTAL_PROPERTY_EVENTS_TOPIC,
+            event_type=PROPERTY_DELETED_EVENT,
+            payload=PropertyDeletedPayload(property_id=property_id, owner_id=prop.owner_id).model_dump(),
+        )
 
     async def get_internal(self, property_id: int) -> PropertyInternalResponse:
         prop = await self._properties_repo.get_by_id(property_id)

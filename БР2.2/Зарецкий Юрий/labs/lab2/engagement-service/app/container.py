@@ -13,6 +13,7 @@ from app.clients.property import PropertyClient
 from app.db.conversations import ConversationsRepo
 from app.db.messages import MessagesRepo
 from app.db.reviews import ReviewsRepo
+from app.events.consumer import kafka_engagement_events_consumer_resource
 from app.logger import setup_logger
 from app.services.conversations import ConversationsService
 from app.services.messages import MessagesService
@@ -46,6 +47,10 @@ class Container(DeclarativeContainer):
     logger = Resource(provides=setup_logger)
     settings = Singleton(provides=get_settings)
     db_engine = Resource(provides=db_engine_manager, settings=settings.provided)
+    kafka_engagement_events_consumer = Resource(
+        provides=kafka_engagement_events_consumer_resource,
+        settings=settings.provided,
+    )
     http_client = Resource(provides=httpx_client_manager)
 
     identity_client = Singleton(IdentityClient, http_client=http_client.provided, settings=settings.provided)

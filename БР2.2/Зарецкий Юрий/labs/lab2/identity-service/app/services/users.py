@@ -1,6 +1,9 @@
 import structlog
 
 from app.db.users import UsersRepo
+from app.events.consts import IDENTITY_USER_EVENTS_TOPIC, USER_UPDATED_EVENT
+from app.events.producer import EventProducer
+from app.events.schemas import UserUpdatedPayload
 from app.schemas.requests import ChangePasswordRequest, UpdateProfileRequest
 from app.schemas.responses import UserInternalResponse, UserPublicResponse, UserResponse
 from app.services.auth import AuthService
@@ -10,9 +13,15 @@ logger = structlog.get_logger()
 
 
 class UsersService:
-    def __init__(self, users_repo: UsersRepo, auth_service: AuthService) -> None:
+    def __init__(
+        self,
+        users_repo: UsersRepo,
+        auth_service: AuthService,
+        event_producer: EventProducer,
+    ) -> None:
         self._users_repo = users_repo
         self._auth_service = auth_service
+        self._event_producer = event_producer
 
     async def get_me(self, user_id: int) -> UserResponse:
         user = await self._users_repo.get_by_id(user_id)
@@ -37,6 +46,12 @@ class UsersService:
             raise UserNotFoundError
 
         logger.info("Обновлён профиль пользователя", user_id=user_id)
+
+        await self._event_producer.send(
+            topic=IDENTITY_USER_EVENTS_TOPIC,
+            event_type=USER_UPDATED_EVENT,
+            payload=UserUpdatedPayload.from_user(user).model_dump(),
+        )
 
         return UserResponse.model_validate(user)
 

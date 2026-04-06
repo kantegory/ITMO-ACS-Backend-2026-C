@@ -1,7 +1,7 @@
 from functools import cache
 from importlib.metadata import version
 
-from pydantic import PostgresDsn
+from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.enums import Env, LogMode
@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     db_user: str = "postgres"
     db_password: str = "postgres"
 
-    jwt_secret_key: str = "secret"
+    jwt_secret_key: SecretStr = SecretStr("secret")
     jwt_access_token_lifetime: int = 300
     jwt_refresh_token_lifetime: int = 2_592_000
 
-    service_auth_token: str = "service-secret"
+    service_auth_token: SecretStr = SecretStr("service-secret")
 
     kafka_bootstrap_servers: str = "localhost:9092"
 

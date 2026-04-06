@@ -25,6 +25,6 @@ app.include_router(internal_router)
 app.mount(path="/metrics", app=make_asgi_app())
 
 
-@app.get(path="/health", tags=["Health"])
+@app.get(path="/health", tags=["Health"], summary="Проверка работоспособности сервиса")
 async def health_check() -> Response:
     return Response()
