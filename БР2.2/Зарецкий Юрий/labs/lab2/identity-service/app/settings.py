@@ -19,12 +19,13 @@ class Settings(BaseSettings):
     db_port: int = 5432
     db_name: str = "identity_db"
     db_user: str = "postgres"
-    db_password: str = "postgres"  # noqa: S105
+    db_password: str = "postgres"
 
-    jwt_secret_key: str = "secret"  # noqa: S105
+    jwt_secret_key: str = "secret"
     jwt_access_token_lifetime: int = 300
+    jwt_refresh_token_lifetime: int = 2_592_000
 
-    service_auth_token: str = "service-secret"  # noqa: S105
+    service_auth_token: str = "service-secret"
 
     kafka_bootstrap_servers: str = "localhost:9092"
 
@@ -38,8 +39,9 @@ class Settings(BaseSettings):
             password=self.db_password,
             host=self.db_host,
             port=self.db_port,
-            path=f"/{self.db_name}",
+            path=self.db_name,
         )
+
         return dsn.encoded_string()
 
 

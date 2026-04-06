@@ -7,7 +7,10 @@ from dependency_injector.providers import Resource, Self, Singleton
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from app.db.users import UsersRepo
 from app.logger import setup_logger
+from app.services.auth import AuthService
+from app.services.users import UsersService
 from app.settings import Settings, __version__, get_settings
 
 
@@ -29,6 +32,10 @@ class Container(DeclarativeContainer):
     logger = Resource(provides=setup_logger)
     settings = Singleton(provides=get_settings)
     db_engine = Resource(provides=db_engine_manager, settings=settings.provided)
+
+    users_repo = Singleton(UsersRepo, engine=db_engine.provided)
+    auth_service = Singleton(AuthService, users_repo=users_repo, settings=settings)
+    users_service = Singleton(UsersService, users_repo=users_repo, auth_service=auth_service)
 
     lifespan = Singleton(provides=Lifespan, container=__self__)
     app = Singleton(provides=FastAPI, version=__version__, lifespan=lifespan)
