@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     sentry_dsn: str | None = None
 
     db_host: str = "localhost"
-    db_port: int = 5432
+    db_port: int = 5434
     db_name: str = "engagement_db"
     db_user: str = "postgres"
     db_password: SecretStr = SecretStr("postgres")
