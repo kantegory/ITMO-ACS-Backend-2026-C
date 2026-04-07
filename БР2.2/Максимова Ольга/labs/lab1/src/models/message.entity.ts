@@ -35,9 +35,6 @@ export class Message extends BaseEntity {
     @Column({ type: 'boolean', default: false })
     is_read: boolean;
 
-    @Column({ type: 'boolean', default: false })
-    is_delivered: boolean;
-
     @ManyToOne(() => User, user => user.sent_messages)
     @JoinColumn({ name: 'sender_id' })
     sender: User;
