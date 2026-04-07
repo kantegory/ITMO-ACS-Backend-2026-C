@@ -3,13 +3,15 @@ import {
     Post,
     Param,
     Body,
-    QueryParam,
+    QueryParams,
     Req,
     UseBefore,
+    NotFoundError,
+    UnauthorizedError,
 } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
-import { NotFoundError, UnauthorizedError } from 'routing-controllers';
 import { In } from 'typeorm';
+
 import { Payment } from '../models/payment.entity';
 import { Rent } from '../models/rent.entity';
 import EntityController from '../common/entity-controller';
@@ -19,10 +21,7 @@ import authMiddleware, {
 } from '../middlewares/auth.middleware';
 import dataSource from '../config/data-source';
 
-export class CreatePaymentRequest {
-    rent_id: number;
-    amount: number;
-}
+import { CreatePaymentRequest, PaymentsListQueryDto } from '../dto/payment';
 
 @EntityController({ baseRoute: '/payments', entity: Payment })
 @UseBefore(authMiddleware)
@@ -35,10 +34,10 @@ export default class PaymentsController extends BaseController {
     })
     async list(
         @Req() req: RequestWithUser,
-        @QueryParam('page') page: number = 1,
-        @QueryParam('limit') limit: number = 10,
-        @QueryParam('sort') sort: string = 'created_at',
+        @QueryParams() query: PaymentsListQueryDto,
     ) {
+        const { page = 1, limit = 10, sort = 'created_at' } = query;
+
         const rentRepo = dataSource.getRepository(Rent);
         const userRents = await rentRepo.find({
             where: [{ tenant_id: req.user.id }, { landlord_id: req.user.id }],
@@ -54,6 +53,7 @@ export default class PaymentsController extends BaseController {
             order: { [sort]: 'DESC' },
             relations: ['rent'],
         });
+
         return { items, total, page, limit };
     }
 
@@ -68,10 +68,12 @@ export default class PaymentsController extends BaseController {
             where: { id },
             relations: ['rent'],
         });
+
         if (!payment) throw new NotFoundError('Payment not found');
 
         const rentRepo = dataSource.getRepository(Rent);
         const rent = await rentRepo.findOne({ where: { id: payment.rent_id } });
+
         if (
             !rent ||
             (rent.tenant_id !== req.user.id && rent.landlord_id !== req.user.id)
@@ -120,6 +122,7 @@ export default class PaymentsController extends BaseController {
     async byRent(@Req() req: RequestWithUser, @Param('rentId') rentId: number) {
         const rentRepo = dataSource.getRepository(Rent);
         const rent = await rentRepo.findOne({ where: { id: rentId } });
+
         if (
             !rent ||
             (rent.tenant_id !== req.user.id && rent.landlord_id !== req.user.id)
@@ -132,6 +135,7 @@ export default class PaymentsController extends BaseController {
             relations: ['rent'],
             order: { created_at: 'DESC' },
         });
+
         return {
             items: payments,
             total: payments.length,

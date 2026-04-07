@@ -5,24 +5,14 @@ import {
     Post,
     Patch,
     Delete,
-    QueryParam,
+    QueryParams,
     UseBefore,
     Req,
     NotFoundError,
     UnauthorizedError,
 } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
-import {
-    IsString,
-    IsNumber,
-    IsBoolean,
-    IsOptional,
-    IsArray,
-    ValidateNested,
-    IsIn,
-    IsUrl,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+
 import EntityController from '../common/entity-controller';
 import BaseController from '../common/base-controller';
 import { Accommodation } from '../models/accommodation.entity';
@@ -33,76 +23,13 @@ import authMiddleware, {
 } from '../middlewares/auth.middleware';
 import dataSource from '../config/data-source';
 
-const VALID_ACCOM_TYPES = ['flat', 'house', 'room', 'townhouse', 'dacha'];
-
-export class AddressDto {
-    @IsString() city: string;
-    @IsOptional() @IsString() district?: string;
-    @IsString() street: string;
-    @IsString() house_num: string;
-    @IsOptional() @IsNumber() @Type(() => Number) building?: number;
-}
-
-export class RentTermsDto {
-    @IsOptional() @IsString() util_serv_pay?: string;
-    @IsNumber() @Type(() => Number) price: number;
-    @IsOptional() @IsNumber() @Type(() => Number) deposit?: number;
-    @IsOptional() @IsNumber() @Type(() => Number) commission?: number;
-    @IsBoolean() @Type(() => Boolean) with_kids: boolean;
-    @IsBoolean() @Type(() => Boolean) with_pets: boolean;
-}
-
-export class PhotoUploadDto {
-    @IsUrl() photo_url: string;
-    @IsOptional() @IsBoolean() @Type(() => Boolean) is_main?: boolean;
-}
-
-export class AccommodationBaseDto {
-    @IsString() @IsIn(VALID_ACCOM_TYPES) accom_type: string;
-    @IsString() title: string;
-    @IsOptional() @IsString() description?: string;
-    @IsNumber() @Type(() => Number) rooms_num: number;
-    @IsOptional() @IsNumber() @Type(() => Number) living_space?: number;
-    @IsBoolean() @Type(() => Boolean) is_decorated: boolean;
-}
-
-export class CreateAccommodationDto {
-    @ValidateNested() @Type(() => AddressDto) address: AddressDto;
-    @ValidateNested()
-    @Type(() => AccommodationBaseDto)
-    accommodation: AccommodationBaseDto;
-    @ValidateNested() @Type(() => RentTermsDto) rent_terms: RentTermsDto;
-    @IsArray()
-    @IsNumber({}, { each: true })
-    @Type(() => Number)
-    facility_ids: number[];
-}
-
-export class UpdateAccommodationDto {
-    @IsOptional() @IsString() title?: string;
-    @IsOptional() @IsString() description?: string;
-    @IsOptional() @IsNumber() @Type(() => Number) rooms_num?: number;
-    @IsOptional() @IsNumber() @Type(() => Number) living_space?: number;
-    @IsOptional() @IsBoolean() @Type(() => Boolean) is_decorated?: boolean;
-    @IsOptional() @IsBoolean() @Type(() => Boolean) is_published?: boolean;
-
-    @IsOptional()
-    rent_terms?: {
-        util_serv_pay?: string;
-        price?: number;
-        deposit?: number;
-        commission?: number;
-        with_kids?: boolean;
-        with_pets?: boolean;
-    };
-
-    @IsOptional()
-    @IsArray()
-    @IsNumber({}, { each: true })
-    @Type(() => Number)
-    facility_ids?: number[];
-    @IsOptional() @IsString() @IsIn(VALID_ACCOM_TYPES) accom_type?: string;
-}
+import {
+    CreateAccommodationDto,
+    UpdateAccommodationDto,
+    PhotoUploadDto,
+    AccommodationListQueryDto,
+    MyAccommodationsQueryDto,
+} from '../dto/accommodation';
 
 @EntityController({ baseRoute: '/accommodations', entity: Accommodation })
 @UseBefore(authMiddleware)
@@ -112,7 +39,7 @@ export default class AccommodationController extends BaseController {
     @OpenAPI({ summary: 'Get my accommodations' })
     async myAccommodations(
         @Req() req: RequestWithUser,
-        @QueryParam('search') search?: string,
+        @QueryParams() query: MyAccommodationsQueryDto,
     ) {
         const qb = this.repository
             .createQueryBuilder('accom')
@@ -121,10 +48,10 @@ export default class AccommodationController extends BaseController {
                 landlordId: req.user.id,
             });
 
-        if (search) {
+        if (query.search) {
             qb.andWhere(
                 '(accom.title ILIKE :search OR address.city ILIKE :search)',
-                { search: `%${search}%` },
+                { search: `%${query.search}%` },
             );
         }
 
@@ -134,15 +61,17 @@ export default class AccommodationController extends BaseController {
 
     @Get('')
     @OpenAPI({ summary: 'Get accommodations list' })
-    async list(
-        @QueryParam('city') city?: string,
-        @QueryParam('district') district?: string,
-        @QueryParam('accom_type') accom_type?: string,
-        @QueryParam('rooms_num') rooms_num?: number,
-        @QueryParam('page') page: number = 1,
-        @QueryParam('limit') limit: number = 10,
-        @QueryParam('sort') sort?: string,
-    ) {
+    async list(@QueryParams() query: AccommodationListQueryDto) {
+        const {
+            city,
+            district,
+            accom_type,
+            rooms_num,
+            page = 1,
+            limit = 10,
+            sort,
+        } = query;
+
         const qb = this.repository
             .createQueryBuilder('accom')
             .leftJoinAndSelect('accom.address', 'address')
@@ -161,10 +90,10 @@ export default class AccommodationController extends BaseController {
 
         if (sort) {
             const [field, order] = sort.split(':');
-            qb.orderBy(
-                `accom.${field || 'id'}`,
-                (order?.toUpperCase() as any) || 'DESC',
-            );
+            const allowedFields = ['id', 'price', 'rooms_num', 'created_at'];
+            const safeField = allowedFields.includes(field) ? field : 'id';
+            const safeOrder = order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+            qb.orderBy(`accom.${safeField}`, safeOrder as any);
         }
 
         qb.skip((page - 1) * limit).take(limit);
@@ -202,7 +131,7 @@ export default class AccommodationController extends BaseController {
             district: body.address.district,
             street: body.address.street,
             house_num: body.address.house_num,
-            ...(body.address.building && { building: body.address.building }),
+            building: body.address.building || undefined,
         };
 
         const savedAddress = await addressRepo.save(addressData);
@@ -243,6 +172,11 @@ export default class AccommodationController extends BaseController {
         if (!accom) throw new NotFoundError('Accommodation not found');
         if (accom.landlord_id !== user.id)
             throw new UnauthorizedError('Access denied');
+
+        if (body.rent_terms) {
+            Object.assign(accom, body.rent_terms);
+            delete body.rent_terms;
+        }
 
         Object.assign(accom, body);
         return await this.repository.save(accom);

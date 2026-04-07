@@ -47,7 +47,7 @@ class App {
         const options = {
             routePrefix: SETTINGS.APP_API_PREFIX,
             controllers: [__dirname + this.controllersPath],
-            // controllers: [AuthController],
+            // controllers: [AuthController, UsersController, AccommodationsController, RentsController, MessagesController, PaymentsController],
             validation: true,
             classTransformer: true,
             defaultErrorHandler: true,

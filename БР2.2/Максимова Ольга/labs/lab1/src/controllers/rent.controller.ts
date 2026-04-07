@@ -4,18 +4,15 @@ import {
     Patch,
     Param,
     Body,
-    QueryParam,
+    QueryParams,
     Req,
     UseBefore,
-} from 'routing-controllers';
-import { OpenAPI } from 'routing-controllers-openapi';
-import { IsInt, IsDateString, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
-import {
     NotFoundError,
     UnauthorizedError,
     BadRequestError,
 } from 'routing-controllers';
+import { OpenAPI } from 'routing-controllers-openapi';
+
 import { Rent, RentStatus } from '../models/rent.entity';
 import { Accommodation } from '../models/accommodation.entity';
 import EntityController from '../common/entity-controller';
@@ -25,15 +22,11 @@ import authMiddleware, {
 } from '../middlewares/auth.middleware';
 import dataSource from '../config/data-source';
 
-class CreateRentRequest {
-    @IsInt() @Type(() => Number) accom_id: number;
-    @IsDateString() start_date: string;
-    @IsDateString() end_date: string;
-}
-
-class UpdateRentStatusRequest {
-    @IsEnum(['ongoing', 'closed']) status: string;
-}
+import {
+    CreateRentRequest,
+    UpdateRentStatusRequest,
+    RentsListQueryDto,
+} from '../dto/rent';
 
 @EntityController({ baseRoute: '/rents', entity: Rent })
 export default class RentsController extends BaseController {
@@ -46,10 +39,10 @@ export default class RentsController extends BaseController {
     })
     async list(
         @Req() req: RequestWithUser,
-        @QueryParam('page') page: number = 1,
-        @QueryParam('limit') limit: number = 10,
-        @QueryParam('sort') sort: string = 'created_at',
+        @QueryParams() query: RentsListQueryDto,
     ) {
+        const { page = 1, limit = 10, sort = 'created_at' } = query;
+
         const [items, total] = await this.repository.findAndCount({
             where: [{ tenant_id: req.user.id }, { landlord_id: req.user.id }],
             take: limit,
@@ -57,6 +50,7 @@ export default class RentsController extends BaseController {
             order: { [sort]: 'DESC' },
             relations: ['tenant', 'landlord', 'accommodation'],
         });
+
         return { items, total, page, limit };
     }
 
@@ -101,12 +95,14 @@ export default class RentsController extends BaseController {
         const accommodation = await accomRepo.findOne({
             where: { id: body.accom_id },
         });
+
         if (!accommodation) {
             throw new NotFoundError('Accommodation not found');
         }
 
         const startDate = new Date(body.start_date);
         const endDate = new Date(body.end_date);
+
         if (endDate <= startDate) {
             throw new BadRequestError('End date must be after start date');
         }
@@ -121,6 +117,7 @@ export default class RentsController extends BaseController {
         });
 
         const savedRent = await this.repository.save(rent);
+
         const fullRent = await this.repository.findOne({
             where: { id: savedRent.id },
             relations: ['tenant', 'landlord', 'accommodation'],
@@ -158,6 +155,7 @@ export default class RentsController extends BaseController {
 
         rent.rent_status = body.status as RentStatus;
         const updatedRent = await this.repository.save(rent);
+
         const fullRent = await this.repository.findOne({
             where: { id: updatedRent.id },
             relations: ['tenant', 'landlord', 'accommodation'],

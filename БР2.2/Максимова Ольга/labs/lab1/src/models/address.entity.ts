@@ -27,7 +27,6 @@ export class Address extends BaseEntity {
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
     updated_at: Date;
 
-    // Связи
     @OneToMany(() => Accommodation, accommodation => accommodation.address)
     accommodations: Accommodation[];
 }

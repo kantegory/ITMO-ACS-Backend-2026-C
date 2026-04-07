@@ -5,99 +5,27 @@ import {
     UnauthorizedError,
 } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
 import jwt from 'jsonwebtoken';
+
 import SETTINGS from '../config/settings';
 import EntityController from '../common/entity-controller';
 import BaseController from '../common/base-controller';
 import { User as UserEntity } from '../models/user.entity';
 import checkPassword from '../utils/check-password';
 import hashPassword from '../utils/hash-password';
-import { ApiUser, ApiRole } from './user.controller';
+// import { ApiUser, ApiRole } from './user.controller';
+import { ApiRole } from '../dto/user';
 
-class ApiError {
-    @Type(() => Number)
-    code: number;
-    @IsString()
-    message: string;
-    @IsOptional()
-    @IsString()
-    exception?: string;
-    @IsOptional()
-    @IsString()
-    exc_type?: string;
-}
-
-class ApiUnauthorized extends ApiError {
-    @Type(() => Number)
-    code: 401;
-    @IsString()
-    message: string;
-}
-
-class ApiConflict extends ApiError {
-    @Type(() => Number)
-    code: 409;
-    @IsString()
-    message: string;
-}
-
-class ApiValidation extends ApiError {
-    @Type(() => Number)
-    code: 422;
-    @IsString()
-    message: string;
-}
-
-class ApiServerError extends ApiError {
-    @Type(() => Number)
-    code: 500;
-    @IsString()
-    message: string;
-}
-
-class ApiLoginRequest {
-    @IsEmail()
-    @Type(() => String)
-    email: string;
-
-    @IsString()
-    @MinLength(6)
-    @Type(() => String)
-    password: string;
-}
-
-class ApiRegisterRequest {
-    @IsEmail()
-    @Type(() => String)
-    email: string;
-
-    @IsString()
-    @MinLength(6)
-    @Type(() => String)
-    password: string;
-
-    @IsString()
-    @Type(() => String)
-    first_name: string;
-
-    @IsString()
-    @Type(() => String)
-    last_name: string;
-
-    @IsOptional()
-    @IsString()
-    @Type(() => String)
-    middle_name?: string;
-}
-
-class ApiLoginResponse {
-    @IsString()
-    token: string;
-
-    user: ApiUser;
-}
+import {
+    ApiLoginRequest,
+    ApiRegisterRequest,
+    ApiLoginResponse,
+    ApiUnauthorized,
+    ApiConflict,
+    ApiValidation,
+    ApiServerError,
+    ApiError,
+} from '../dto/auth';
 
 @EntityController({
     baseRoute: '/auth',

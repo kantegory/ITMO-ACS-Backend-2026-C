@@ -3,15 +3,15 @@ import {
     Patch,
     Delete,
     Param,
-    QueryParam,
+    QueryParams,
     Body,
     Req,
     UseBefore,
+    NotFoundError,
+    UnauthorizedError,
 } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
-import { IsOptional, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
-import { NotFoundError, UnauthorizedError } from 'routing-controllers';
+
 import EntityController from '../common/entity-controller';
 import BaseController from '../common/base-controller';
 import { User as UserEntity } from '../models/user.entity';
@@ -21,40 +21,14 @@ import authMiddleware, {
 } from '../middlewares/auth.middleware';
 import dataSource from '../config/data-source';
 
-export enum ApiRole {
-    Admin = 'admin',
-    User = 'user',
-}
-
-export class ApiUser {
-    @Type(() => Number) id: number;
-    role: ApiRole;
-    @IsString() first_name: string;
-    @IsString() email: string;
-    @IsOptional() @IsString() middle_name?: string;
-    @IsString() last_name: string;
-    @Type(() => Boolean) is_verified: boolean;
-}
-
-export class ApiUserResponse {
-    @IsString() first_name: string;
-    @IsOptional() @IsString() middle_name?: string;
-    @IsString() last_name: string;
-    @IsString() email: string;
-}
-
-export class ApiUpdateProfileRequest {
-    @IsOptional() @IsString() first_name?: string;
-    @IsOptional() @IsString() middle_name?: string;
-    @IsOptional() @IsString() last_name?: string;
-    @IsOptional() @IsString() email?: string;
-    @IsOptional() @IsString() password?: string;
-}
-
-export class UserRentsResponseDto {
-    as_tenant: RentEntity[];
-    as_landlord: RentEntity[];
-}
+import {
+    ApiUser,
+    ApiRole,
+    ApiUserResponse,
+    ApiUpdateProfileRequest,
+    UserRentsResponseDto,
+    UsersListQueryDto,
+} from '../dto/user';
 
 @EntityController({ baseRoute: '/users', entity: UserEntity })
 export default class UsersController extends BaseController {
@@ -68,13 +42,13 @@ export default class UsersController extends BaseController {
     @ResponseSchema(ApiUser, { statusCode: 200, isArray: true })
     async list(
         @Req() req: RequestWithUser,
-        @QueryParam('page') page: number = 1,
-        @QueryParam('limit') limit: number = 10,
-        @QueryParam('sort') sort: string = 'created_at',
+        @QueryParams() query: UsersListQueryDto,
     ) {
         if (req.user.role !== 'admin') {
             throw new UnauthorizedError('Admin access required');
         }
+
+        const { page = 1, limit = 10, sort = 'created_at' } = query;
 
         const [items, total] = await this.repository.findAndCount({
             take: limit,
@@ -175,6 +149,7 @@ export default class UsersController extends BaseController {
         tags: ['User'],
         security: [{ bearerAuth: [] }],
     })
+    @ResponseSchema(UserRentsResponseDto, { statusCode: 200 })
     async getRents(@Req() req: RequestWithUser, @Param('id') id: number) {
         if (req.user.role !== 'admin' && req.user.id !== id) {
             throw new UnauthorizedError('Access denied');

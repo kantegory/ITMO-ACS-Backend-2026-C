@@ -5,21 +5,14 @@ import {
     Delete,
     Param,
     Body,
-    QueryParam,
+    QueryParams,
     Req,
     UseBefore,
+    NotFoundError,
+    UnauthorizedError,
 } from 'routing-controllers';
 import { OpenAPI } from 'routing-controllers-openapi';
-import {
-    IsInt,
-    IsString,
-    IsOptional,
-    IsEnum,
-    IsArray,
-    IsBoolean,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import { NotFoundError, UnauthorizedError } from 'routing-controllers';
+
 import { Message } from '../models/message.entity';
 import EntityController from '../common/entity-controller';
 import BaseController from '../common/base-controller';
@@ -27,23 +20,13 @@ import authMiddleware, {
     RequestWithUser,
 } from '../middlewares/auth.middleware';
 
-const VALID_MESSAGE_TYPES = ['text', 'image', 'file'];
-
-export class SendMessageRequest {
-    @IsInt() @Type(() => Number) receiver_id: number;
-    @IsInt() @Type(() => Number) accom_id: number;
-    @IsString() mes_text: string;
-    @IsOptional() @IsEnum(VALID_MESSAGE_TYPES) mes_type?: string;
-    @IsOptional()
-    @IsArray()
-    @IsInt({ each: true })
-    @Type(() => Number)
-    attachment_ids?: number[];
-}
-
-export class MarkAsReadRequest {
-    @IsBoolean() @Type(() => Boolean) is_read: boolean;
-}
+import {
+    SendMessageRequest,
+    MarkAsReadRequest,
+    MyMessagesQueryDto,
+    MessagesListQueryDto,
+    ConversationQueryDto,
+} from '../dto/message';
 
 @EntityController({ baseRoute: '/messages', entity: Message })
 @UseBefore(authMiddleware)
@@ -53,7 +36,7 @@ export default class MessagesController extends BaseController {
     @OpenAPI({ summary: 'Get my messages', tags: ['Messages'] })
     async myMessages(
         @Req() req: RequestWithUser,
-        @QueryParam('search') search?: string,
+        @QueryParams() query: MyMessagesQueryDto,
     ) {
         const qb = this.repository
             .createQueryBuilder('msg')
@@ -63,9 +46,9 @@ export default class MessagesController extends BaseController {
                 userId: req.user.id,
             });
 
-        if (search) {
+        if (query.search) {
             qb.andWhere('msg.mes_text ILIKE :search', {
-                search: `%${search}%`,
+                search: `%${query.search}%`,
             });
         }
 
@@ -77,10 +60,10 @@ export default class MessagesController extends BaseController {
     @OpenAPI({ summary: 'List user messages', tags: ['Messages'] })
     async list(
         @Req() req: RequestWithUser,
-        @QueryParam('page') page: number = 1,
-        @QueryParam('limit') limit: number = 10,
-        @QueryParam('sort') sort: string = 'created_at',
+        @QueryParams() query: MessagesListQueryDto,
     ) {
+        const { page = 1, limit = 10, sort = 'created_at' } = query;
+
         const [items, total] = await this.repository.findAndCount({
             where: [{ sender_id: req.user.id }, { receiver_id: req.user.id }],
             take: limit,
@@ -88,6 +71,7 @@ export default class MessagesController extends BaseController {
             order: { [sort]: 'DESC' },
             relations: ['sender', 'receiver'],
         });
+
         return { items, total, page, limit };
     }
 
@@ -102,12 +86,12 @@ export default class MessagesController extends BaseController {
             receiver_id: body.receiver_id,
             accom_id: body.accom_id,
             mes_text: body.mes_text,
-            mes_type: body.mes_type || 'text',
+            mes_type: body.mes_type ?? 'text',
             is_read: false,
-            is_delivered: false,
         });
 
         const savedMessage = await this.repository.save(message);
+
         return {
             message: savedMessage,
             sender: {
@@ -115,7 +99,7 @@ export default class MessagesController extends BaseController {
                 last_name: req.user.last_name,
             },
             receiver: { id: body.receiver_id },
-            attachments: body.attachment_ids || [],
+            attachments: body.attachment_ids ?? [],
         };
     }
 
@@ -204,30 +188,27 @@ export default class MessagesController extends BaseController {
     @OpenAPI({ summary: 'Get conversation messages', tags: ['Messages'] })
     async getConversation(
         @Req() req: RequestWithUser,
-        @QueryParam('accom_id') accomId: number,
-        @QueryParam('user_id') userId: number,
-        @QueryParam('page') page: number = 1,
-        @QueryParam('limit') limit: number = 10,
+        @QueryParams() query: ConversationQueryDto,
     ) {
-        if (req.user.id !== userId) {
+        if (req.user.id !== query.user_id) {
             throw new UnauthorizedError('Access denied');
         }
 
         const [items, total] = await this.repository.findAndCount({
             where: [
                 {
-                    sender_id: userId,
+                    sender_id: query.user_id,
                     receiver_id: req.user.id,
-                    accom_id: accomId,
+                    accom_id: query.accom_id,
                 },
                 {
                     sender_id: req.user.id,
-                    receiver_id: userId,
-                    accom_id: accomId,
+                    receiver_id: query.user_id,
+                    accom_id: query.accom_id,
                 },
             ],
-            take: limit,
-            skip: (page - 1) * limit,
+            take: query.limit,
+            skip: (query.page - 1) * query.limit,
             order: { created_at: 'DESC' },
             relations: ['sender', 'receiver'],
         });
@@ -245,6 +226,11 @@ export default class MessagesController extends BaseController {
             attachments: [],
         }));
 
-        return { items: formattedItems, total, page, limit };
+        return {
+            items: formattedItems,
+            total,
+            page: query.page,
+            limit: query.limit,
+        };
     }
 }
