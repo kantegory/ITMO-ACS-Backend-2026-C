@@ -1,0 +1,1 @@
+export const VALID_ACCOM_TYPES = ['flat', 'house', 'room', 'townhouse', 'dacha'] as const;
