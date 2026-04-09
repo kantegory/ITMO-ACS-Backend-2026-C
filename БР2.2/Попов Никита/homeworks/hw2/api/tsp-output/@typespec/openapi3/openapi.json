@@ -1,0 +1,1687 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Restaurant API",
+    "version": "0.0.0"
+  },
+  "tags": [
+    {
+      "name": "Users"
+    },
+    {
+      "name": "Restaurant"
+    },
+    {
+      "name": "Menu"
+    },
+    {
+      "name": "Bookings"
+    },
+    {
+      "name": "Auth"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthApi_login",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AuthTokens"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "AuthApi_register",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AuthTokens"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/me": {
+      "get": {
+        "operationId": "BookingsApi_myBookings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PaginationQuery.page"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.pageSize"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "total",
+                        "page",
+                        "pageSize"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Booking"
+                          }
+                        },
+                        "total": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "format": "int32"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404 — Не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/status": {
+      "patch": {
+        "operationId": "BookingsApi_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bookings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "$ref": "#/components/schemas/BookingStatus"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/restaurants": {
+      "get": {
+        "operationId": "RestaurantsApi_listRestaurants",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PaginationQuery.page"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.pageSize"
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          },
+          {
+            "name": "cuisineId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          },
+          {
+            "name": "priceLevel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PriceLevel"
+            },
+            "explode": false
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "priceLevel",
+                "rating",
+                "name",
+                "createdAt"
+              ]
+            },
+            "explode": false
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "total",
+                        "page",
+                        "pageSize"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Restaurant"
+                          }
+                        },
+                        "total": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "format": "int32"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ]
+      },
+      "post": {
+        "operationId": "RestaurantsApi_createRestaurant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Restaurant"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403 — Нет прав",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "500 — Внутренняя ошибка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRestaurantDto"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/restaurants/restaurants/{restaurantId}/available-slots": {
+      "get": {
+        "operationId": "RestaurantsApi_getAvailableSlots",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "guestCount",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "explode": false
+          },
+          {
+            "name": "durationMinutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AvailableSlotsResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404 — Не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ]
+      }
+    },
+    "/api/v1/restaurants/{id}": {
+      "get": {
+        "operationId": "RestaurantsApi_getRestaurant",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Restaurant"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404 — Не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "500 — Внутренняя ошибка",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ]
+      }
+    },
+    "/api/v1/restaurants/{restaurantId}/bookings": {
+      "get": {
+        "operationId": "BookingsApi_listRestaurantBookings",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.page"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.pageSize"
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BookingStatus"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "total",
+                        "page",
+                        "pageSize"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Booking"
+                          }
+                        },
+                        "total": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "format": "int32"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403 — Нет прав",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404 — Не найдено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bookings"
+        ]
+      },
+      "post": {
+        "operationId": "BookingsApi_createBooking",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Bookings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingDto"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/restaurants/{restaurantId}/menu": {
+      "get": {
+        "operationId": "MenuApi_listMenu",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MenuItem"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Menu"
+        ]
+      },
+      "post": {
+        "operationId": "MenuApi_createMenuItem",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MenuItem"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Menu"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuItemDto"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/restaurants/{restaurantId}/reviews": {
+      "get": {
+        "operationId": "ReviewsApi_listReviews",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.page"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationQuery.pageSize"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "rating",
+                "createdAt"
+              ]
+            },
+            "explode": false
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "total",
+                        "page",
+                        "pageSize"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Review"
+                          }
+                        },
+                        "total": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "format": "int32"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "format": "int32"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ]
+      },
+      "post": {
+        "operationId": "ReviewsApi_createReview",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Review"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400 — Ошибка валидации",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401 — Не авторизован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Restaurant"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewDto"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "UsersApi_getMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersApi_updateMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "PaginationQuery.page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "default": 1
+        },
+        "explode": false
+      },
+      "PaginationQuery.pageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "default": 20
+        },
+        "explode": false
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthTokens": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "AvailableSlotsResponse": {
+        "type": "object",
+        "required": [
+          "slots"
+        ],
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeSlot"
+            },
+            "description": "Список доступных временных слотов"
+          }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "restaurantId",
+          "fromDate",
+          "toDate",
+          "guestCount",
+          "status",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "restaurantId": {
+            "type": "string"
+          },
+          "fromDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "guestCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BookingStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BookingStatus": {
+        "type": "string",
+        "enum": [
+          "CONFIRMED",
+          "CANCELLED"
+        ]
+      },
+      "ConflictError": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        ],
+        "description": "409 — Конфликт"
+      },
+      "CreateBookingDto": {
+        "type": "object",
+        "required": [
+          "fromDate",
+          "toDate",
+          "guestCount"
+        ],
+        "properties": {
+          "fromDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "guestCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateMenuItemDto": {
+        "type": "object",
+        "required": [
+          "categoryId",
+          "name",
+          "price"
+        ],
+        "properties": {
+          "categoryId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "CreateRestaurantDto": {
+        "type": "object",
+        "required": [
+          "name",
+          "address",
+          "city",
+          "priceLevel",
+          "capacity"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "priceLevel": {
+            "$ref": "#/components/schemas/PriceLevel"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CreateReviewDto": {
+        "type": "object",
+        "required": [
+          "rating"
+        ],
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "comment": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ForbiddenError": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        ],
+        "description": "403 — Нет прав"
+      },
+      "InternalServerError": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        ],
+        "description": "500 — Внутренняя ошибка"
+      },
+      "LoginDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "MenuItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "restaurantId",
+          "categoryId",
+          "name",
+          "price"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "restaurantId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "NotFoundError": {
+        "type": "object",
+        "properties": {
+          "resource": {
+            "type": "string"
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        ],
+        "description": "404 — Не найдено"
+      },
+      "PriceLevel": {
+        "type": "string",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "MEDIUM_HIGH",
+          "HIGH"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "lastName"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        }
+      },
+      "Restaurant": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "address",
+          "city",
+          "priceLevel",
+          "capacity",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "priceLevel": {
+            "$ref": "#/components/schemas/PriceLevel"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rating": {
+            "type": "number",
+            "format": "float"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "restaurantId",
+          "rating",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "restaurantId": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SortOrder": {
+        "type": "string",
+        "enum": [
+          "ASC",
+          "DESC"
+        ]
+      },
+      "TimeSlot": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "type": "object",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        ],
+        "description": "401 — Не авторизован"
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "role",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "ADMIN",
+          "OWNER",
+          "CLIENT"
+        ]
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        ],
+        "description": "400 — Ошибка валидации"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local",
+      "variables": {}
+    }
+  ]
+}
