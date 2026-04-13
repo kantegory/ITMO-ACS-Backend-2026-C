@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "1c6d828f-de28-46b5-92a5-1ef70cfb235f",
-		"name": "Аренда помещений  — E2E Сценарий",
+		"name": "Аренда помещений",
 		"description": "Комплексный сценарий: регистрация -> вход -> список объявлений -> фильтрация -> просмотр случайного объявления -> старт переписки",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "26810996"
@@ -14,24 +14,24 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
-							"pm.test('Ответ содержит accessToken', () => {",
-							"    pm.expect(body).to.have.property('accessToken');",
-							"    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+							"pm.test('Ответ содержит tokens', () => {",
+							"    pm.expect(body).to.have.property('tokens');",
+							"    pm.expect(body.tokens.access_token).to.be.a('string').and.not.empty;",
 							"});",
-							"pm.test('Ответ содержит refreshToken', () => {",
-							"    pm.expect(body).to.have.property('refreshToken');",
+							"pm.test('Ответ содержит refresh_token', () => {",
+							"    pm.expect(body.tokens.refresh_token).to.be.a('string').and.not.empty;",
 							"});",
 							"pm.test('Данные пользователя корректны', () => {",
 							"    pm.expect(body.user).to.have.property('id');",
-							"    pm.expect(body.user.fullName).to.eql('Владелец Иванов');",
+							"    pm.expect(body.user.full_name).to.eql('Владелец Иванов');",
 							"    pm.expect(body.user.email).to.eql('owner@test.ru');",
 							"});",
 							"pm.test('Пароль НЕ возвращается', () => {",
 							"    pm.expect(body.user).to.not.have.property('password');",
 							"});",
-							"pm.collectionVariables.set('ownerToken', body.accessToken);",
+							"pm.collectionVariables.set('ownerToken', body.tokens.access_token);",
 							"pm.collectionVariables.set('ownerId', body.user.id);"
 						],
 						"type": "text/javascript",
@@ -49,7 +49,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"email\": \"owner@test.ru\",\n  \"password\": \"pass1234\",\n  \"fullName\": \"Владелец Иванов\"\n}"
+					"raw": "{\n  \"email\": \"owner@test.ru\",\n  \"password\": \"pass1234\",\n  \"full_name\": \"Владелец Иванов\"\n}"
 				},
 				"url": {
 					"raw": "{{identityBaseUrl}}/auth/register",
@@ -71,7 +71,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Город создан', () => {",
 							"    pm.expect(body).to.have.property('id');",
@@ -119,7 +119,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Город создан', () => {",
 							"    pm.expect(body.name).to.eql('Санкт-Петербург');",
@@ -166,7 +166,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Удобство создано', () => {",
 							"    pm.expect(body.name).to.eql('Wi-Fi');",
@@ -214,7 +214,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Удобство создано', () => {",
 							"    pm.expect(body.name).to.eql('Кондиционер');",
@@ -261,7 +261,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Удобство создано', () => {",
 							"    pm.expect(body.name).to.eql('Парковка');",
@@ -308,16 +308,16 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Объявление создано', () => {",
 							"    pm.expect(body).to.have.property('id');",
 							"    pm.expect(body.title).to.eql('Уютная студия в центре Москвы');",
 							"    pm.expect(body.type).to.eql('flat');",
-							"    pm.expect(body.pricePerDay).to.eql(3500);",
-							"    pm.expect(body.roomsCount).to.eql(1);",
+							"    pm.expect(body.price_per_day).to.eql(3500);",
+							"    pm.expect(body.rooms_count).to.eql(1);",
 							"    pm.expect(body.area).to.eql(35);",
-							"    pm.expect(body.maxGuests).to.eql(2);",
+							"    pm.expect(body.max_guests).to.eql(2);",
 							"});",
 							"pm.test('Привязаны удобства', () => {",
 							"    pm.expect(body.comforts).to.be.an('array').with.lengthOf(2);",
@@ -346,7 +346,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"title\": \"Уютная студия в центре Москвы\",\n  \"description\": \"Светлая студия рядом с метро Арбатская\",\n  \"type\": \"flat\",\n  \"pricePerDay\": 3500,\n  \"address\": \"ул. Арбат, 10\",\n  \"roomsCount\": 1,\n  \"area\": 35,\n  \"maxGuests\": 2,\n  \"cityId\": {{cityMoscowId}},\n  \"comfortIds\": [{{comfortWifiId}}, {{comfortAcId}}]\n}"
+					"raw": "{\n  \"title\": \"Уютная студия в центре Москвы\",\n  \"description\": \"Светлая студия рядом с метро Арбатская\",\n  \"type\": \"flat\",\n  \"price_per_day\": 3500,\n  \"address\": \"ул. Арбат, 10\",\n  \"rooms_count\": 1,\n  \"area\": 35,\n  \"max_guests\": 2,\n  \"city_id\": {{cityMoscowId}},\n  \"comfort_ids\": [{{comfortWifiId}}, {{comfortAcId}}]\n}"
 				},
 				"url": {
 					"raw": "{{propertyBaseUrl}}/properties",
@@ -367,11 +367,11 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Объявление создано', () => {",
 							"    pm.expect(body.title).to.eql('Просторная квартира на Невском');",
-							"    pm.expect(body.pricePerDay).to.eql(7000);",
+							"    pm.expect(body.price_per_day).to.eql(7000);",
 							"    pm.expect(body.comforts).to.have.lengthOf(3);",
 							"});",
 							"pm.collectionVariables.set('property2Id', body.id);"
@@ -395,7 +395,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"title\": \"Просторная квартира на Невском\",\n  \"description\": \"3-комн. квартира с видом на Неву\",\n  \"type\": \"flat\",\n  \"pricePerDay\": 7000,\n  \"address\": \"Невский пр., 50\",\n  \"roomsCount\": 3,\n  \"area\": 85,\n  \"maxGuests\": 6,\n  \"cityId\": {{citySpbId}},\n  \"comfortIds\": [{{comfortWifiId}}, {{comfortAcId}}, {{comfortParkingId}}]\n}"
+					"raw": "{\n  \"title\": \"Просторная квартира на Невском\",\n  \"description\": \"3-комн. квартира с видом на Неву\",\n  \"type\": \"flat\",\n  \"price_per_day\": 7000,\n  \"address\": \"Невский пр., 50\",\n  \"rooms_count\": 3,\n  \"area\": 85,\n  \"max_guests\": 6,\n  \"city_id\": {{citySpbId}},\n  \"comfort_ids\": [{{comfortWifiId}}, {{comfortAcId}}, {{comfortParkingId}}]\n}"
 				},
 				"url": {
 					"raw": "{{propertyBaseUrl}}/properties",
@@ -416,11 +416,11 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Комната создана с типом room', () => {",
 							"    pm.expect(body.type).to.eql('room');",
-							"    pm.expect(body.pricePerDay).to.eql(1500);",
+							"    pm.expect(body.price_per_day).to.eql(1500);",
 							"});",
 							"pm.collectionVariables.set('property3Id', body.id);"
 						],
@@ -443,7 +443,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"title\": \"Комната в коммуналке\",\n  \"description\": \"Недорогая комната в центре Москвы\",\n  \"type\": \"room\",\n  \"pricePerDay\": 1500,\n  \"address\": \"ул. Тверская, 5\",\n  \"roomsCount\": 1,\n  \"area\": 18,\n  \"maxGuests\": 1,\n  \"cityId\": {{cityMoscowId}},\n  \"comfortIds\": [{{comfortWifiId}}]\n}"
+					"raw": "{\n  \"title\": \"Комната в коммуналке\",\n  \"description\": \"Недорогая комната в центре Москвы\",\n  \"type\": \"room\",\n  \"price_per_day\": 1500,\n  \"address\": \"ул. Тверская, 5\",\n  \"rooms_count\": 1,\n  \"area\": 18,\n  \"max_guests\": 1,\n  \"city_id\": {{cityMoscowId}},\n  \"comfort_ids\": [{{comfortWifiId}}]\n}"
 				},
 				"url": {
 					"raw": "{{propertyBaseUrl}}/properties",
@@ -464,12 +464,12 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Дом создан с типом house', () => {",
 							"    pm.expect(body.type).to.eql('house');",
-							"    pm.expect(body.maxGuests).to.eql(10);",
-							"    pm.expect(body.roomsCount).to.eql(5);",
+							"    pm.expect(body.max_guests).to.eql(10);",
+							"    pm.expect(body.rooms_count).to.eql(5);",
 							"});",
 							"pm.collectionVariables.set('property4Id', body.id);"
 						],
@@ -492,7 +492,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"title\": \"Загородный дом в Подмосковье\",\n  \"description\": \"Двухэтажный дом с баней и участком\",\n  \"type\": \"house\",\n  \"pricePerDay\": 12000,\n  \"address\": \"пос. Лесной, ул. Сосновая, 7\",\n  \"roomsCount\": 5,\n  \"area\": 150,\n  \"maxGuests\": 10,\n  \"cityId\": {{cityMoscowId}},\n  \"comfortIds\": [{{comfortParkingId}}]\n}"
+					"raw": "{\n  \"title\": \"Загородный дом в Подмосковье\",\n  \"description\": \"Двухэтажный дом с баней и участком\",\n  \"type\": \"house\",\n  \"price_per_day\": 12000,\n  \"address\": \"пос. Лесной, ул. Сосновая, 7\",\n  \"rooms_count\": 5,\n  \"area\": 150,\n  \"max_guests\": 10,\n  \"city_id\": {{cityMoscowId}},\n  \"comfort_ids\": [{{comfortParkingId}}]\n}"
 				},
 				"url": {
 					"raw": "{{propertyBaseUrl}}/properties",
@@ -513,10 +513,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Арендатор зарегистрирован', () => {",
-							"    pm.expect(body.user.fullName).to.eql('Арендатор Петров');",
+							"    pm.expect(body.user.full_name).to.eql('Арендатор Петров');",
 							"    pm.expect(body.user.email).to.eql('tenant@test.ru');",
 							"});",
 							"pm.test('Пароль НЕ возвращается', () => {",
@@ -539,7 +539,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"email\": \"tenant@test.ru\",\n  \"password\": \"tenant123\",\n  \"fullName\": \"Арендатор Петров\"\n}"
+					"raw": "{\n  \"email\": \"tenant@test.ru\",\n  \"password\": \"tenant123\",\n  \"full_name\": \"Арендатор Петров\"\n}"
 				},
 				"url": {
 					"raw": "{{identityBaseUrl}}/auth/register",
@@ -563,16 +563,16 @@
 						"exec": [
 							"pm.test('Статус 200', () => pm.response.to.have.status(200));",
 							"const body = pm.response.json();",
-							"pm.test('Получен accessToken', () => {",
-							"    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+							"pm.test('Получен access_token', () => {",
+							"    pm.expect(body.tokens.access_token).to.be.a('string').and.not.empty;",
 							"});",
-							"pm.test('Получен refreshToken', () => {",
-							"    pm.expect(body.refreshToken).to.be.a('string').and.not.empty;",
+							"pm.test('Получен refresh_token', () => {",
+							"    pm.expect(body.tokens.refresh_token).to.be.a('string').and.not.empty;",
 							"});",
 							"pm.test('Возвращён правильный пользователь', () => {",
 							"    pm.expect(body.user.email).to.eql('tenant@test.ru');",
 							"});",
-							"pm.collectionVariables.set('tenantToken', body.accessToken);"
+							"pm.collectionVariables.set('tenantToken', body.tokens.access_token);"
 						],
 						"type": "text/javascript",
 						"packages": {}
@@ -625,7 +625,7 @@
 							"    pm.expect(body.pagination).to.have.property('page');",
 							"    pm.expect(body.pagination).to.have.property('limit');",
 							"    pm.expect(body.pagination).to.have.property('total');",
-							"    pm.expect(body.pagination).to.have.property('totalPages');",
+							"    pm.expect(body.pagination).to.have.property('total_pages');",
 							"});",
 							"pm.test('У каждого объявления есть город', () => {",
 							"    body.data.forEach(p => {",
@@ -675,15 +675,14 @@
 							"    const p = body.data[0];",
 							"    pm.expect(p.title).to.eql('Уютная студия в центре Москвы');",
 							"    pm.expect(p.type).to.eql('flat');",
-							"    pm.expect(p.pricePerDay).to.be.at.most(5000);",
+							"    pm.expect(p.price_per_day).to.be.at.most(5000);",
 							"});",
 							"pm.test('Все результаты соответствуют фильтру', () => {",
 							"    body.data.forEach(p => {",
 							"        pm.expect(p.type).to.eql('flat');",
-							"        pm.expect(p.pricePerDay).to.be.at.most(5000);",
+							"        pm.expect(p.price_per_day).to.be.at.most(5000);",
 							"    });",
 							"});",
-							"// Выбираем случайное объявление из выдачи",
 							"const randomIndex = Math.floor(Math.random() * body.data.length);",
 							"const chosen = body.data[randomIndex];",
 							"pm.collectionVariables.set('chosenPropertyId', chosen.id);",
@@ -701,7 +700,7 @@
 					}
 				],
 				"url": {
-					"raw": "{{propertyBaseUrl}}/properties?type=flat&cityId={{cityMoscowId}}&priceMax=5000",
+					"raw": "{{propertyBaseUrl}}/properties?type=flat&city_id={{cityMoscowId}}&price_max=5000",
 					"host": [
 						"{{propertyBaseUrl}}"
 					],
@@ -714,11 +713,11 @@
 							"value": "flat"
 						},
 						{
-							"key": "cityId",
+							"key": "city_id",
 							"value": "{{cityMoscowId}}"
 						},
 						{
-							"key": "priceMax",
+							"key": "price_max",
 							"value": "5000"
 						}
 					]
@@ -741,26 +740,25 @@
 							"    pm.expect(body).to.have.property('title');",
 							"    pm.expect(body).to.have.property('description');",
 							"    pm.expect(body).to.have.property('type');",
-							"    pm.expect(body).to.have.property('pricePerDay');",
+							"    pm.expect(body).to.have.property('price_per_day');",
 							"    pm.expect(body).to.have.property('address');",
-							"    pm.expect(body).to.have.property('roomsCount');",
+							"    pm.expect(body).to.have.property('rooms_count');",
 							"    pm.expect(body).to.have.property('area');",
-							"    pm.expect(body).to.have.property('maxGuests');",
+							"    pm.expect(body).to.have.property('max_guests');",
 							"});",
 							"pm.test('Есть город', () => {",
 							"    pm.expect(body.city).to.be.an('object');",
 							"    pm.expect(body.city).to.have.property('name');",
 							"});",
-							"pm.test('Есть владелец (без пароля)', () => {",
-							"    pm.expect(body.owner).to.be.an('object');",
-							"    pm.expect(body.owner).to.have.property('fullName');",
-							"    pm.expect(body.owner).to.not.have.property('password');",
+							"pm.test('Есть владелец (owner_id)', () => {",
+							"    pm.expect(body).to.have.property('owner_id');",
+							"    pm.expect(body.owner_id).to.be.a('number');",
 							"});",
 							"pm.test('Есть удобства', () => {",
 							"    pm.expect(body.comforts).to.be.an('array');",
 							"    pm.expect(body.comforts.length).to.be.greaterThan(0);",
 							"});",
-							"pm.collectionVariables.set('propertyOwnerId', body.owner.id);"
+							"pm.collectionVariables.set('propertyOwnerId', body.owner_id);"
 						]
 					}
 				}
@@ -793,7 +791,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Беседа создана', () => {",
 							"    pm.expect(body).to.have.property('id');",
@@ -820,7 +818,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"userId\": {{propertyOwnerId}},\n  \"propertyId\": {{chosenPropertyId}},\n  \"message\": \"Здравствуйте! Хотел бы арендовать вашу квартиру на неделю. Свободна ли она с 15 по 22 января?\"\n}"
+					"raw": "{\n  \"user_id\": {{propertyOwnerId}},\n  \"property_id\": {{chosenPropertyId}}\n}"
 				},
 				"url": {
 					"raw": "{{engagementBaseUrl}}/conversations",
@@ -835,13 +833,62 @@
 			"response": []
 		},
 		{
+			"name": "16a. Первое сообщение арендатора",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Сообщение создано', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"    pm.expect(body.text).to.include('арендовать');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"text\": \"Здравствуйте! Хотел бы арендовать вашу квартиру на неделю. Свободна ли она с 15 по 22 января?\"\n}"
+				},
+				"url": {
+					"raw": "{{engagementBaseUrl}}/conversations/{{conversationId}}/messages",
+					"host": [
+						"{{engagementBaseUrl}}"
+					],
+					"path": [
+						"conversations",
+						"{{conversationId}}",
+						"messages"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "17. Ответ владельца в переписке",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('Статус 200', () => pm.response.to.have.status(201));",
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
 							"const body = pm.response.json();",
 							"pm.test('Сообщение создано', () => {",
 							"    pm.expect(body).to.have.property('id');",
@@ -901,21 +948,17 @@
 							"pm.test('В переписке 2 сообщения', () => {",
 							"    pm.expect(body.data).to.have.lengthOf(2);",
 							"});",
+							"const tenantId = Number(pm.collectionVariables.get('tenantId'));",
+							"const ownerId = Number(pm.collectionVariables.get('ownerId'));",
 							"pm.test('Первое — от арендатора', () => {",
 							"    const msg = body.data[0];",
-							"    pm.expect(msg.sender.fullName).to.eql('Арендатор Петров');",
+							"    pm.expect(msg.sender_id).to.eql(tenantId);",
 							"    pm.expect(msg.text).to.include('арендовать');",
 							"});",
 							"pm.test('Второе — от владельца', () => {",
 							"    const msg = body.data[1];",
-							"    pm.expect(msg.sender.fullName).to.eql('Владелец Иванов');",
+							"    pm.expect(msg.sender_id).to.eql(ownerId);",
 							"    pm.expect(msg.text).to.include('Бронируйте');",
-							"});",
-							"pm.test('У сообщений есть sender без пароля', () => {",
-							"    body.data.forEach(m => {",
-							"        pm.expect(m.sender).to.have.property('fullName');",
-							"        pm.expect(m.sender).to.not.have.property('password');",
-							"    });",
 							"});",
 							"console.log('=== E2E СЦЕНАРИЙ ПРОЙДЕН УСПЕШНО ===');"
 						]

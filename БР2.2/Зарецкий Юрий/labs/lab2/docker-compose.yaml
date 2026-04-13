@@ -55,6 +55,78 @@ services:
     networks:
       - rental-network
 
+  identity-migrate:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: identity-db
+      DB_PORT: "5432"
+      DB_NAME: identity_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./identity-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - uv sync --locked && uv run alembic upgrade head
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    networks:
+      - rental-network
+    restart: "no"
+
+  property-migrate:
+    build:
+      context: ./property-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: property-db
+      DB_PORT: "5432"
+      DB_NAME: property_rental_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./property-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - uv sync --locked && uv run alembic upgrade head
+    depends_on:
+      property-db:
+        condition: service_healthy
+    networks:
+      - rental-network
+    restart: "no"
+
+  engagement-migrate:
+    build:
+      context: ./engagement-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: engagement-db
+      DB_PORT: "5432"
+      DB_NAME: engagement_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./engagement-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - uv sync --locked && uv run alembic upgrade head
+    depends_on:
+      engagement-db:
+        condition: service_healthy
+    networks:
+      - rental-network
+    restart: "no"
+
   kafka:
     image: apache/kafka:latest
     hostname: kafka
@@ -109,6 +181,8 @@ services:
     depends_on:
       identity-db:
         condition: service_healthy
+      identity-migrate:
+        condition: service_completed_successfully
       kafka:
         condition: service_started
     networks:
@@ -141,6 +215,8 @@ services:
     depends_on:
       property-db:
         condition: service_healthy
+      property-migrate:
+        condition: service_completed_successfully
       kafka:
         condition: service_started
     networks:
@@ -175,6 +251,8 @@ services:
     depends_on:
       engagement-db:
         condition: service_healthy
+      engagement-migrate:
+        condition: service_completed_successfully
       kafka:
         condition: service_started
       identity-service:
