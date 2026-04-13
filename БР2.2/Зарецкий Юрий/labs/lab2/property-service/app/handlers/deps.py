@@ -15,8 +15,10 @@ service_token_header = APIKeyHeader(name="X-Service-Token", auto_error=False)
 
 
 def _decode_access_token(token: str, settings: Settings) -> int:
+    secret = settings.jwt_secret_key.get_secret_value()
+
     try:
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
     except JWTError:
         raise InvalidTokenError from None
 
@@ -50,5 +52,5 @@ async def verify_service_token(
     token: Annotated[str | None, Depends(service_token_header)],
     settings: Annotated[Settings, Depends(Provide[Container.settings])],
 ) -> None:
-    if token is None or token != settings.service_auth_token:
+    if token is None or token != settings.service_auth_token.get_secret_value():
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Недостаточно прав для сервисного доступа")
