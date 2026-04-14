@@ -1,0 +1,109 @@
+services:
+  postgres-user:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user
+      POSTGRES_DB: userdb
+    volumes:
+      - pg_user:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d userdb"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  postgres-rent:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rent
+      POSTGRES_PASSWORD: rent
+      POSTGRES_DB: rentdb
+    volumes:
+      - pg_rent:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rent -d rentdb"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  postgres-comm:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: comm
+      POSTGRES_PASSWORD: comm
+      POSTGRES_DB: commdb
+    volumes:
+      - pg_comm:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comm -d commdb"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  user-manager:
+    build: ./user-manager
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      DATABASE_URL: postgres://user:user@postgres-user:5432/userdb
+      JWT_SECRET: dev-jwt-secret-change-me
+      INTERNAL_SERVICE_TOKEN: dev-internal-token
+      ACCESS_TOKEN_TTL_SEC: "900"
+      REFRESH_TOKEN_TTL_SEC: "604800"
+
+  rent-manager:
+    build: ./rent-manager
+    depends_on:
+      postgres-rent:
+        condition: service_healthy
+      user-manager:
+        condition: service_started
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: "3002"
+      DATABASE_URL: postgres://rent:rent@postgres-rent:5432/rentdb
+      USER_MANAGER_URL: http://user-manager:3001
+      INTERNAL_SERVICE_TOKEN: dev-internal-token
+      JWT_SECRET: dev-jwt-secret-change-me
+
+  communication-manager:
+    build: ./communication-manager
+    depends_on:
+      postgres-comm:
+        condition: service_healthy
+      user-manager:
+        condition: service_started
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: "3003"
+      DATABASE_URL: postgres://comm:comm@postgres-comm:5432/commdb
+      USER_MANAGER_URL: http://user-manager:3001
+      RENT_MANAGER_URL: http://rent-manager:3002
+      INTERNAL_SERVICE_TOKEN: dev-internal-token
+      JWT_SECRET: dev-jwt-secret-change-me
+
+  gateway:
+    build: ./gateway
+    depends_on:
+      - user-manager
+      - rent-manager
+      - communication-manager
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      USER_SERVICE_URL: http://user-manager:3001
+      RENT_SERVICE_URL: http://rent-manager:3002
+      COMM_SERVICE_URL: http://communication-manager:3003
+
+volumes:
+  pg_user:
+  pg_rent:
+  pg_comm:
