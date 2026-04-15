@@ -1,0 +1,273 @@
+name: rental-lab2
+
+services:
+  identity-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: identity_db
+    volumes:
+      - identity_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental-network
+
+  property-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: property_rental_db
+    volumes:
+      - property_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d property_rental_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental-network
+
+  engagement-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: engagement_db
+    volumes:
+      - engagement_db_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d engagement_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rental-network
+
+  identity-migrate:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: identity-db
+      DB_PORT: "5432"
+      DB_NAME: identity_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./identity-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - uv sync --locked && uv run alembic upgrade head
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    networks:
+      - rental-network
+    restart: "no"
+
+  property-migrate:
+    build:
+      context: ./property-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: property-db
+      DB_PORT: "5432"
+      DB_NAME: property_rental_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./property-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - uv sync --locked && uv run alembic upgrade head
+    depends_on:
+      property-db:
+        condition: service_healthy
+    networks:
+      - rental-network
+    restart: "no"
+
+  engagement-migrate:
+    build:
+      context: ./engagement-service
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: engagement-db
+      DB_PORT: "5432"
+      DB_NAME: engagement_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    volumes:
+      - ./engagement-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - uv sync --locked && uv run alembic upgrade head
+    depends_on:
+      engagement-db:
+        condition: service_healthy
+    networks:
+      - rental-network
+    restart: "no"
+
+  kafka:
+    image: apache/kafka:latest
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+    # Именованный том даёт root-only права → AccessDeniedException у appuser в образе.
+    # tmpfs с uid/gid=1000 — каталог данных KRaft доступен процессу Kafka.
+    tmpfs:
+      - /tmp/kraft-combined-logs:uid=1000,gid=1000,mode=0755,size=512m
+    networks:
+      - rental-network
+
+  identity-service:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      DB_HOST: identity-db
+      DB_PORT: "5432"
+      DB_NAME: identity_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      JWT_SECRET_KEY: secret
+      SERVICE_AUTH_TOKEN: service-secret
+    volumes:
+      - ./identity-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv sync --locked && exec uv run uvicorn --host 0.0.0.0 --port 8000 --reload
+        --no-access-log --log-config uvicornlogs.json app.main:app
+    depends_on:
+      identity-db:
+        condition: service_healthy
+      identity-migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+    networks:
+      - rental-network
+
+  property-service:
+    build:
+      context: ./property-service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    environment:
+      DB_HOST: property-db
+      DB_PORT: "5432"
+      DB_NAME: property_rental_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      IDENTITY_SERVICE_URL: http://identity-service:8000
+      JWT_SECRET_KEY: secret
+      SERVICE_AUTH_TOKEN: service-secret
+    volumes:
+      - ./property-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv sync --locked && exec uv run uvicorn --host 0.0.0.0 --port 8000 --reload
+        --no-access-log --log-config uvicornlogs.json app.main:app
+    depends_on:
+      property-db:
+        condition: service_healthy
+      property-migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+    networks:
+      - rental-network
+
+  engagement-service:
+    build:
+      context: ./engagement-service
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      DB_HOST: engagement-db
+      DB_PORT: "5432"
+      DB_NAME: engagement_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      IDENTITY_SERVICE_URL: http://identity-service:8000
+      PROPERTY_SERVICE_URL: http://property-service:8000
+      JWT_SECRET_KEY: secret
+      SERVICE_AUTH_TOKEN: service-secret
+    volumes:
+      - ./engagement-service:/app
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        uv sync --locked && exec uv run uvicorn --host 0.0.0.0 --port 8000 --reload
+        --no-access-log --log-config uvicornlogs.json app.main:app
+    depends_on:
+      engagement-db:
+        condition: service_healthy
+      engagement-migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      property-service:
+        condition: service_started
+    networks:
+      - rental-network
+
+volumes:
+  identity_db_data:
+  property_db_data:
+  engagement_db_data:
+
+networks:
+  rental-network:
+    name: rental-network

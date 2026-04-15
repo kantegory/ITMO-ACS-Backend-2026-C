@@ -1,0 +1,1 @@
+OAUTH2_TOKEN_TYPE = "bearer"
