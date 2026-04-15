@@ -2,8 +2,10 @@ from datetime import date
 
 import structlog
 
+from app.clients.identity import IdentityClient
 from app.db.deals import DealsRepo, RentDeal
 from app.db.properties import PropertiesRepo
+from app.db.user_projection import UserProjectionRepo
 from app.enums import DealStatus
 from app.events.consts import (
     DEAL_CREATED_EVENT,
@@ -44,10 +46,14 @@ class DealsService:
         deals_repo: DealsRepo,
         properties_repo: PropertiesRepo,
         event_producer: EventProducer,
+        user_projection_repo: UserProjectionRepo,
+        identity_client: IdentityClient,
     ) -> None:
         self._deals_repo = deals_repo
         self._properties_repo = properties_repo
         self._event_producer = event_producer
+        self._user_projection_repo = user_projection_repo
+        self._identity_client = identity_client
 
     def _to_response(self, deal: RentDeal) -> RentDealResponse:
         created_at, updated_at = require_deal_timestamps(deal.created_at, deal.updated_at)
@@ -70,6 +76,24 @@ class DealsService:
     def _deal_days(self, start: date, end: date) -> int:
         return (end - start).days
 
+    async def _ensure_tenant_in_local_projection(self, tenant_id: int) -> None:
+        if await self._user_projection_repo.exists(tenant_id):
+            return
+
+        internal = await self._identity_client.fetch_internal_user(tenant_id)
+
+        await self._user_projection_repo.upsert_from_internal(
+            user_id=internal.id,
+            email=str(internal.email),
+            full_name=internal.full_name,
+            avatar_url=internal.avatar_url,
+        )
+
+        logger.info(
+            "Догружена проекция арендатора из Identity при создании сделки",
+            user_id=tenant_id,
+        )
+
     async def create(self, tenant_id: int, data: CreateRentDealRequest) -> RentDealResponse:
         prop = await self._properties_repo.get_by_id(data.property_id)
 
@@ -81,6 +105,8 @@ class DealsService:
 
         if prop.owner_id == tenant_id:
             raise CannotRentOwnPropertyError
+
+        await self._ensure_tenant_in_local_projection(tenant_id)
 
         days = self._deal_days(data.start_date, data.end_date)
 

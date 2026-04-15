@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     service_auth_token: SecretStr = SecretStr("service-secret")
 
+    identity_service_url: str = "http://localhost:8001"
+
     kafka_bootstrap_servers: str = "localhost:9092"
 
     model_config = SettingsConfigDict(env_file=".env")

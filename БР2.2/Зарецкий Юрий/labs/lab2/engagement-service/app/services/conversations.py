@@ -1,7 +1,6 @@
 import structlog
 
 from app.clients.identity import IdentityClient
-from app.clients.property import PropertyClient
 from app.db.conversations import Conversation, ConversationsRepo
 from app.db.messages import Message, MessagesRepo
 from app.schemas.dto import ConversationCreateDTO, require_conversation_timestamps, require_message_timestamp
@@ -12,6 +11,7 @@ from app.services.errors import (
     ConversationNotFoundError,
     SelfConversationError,
 )
+from app.services.property_engagement import PropertyEngagementGuard
 
 logger = structlog.get_logger()
 
@@ -22,12 +22,12 @@ class ConversationsService:
         conversations_repo: ConversationsRepo,
         messages_repo: MessagesRepo,
         identity_client: IdentityClient,
-        property_client: PropertyClient,
+        property_engagement_guard: PropertyEngagementGuard,
     ) -> None:
         self._conversations_repo = conversations_repo
         self._messages_repo = messages_repo
         self._identity_client = identity_client
-        self._property_client = property_client
+        self._property_engagement_guard = property_engagement_guard
 
     def _ensure_participant(self, conversation: Conversation, user_id: int) -> None:
         if user_id not in (conversation.user1_id, conversation.user2_id):
@@ -68,7 +68,7 @@ class ConversationsService:
         if user_id == body.user_id:
             raise SelfConversationError
 
-        await self._property_client.ensure_property_exists(body.property_id)
+        await self._property_engagement_guard.ensure_messaging_allowed(body.property_id)
         await self._identity_client.ensure_user_exists(body.user_id)
         existing = await self._conversations_repo.find_existing(user_id, body.user_id, body.property_id)
 

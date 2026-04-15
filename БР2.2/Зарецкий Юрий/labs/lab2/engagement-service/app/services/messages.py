@@ -6,6 +6,7 @@ from app.schemas.dto import MessageCreateDTO, require_message_timestamp
 from app.schemas.requests import SendMessageRequest
 from app.schemas.responses import MessageListResponse, MessageResponse, pagination_meta
 from app.services.errors import ConversationAccessDeniedError, ConversationNotFoundError
+from app.services.property_engagement import PropertyEngagementGuard
 
 logger = structlog.get_logger()
 
@@ -15,9 +16,11 @@ class MessagesService:
         self,
         messages_repo: MessagesRepo,
         conversations_repo: ConversationsRepo,
+        property_engagement_guard: PropertyEngagementGuard,
     ) -> None:
         self._messages_repo = messages_repo
         self._conversations_repo = conversations_repo
+        self._property_engagement_guard = property_engagement_guard
 
     def _ensure_participant(self, conversation: Conversation, user_id: int) -> None:
         if user_id not in (conversation.user1_id, conversation.user2_id):
@@ -42,6 +45,7 @@ class MessagesService:
             raise ConversationNotFoundError
 
         self._ensure_participant(conv, user_id)
+        await self._property_engagement_guard.ensure_messaging_allowed(conv.property_id)
 
         row = await self._messages_repo.create(
             MessageCreateDTO(

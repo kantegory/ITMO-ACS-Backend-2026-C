@@ -9,6 +9,7 @@ from starlette.status import (
     HTTP_403_FORBIDDEN,
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
+    HTTP_502_BAD_GATEWAY,
 )
 
 from app.container import Container
@@ -22,12 +23,14 @@ from app.services.errors import (
     DealAccessDeniedError,
     DealNotFoundError,
     DealNotInRequestedStatusError,
+    ExternalServiceError,
     InvalidDateRangeError,
     InvalidDealActionError,
     NotOwnerError,
     PropertyNotActiveError,
     PropertyNotFoundError,
     RentalPeriodConflictError,
+    UserNotFoundError,
 )
 
 router = APIRouter(prefix="/api/rent-deals", tags=["Аренда"])
@@ -55,6 +58,10 @@ async def create_deal(
             status_code=HTTP_409_CONFLICT,
             detail="Период занят другими бронированиями",
         ) from None
+    except UserNotFoundError:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Пользователь не найден") from None
+    except ExternalServiceError:
+        raise HTTPException(status_code=HTTP_502_BAD_GATEWAY, detail="Сервис недоступен") from None
 
 
 @router.get("/check-availability", summary="Проверка доступности периода")

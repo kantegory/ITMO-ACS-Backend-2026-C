@@ -201,6 +201,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      IDENTITY_SERVICE_URL: http://identity-service:8000
       JWT_SECRET_KEY: secret
       SERVICE_AUTH_TOKEN: service-secret
     volumes:

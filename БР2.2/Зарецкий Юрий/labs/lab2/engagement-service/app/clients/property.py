@@ -1,8 +1,17 @@
 import httpx
+from pydantic import BaseModel, ConfigDict
 from starlette.status import HTTP_404_NOT_FOUND
 
 from app.services.errors import ExternalServiceError, PropertyNotFoundError
 from app.settings import Settings
+
+
+class PropertyInternalPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: int
+    owner_id: int
+    is_active: bool
 
 
 class PropertyClient:
@@ -27,3 +36,17 @@ class PropertyClient:
             msg = "Ошибка Property при проверке объекта"
 
             raise ExternalServiceError(msg)
+
+    async def fetch_internal_property(self, property_id: int) -> PropertyInternalPayload:
+        url = f"{self._base()}/internal/properties/{property_id}"
+        response = await self._client.get(url, headers=self._headers())
+
+        if response.status_code == HTTP_404_NOT_FOUND:
+            raise PropertyNotFoundError from None
+
+        if response.is_error:
+            msg = "Ошибка Property при загрузке объекта"
+
+            raise ExternalServiceError(msg)
+
+        return PropertyInternalPayload.model_validate(response.json())

@@ -22,6 +22,7 @@ from app.services.errors import (
     ConversationNotFoundError,
     ExternalServiceError,
     PropertyNotFoundError,
+    PropertyUnavailableForEngagementError,
     SelfConversationError,
     UserNotFoundError,
 )
@@ -68,6 +69,11 @@ async def create_conversation(
         ) from None
     except PropertyNotFoundError:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Объект не найден") from None
+    except PropertyUnavailableForEngagementError:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="Объект недоступен для переписки",
+        ) from None
     except UserNotFoundError:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Пользователь не найден") from None
     except ExternalServiceError:

@@ -2,14 +2,23 @@ from typing import Annotated
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException
-from starlette.status import HTTP_201_CREATED, HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+from starlette.status import (
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_403_FORBIDDEN,
+    HTTP_404_NOT_FOUND,
+)
 
 from app.container import Container
 from app.handlers.deps import get_current_user_id
 from app.schemas.queries import MessagesQuery
 from app.schemas.requests import SendMessageRequest
 from app.schemas.responses import MarkReadResponse, MessageListResponse, MessageResponse
-from app.services.errors import ConversationAccessDeniedError, ConversationNotFoundError
+from app.services.errors import (
+    ConversationAccessDeniedError,
+    ConversationNotFoundError,
+    PropertyUnavailableForEngagementError,
+)
 from app.services.messages import MessagesService
 
 router = APIRouter(prefix="/api/conversations/{conversation_id}/messages", tags=["Сообщения"])
@@ -52,6 +61,11 @@ async def send_message(
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Переписка не найдена") from None
     except ConversationAccessDeniedError:
         raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Нет доступа к переписке") from None
+    except PropertyUnavailableForEngagementError:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="Объект недоступен для переписки",
+        ) from None
 
 
 @router.post("/mark-read", summary="Пометить сообщения прочитанными")

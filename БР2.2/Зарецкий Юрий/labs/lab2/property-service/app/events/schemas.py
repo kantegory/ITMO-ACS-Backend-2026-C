@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -97,3 +98,24 @@ class DealStatusChangedPayload(BaseModel):
             cancellation_reason=deal.cancellation_reason,
             updated_at=deal.updated_at,
         )
+
+
+class KafkaDomainEventEnvelope(BaseModel):
+    event_type: str
+    timestamp: str
+    payload: dict[str, Any]
+
+
+class IdentityUserCreatedPayload(BaseModel):
+    user_id: int
+    email: str
+    full_name: str
+    phone: str | None = None
+    avatar_url: str | None = None
+
+
+class IdentityUserUpdatedPayload(BaseModel):
+    user_id: int
+    full_name: str
+    phone: str | None = None
+    avatar_url: str | None = None

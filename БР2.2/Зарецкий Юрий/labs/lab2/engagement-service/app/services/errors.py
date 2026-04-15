@@ -48,3 +48,11 @@ class InvalidReviewPayloadError(Exception):
 
 class ExternalServiceError(Exception):
     """Ошибка при обращении к другому сервису."""
+
+
+class PropertyUnavailableForEngagementError(Exception):
+    """Объект недоступен для переписки (неактивен или удалён)."""
+
+
+class NoApprovedDealForPropertyReviewError(Exception):
+    """Нет подтверждённой сделки для отзыва на объект."""

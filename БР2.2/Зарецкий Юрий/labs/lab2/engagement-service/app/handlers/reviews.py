@@ -23,6 +23,7 @@ from app.schemas.responses import ReviewListResponse, ReviewResponse
 from app.services.errors import (
     ExternalServiceError,
     InvalidReviewPayloadError,
+    NoApprovedDealForPropertyReviewError,
     PropertyNotFoundError,
     ReviewAccessDeniedError,
     ReviewNotFoundError,
@@ -93,6 +94,11 @@ async def create_property_review(
         return await service.create_property_review(user_id, body)
     except PropertyNotFoundError:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Объект не найден") from None
+    except NoApprovedDealForPropertyReviewError:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="Отзыв на объект доступен только после подтверждённой сделки",
+        ) from None
     except ExternalServiceError:
         raise HTTPException(status_code=HTTP_502_BAD_GATEWAY, detail="Сервис недоступен") from None
 

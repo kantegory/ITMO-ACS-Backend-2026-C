@@ -2,6 +2,7 @@ import structlog
 
 from app.clients.identity import IdentityClient
 from app.clients.property import PropertyClient
+from app.db.deal_projection import DealProjectionRepo
 from app.db.reviews import Review, ReviewsRepo
 from app.schemas.dto import ReviewCreateDTO, ReviewUpdateDTO, require_review_timestamps
 from app.schemas.requests import (
@@ -12,6 +13,7 @@ from app.schemas.requests import (
 from app.schemas.responses import ReviewListResponse, ReviewResponse, pagination_meta
 from app.services.errors import (
     InvalidReviewPayloadError,
+    NoApprovedDealForPropertyReviewError,
     ReviewAccessDeniedError,
     ReviewNotFoundError,
     SelfReviewError,
@@ -26,10 +28,12 @@ class ReviewsService:
         reviews_repo: ReviewsRepo,
         identity_client: IdentityClient,
         property_client: PropertyClient,
+        deal_projection_repo: DealProjectionRepo,
     ) -> None:
         self._reviews_repo = reviews_repo
         self._identity_client = identity_client
         self._property_client = property_client
+        self._deal_projection_repo = deal_projection_repo
 
     def _to_response(self, row: Review) -> ReviewResponse:
         created_at, updated_at = require_review_timestamps(row.created_at, row.updated_at)
@@ -51,6 +55,9 @@ class ReviewsService:
         body: CreatePropertyReviewRequest,
     ) -> ReviewResponse:
         await self._property_client.ensure_property_exists(body.property_id)
+
+        if not await self._deal_projection_repo.has_approved_for_tenant(body.property_id, author_id):
+            raise NoApprovedDealForPropertyReviewError
 
         row = await self._reviews_repo.create(
             ReviewCreateDTO(

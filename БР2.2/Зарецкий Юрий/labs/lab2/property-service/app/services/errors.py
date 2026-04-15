@@ -57,3 +57,11 @@ class InvalidDealActionError(Exception):
 class InvalidTokenError(Exception):
     """Некорректный или просроченный токен."""
 
+
+class UserNotFoundError(Exception):
+    """Пользователь не найден (межсервисная проверка)."""
+
+
+class ExternalServiceError(Exception):
+    """Ошибка при обращении к другому сервису."""
+
