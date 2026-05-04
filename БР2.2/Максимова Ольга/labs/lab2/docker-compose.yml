@@ -1,0 +1,199 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - rent-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 | grep -q 'ApiVersion' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - rent-net
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      sh -c '
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic rent.events --partitions 1 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic payment.events --partitions 1 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic accommodation.events --partitions 1 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic user.events --partitions 1 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic message.events --partitions 1 --replication-factor 1
+      '
+    restart: "no"
+    networks:
+      - rent-net
+
+  user:
+    build:
+      context: .
+      dockerfile: user/Dockerfile
+    env_file: ./user/.env
+    ports:
+      - "8001:8001"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - rent-net
+
+  accommodation:
+    build:
+      context: .
+      dockerfile: accommodation/Dockerfile
+    env_file: ./accommodation/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - rent-net
+
+  payment:
+    build:
+      context: .
+      dockerfile: payment/Dockerfile
+    env_file: ./payment/.env
+    ports:
+      - "8003:8003"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - rent-net
+
+  rent:
+    build:
+      context: .
+      dockerfile: rent/Dockerfile
+    env_file: ./rent/.env
+    ports:
+      - "8002:8002"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - rent-net
+
+  message:
+    build:
+      context: .
+      dockerfile: message/Dockerfile
+    env_file: ./message/.env
+    ports:
+      - "8004:8004"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks:
+      - rent-net
+
+  message-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: messagedb
+      POSTGRES_PASSWORD: messagedb
+      POSTGRES_DB: messagedb
+    ports:
+      - "15435:5432"
+    volumes:
+      - message-db-data:/var/lib/postgresql/data
+    networks:
+      - rent-net
+
+  rent-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: rentdb
+      POSTGRES_PASSWORD: rentdb
+      POSTGRES_DB: rentdb
+    ports:
+      - "15436:5432"
+    volumes:
+      - rent-db-data:/var/lib/postgresql/data
+    networks:
+      - rent-net
+
+  user-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: userdb
+      POSTGRES_PASSWORD: userdb
+      POSTGRES_DB: userdb
+    ports:
+      - "15434:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    networks:
+      - rent-net
+
+  payment-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: paymentdb
+      POSTGRES_PASSWORD: paymentdb
+      POSTGRES_DB: paymentdb
+    ports:
+      - "15433:5432"
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+    networks:
+      - rent-net
+
+  accommodation-db:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: accommodationdb
+      POSTGRES_PASSWORD: accommodationdb
+      POSTGRES_DB: accommodationdb
+    ports:
+      - "15437:5432"
+    volumes:
+      - accommodation-db-data:/var/lib/postgresql/data
+    networks:
+      - rent-net
+
+volumes:
+  payment-db-data:
+  rent-db-data:
+  user-db-data:
+  accommodation-db-data:
+  message-db-data:
+
+networks:
+  rent-net:
+    name: rent-network

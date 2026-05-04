@@ -1,0 +1,26 @@
+{
+    "name": "common",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    
+    "scripts": {
+        "build": "tsc",
+        "dev": "npx tsx --env-file=.env --watch src/index.ts",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "bcrypt": "^5.1.1",
+        "cors": "^2.8.5",
+        "express": "^4.22.1",
+        "jsonwebtoken": "^9.0.2",
+        "kafkajs": "^2.2.4",
+        "axios": "^1.7.0"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10",
+        "tsx": "^4.19.3",
+         "@types/node": "^22.0.0",
+        "typescript": "^5.8.3"
+    }
+}
