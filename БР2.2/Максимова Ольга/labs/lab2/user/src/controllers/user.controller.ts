@@ -181,15 +181,23 @@ class UserController {
   updateProfile = async (
     req: Request<{}, {}, UpdateProfileDto>,
     res: Response,
-  ): Promise<void> => {
+  ) => {
     const userId = getUserIdFromToken(req);
-
     if (!userId) {
-      return void res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const updated = await userService.updateProfile(userId, req.body);
-    res.status(200).json(updated);
+    try {
+      await userService.updateProfile(userId, req.body);
+      res.status(200).json({ message: "profile updated" });
+    } catch (error: any) {
+      if (error.message === "USER_NOT_FOUND") {
+        res.status(404).json({ message: "User not found" });
+      } else if (error.message === "EMAIL_ALREADY_EXISTS") {
+        res.status(409).json({ message: "Email already exists" });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
   };
 }
 

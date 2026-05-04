@@ -153,7 +153,7 @@ class UserService {
     return true;
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<void> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
       throw new Error("USER_NOT_FOUND");
@@ -171,6 +171,10 @@ class UserService {
       user.last_name = dto.last_name;
     }
 
+    if (dto.password !== undefined) {
+      user.password = dto.password; 
+    }
+
     if (dto.email !== undefined) {
       const exists = await this.userRepository.findOneBy({ email: dto.email });
       if (exists && exists.id !== userId) {
@@ -179,7 +183,7 @@ class UserService {
       user.email = dto.email;
     }
 
-    return this.userRepository.save(user);
+    await this.userRepository.save(user);
   }
 
   private toUserResponse(user: User): UserResponseDto {
