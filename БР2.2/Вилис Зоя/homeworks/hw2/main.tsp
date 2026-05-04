@@ -182,7 +182,7 @@ interface Recipes {
 interface Comments {
   @route("/{recipe_id}")
     @get op comment_list(@path recipe_id: int32): Comment[];
-    @post @useAuth(BearerAuth) op add_comment(@path recipeId: int32, @body body: { comment_body: string }
+    @post @useAuth(BearerAuth) op add_comment(@path recipe_id: int32, @body body: { comment_body: string }
   ): Comment;
   @route("/{id}") 
     @delete @useAuth(BearerAuth) op delete(@path id: int32): void;
