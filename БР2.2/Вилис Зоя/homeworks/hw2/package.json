@@ -1,0 +1,14 @@
+{
+  "name": "vegetarianward",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@typespec/compiler": "latest",
+    "@typespec/http": "^1.9.0",
+    "@typespec/http-client-js": "latest",
+    "@typespec/openapi": "latest",
+    "@typespec/openapi3": "latest",
+    "@typespec/rest": "latest"
+  }
+}
