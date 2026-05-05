@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AppDataSource } from "../index";
+import { AppDataSource } from "../routes/index";
 import { User } from "../entities/User";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
