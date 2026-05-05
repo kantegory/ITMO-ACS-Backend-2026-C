@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "ignoreDeprecations": "6.0",
+        "moduleResolution": "node10",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "rootDir": "./src", 
+        "outDir": "dist",
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
