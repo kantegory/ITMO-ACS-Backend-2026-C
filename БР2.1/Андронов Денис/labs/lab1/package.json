@@ -2,7 +2,7 @@
   "name": "restorator-api",
   "version": "1.0.0",
   "scripts": {
-    "dev": "nodemon src/index.ts"
+    "dev": "nodemon --exec ts-node -r reflect-metadata src/index.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

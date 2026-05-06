@@ -1,8 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express"; // убираем обычный Request
+import { AuthRequest } from "../types/express"; // импортируем наш новый тип
 import jwt from "jsonwebtoken";
 
 // проверка bearer токена
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({ message: "не авторизован" });
@@ -19,7 +20,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
 };
 
 // проверка роли админа
-export const adminMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.user?.role !== "ADMIN") {
         return res.status(403).json({ message: "доступ запрещен, требуется роль admin" });
     }

@@ -1,9 +1,11 @@
-import { Request, Response } from "express";
-import { AppDataSource } from "../index";
+import { Response } from "express"; // убираем обычный Request
+import { AuthRequest } from "../types/express"; // импортируем наш новый тип
+import { AppDataSource } from "../database";
 import { Review } from "../entities/Review";
 
+
 export class ReviewController {
-    static async createReview(req: Request, res: Response) {
+    static async createReview(req: AuthRequest, res: Response) {
         const repo = AppDataSource.getRepository(Review);
         const { restaurant_id, rating, comment } = req.body;
 
@@ -18,7 +20,7 @@ export class ReviewController {
         res.status(201).json(review);
     }
 
-    static async getRestaurantReviews(req: Request, res: Response) {
+    static async getRestaurantReviews(req: AuthRequest, res: Response) {
         const repo = AppDataSource.getRepository(Review);
         const { rating_sort } = req.query;
         const restaurant_id = Number(req.params.restaurantId);

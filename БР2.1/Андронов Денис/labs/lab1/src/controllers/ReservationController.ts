@@ -1,15 +1,16 @@
-import { Request, Response } from "express";
-import { AppDataSource } from "../routes/index";
+import { Response } from "express"; // убираем обычный Request
+import { AuthRequest } from "../types/express"; // импортируем наш новый тип
+import { AppDataSource } from "../database";
 import { Reservation } from "../entities/Reservation";
 import { Restaurant } from "../entities/Restaurant"; // Для поиска по имени ресторана
 
 export class ReservationController {
-    static async createReservation(req: Request, res: Response) {
+    static async createReservation(req: AuthRequest, res: Response) {
         const repo = AppDataSource.getRepository(Reservation);
         const { restaurant_id, reservation_time, guests_count } = req.body;
 
         const reservation = repo.create({
-            user_id: req.user!.id,
+            user_id: req.user!.id,  
             restaurant_id,
             reservation_time,
             guests_count
@@ -19,14 +20,14 @@ export class ReservationController {
         res.status(201).json(reservation);
     }
 
-    static async getUserReservations(req: Request, res: Response) {
+    static async getUserReservations(req: AuthRequest, res: Response) {
         // этот метод защищен adminMiddleware в роутах
         const repo = AppDataSource.getRepository(Reservation);
         const reservations = await repo.find({ where: { user_id: Number(req.params.userId) } });
         res.json(reservations);
     }
 
-    static async getMyReservations(req: Request, res: Response) {
+    static async getMyReservations(req: AuthRequest, res: Response) {
         const repo = AppDataSource.getRepository(Reservation);
         const { from_date, to_date, restaurant_id, name, sort_by_date } = req.query;
 
