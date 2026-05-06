@@ -1,0 +1,26 @@
+$kind: http-request
+name: Get My Reservations
+method: GET
+url: '{{baseUrl}}/reservations/my'
+order: 2000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+queryParams:
+  - key: from_date
+    value: ''
+    disabled: true
+  - key: to_date
+    value: ''
+    disabled: true
+  - key: restaurant_id
+    value: ''
+    disabled: true
+  - key: name
+    value: ''
+    disabled: true
+  - key: sort_by_date
+    value: asc
+    disabled: true
