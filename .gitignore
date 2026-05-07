@@ -1,7 +1,10 @@
-node_modules/
-.idea/
+*
+
+!БР2.2/
+!БР2.2/Зарецкий Юрий/
+!БР2.2/Зарецкий Юрий/**
+
 .DS_Store
-*.swp
-*~
-*.bak
 .env
+
+node_modules/
