@@ -7,7 +7,7 @@ export const BookingDataSource = new DataSource({
     port: 5432,
     username: "postgres",
     password: "password",
-    database: "booking_db", // Своя независимая база!
+    database: "booking_db", 
     synchronize: true,
     entities: [Reservation],
 });

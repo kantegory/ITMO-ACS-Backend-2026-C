@@ -4,7 +4,7 @@ import { Restaurant } from "../entities/Restaurant";
 import { RestaurantCheckResponse } from "../../../shared/types";
 
 export class RestaurantController {
-    // 1. Создать ресторан (для тестов в Postman)
+    // Создать ресторан 
     static async create(req: Request, res: Response) {
         const repo = CatalogDataSource.getRepository(Restaurant);
         const restaurant = repo.create(req.body);
@@ -12,7 +12,7 @@ export class RestaurantController {
         res.status(201).json(restaurant);
     }
 
-    // 2. Внутренний эндпоинт (Для Booking Service)
+    // Внутренний эндпоинт (Для Booking Service)
     static async checkRestaurant(req: Request, res: Response) {
         const repo = CatalogDataSource.getRepository(Restaurant);
         const restaurant = await repo.findOneBy({ id: parseInt(req.params.id as string) });
