@@ -1,0 +1,30 @@
+openapi: 3.0.0
+info:
+  title: Auth Service Internal API
+  version: 0.0.0
+paths:
+  /internal/api/users/validate:
+    post:
+      summary: Проверка статуса пользователя
+      description: Используется другими сервисами для валидации пользователя перед выполнением бизнес-операций.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+      responses:
+        '200':
+          description: Пользователь валиден
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isValid: { type: boolean }
+                  role: { type: string }
+        '404':
+          description: Пользователь не найден

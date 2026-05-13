@@ -4,10 +4,10 @@ import { User } from "./entities/User";
 export const AuthDataSource = new DataSource({
     type: "postgres",
     host: "localhost",
-    port: 5432,
-    username: "postgres", // логин от базы
-    password: "password", //  пароль
-    database: "auth_db",  // отдельная база для юзеров
+    port: 3000,
+    username: "postgres", 
+    password: "password", 
+    database: "auth_db",  
     synchronize: true,
     logging: false,
     entities: [User],

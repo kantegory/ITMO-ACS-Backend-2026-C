@@ -4,7 +4,7 @@ import { Reservation } from "./entities/Reservation";
 export const BookingDataSource = new DataSource({
     type: "postgres",
     host: "localhost",
-    port: 5432,
+    port: 3000,
     username: "postgres",
     password: "password",
     database: "booking_db", 
