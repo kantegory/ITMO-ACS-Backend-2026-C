@@ -1,0 +1,36 @@
+$kind: http-request
+name: subscribe
+url: "{{baseUrl}}/api/users/{{otherUserId}}/subscribe"
+method: POST
+headers:
+  - key: Authorization
+    value: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 201\", function () {\r
+
+      \    pm.response.to.have.status(201);\r
+
+      });\r
+
+      \r
+
+      pm.test(\"Subscription created correctly\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('followerId');\r
+
+      \    pm.expect(response).to.have.property('authorId');\r
+
+      \    pm.expect(response.followerId).to.equal(parseInt(pm.environment.get(\
+      \"userId\")));\r
+
+      \    pm.expect(response.authorId).to.equal(parseInt(pm.environment.get(\"\
+      otherUserId\")));\r
+
+      });\r\n"
+    language: text/javascript
+order: 24000

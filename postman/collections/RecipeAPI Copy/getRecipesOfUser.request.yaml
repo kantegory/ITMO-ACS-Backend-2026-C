@@ -1,0 +1,30 @@
+$kind: http-request
+name: getRecipesOfUser
+url: "{{baseUrl}}/api/users/{{otherUserId}}/recipes?page=1&limit=10"
+method: GET
+queryParams:
+  page: "1"
+  limit: "10"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      pm.test(\"Response has pagination\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('items');\r
+
+      \    pm.expect(response).to.have.property('total');\r
+
+      \    pm.expect(response.items).to.be.an('array');\r
+
+      });"
+    language: text/javascript
+order: 24000

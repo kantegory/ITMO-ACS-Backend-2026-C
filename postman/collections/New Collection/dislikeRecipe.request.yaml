@@ -1,0 +1,33 @@
+$kind: http-request
+name: dislikeRecipe
+url: "{{baseUrl}}/api/recipes/{{recipeId}}/dislike"
+method: POST
+headers:
+  Authorization: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка счетчиков\r
+
+      pm.test(\"Dislikes count increased\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('likes');\r
+
+      \    pm.expect(response).to.have.property('dislikes');\r
+
+      \    pm.expect(response.dislikes).to.be.at.least(1);\r
+
+      });"
+    language: text/javascript
+order: 4383110440512381

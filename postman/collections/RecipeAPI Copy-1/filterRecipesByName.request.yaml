@@ -1,0 +1,40 @@
+$kind: http-request
+name: filterRecipesByName
+url: "{{baseUrl}}/api/recipes?search=класс&page=1&limit=10"
+method: GET
+queryParams:
+  - key: search
+    value: класс
+  - key: page
+    value: "1"
+  - key: limit
+    value: "10"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка фильтрации\r
+
+      pm.test(\"Search results contain 'класс'\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    const hasBorsch = response.items.some(r => \r
+
+      \        r.title.toLowerCase().includes('класс')\r
+
+      \    );\r
+
+      \    pm.expect(hasBorsch).to.be.true;\r
+
+      });"
+    language: text/javascript
+order: 5000

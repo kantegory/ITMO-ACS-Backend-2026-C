@@ -1,0 +1,45 @@
+$kind: http-request
+name: addComment
+url: "{{baseUrl}}/api/recipes/{{recipeId}}/comments"
+method: POST
+headers:
+  Content-Type: " application/json"
+  Authorization: " Bearer {{token}}"
+body:
+  type: json
+  content: "{\r
+
+    \  \"text\": \"Крутой рецепт, ребенок спит уже 48 часов обязательно будем
+    готовить по вашим рецептам еще.\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 201\", function () {\r
+
+      \    pm.response.to.have.status(201);\r
+
+      });\r
+
+      \r
+
+      // Проверка комментария\r
+
+      pm.test(\"Comment created correctly\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('text');\r
+
+      \    pm.expect(response).to.have.property('userId');\r
+
+      \    pm.expect(response.userId).to.equal(parseInt(pm.environment.get(\"us\
+      erId\")));\r
+
+      });"
+    language: text/javascript
+order: 11000

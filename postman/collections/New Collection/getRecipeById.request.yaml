@@ -1,0 +1,40 @@
+$kind: http-request
+url: "{{baseUrl}}/api/recipes/{{recipeId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка полной информации\r
+
+      pm.test(\"Recipe has all details\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('title');\r
+
+      \    pm.expect(response).to.have.property('desc');\r
+
+      \    pm.expect(response).to.have.property('steps');\r
+
+      \    pm.expect(response).to.have.property('ingredients');\r
+
+      \    pm.expect(response).to.have.property('author');\r
+
+      \    pm.expect(response).to.have.property('cuisine');\r
+
+      \    pm.expect(response).to.have.property('type');\r
+
+      });"
+    language: text/javascript
+order: 4376874277538833

@@ -1,0 +1,48 @@
+$kind: http-request
+name: login
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \    \"login\": \"{{userLogin}}\",\r
+
+    \    \"password\": \"{{userPassword}}\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка ответа\r
+
+      pm.test(\"Response has user and token\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('user');\r
+
+      \    pm.expect(response).to.have.property('accessToken');\r
+
+      });\r
+
+      \r
+
+      // Обновляем токен\r
+
+      const response = pm.response.json();\r
+
+      pm.environment.set(\"token\", response.accessToken);"
+    language: text/javascript
+order: 1000

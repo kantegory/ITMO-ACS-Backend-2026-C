@@ -1,0 +1,32 @@
+$kind: http-request
+name: getSavedRecipes
+url: "{{baseUrl}}/api/users/me/saved-recipes"
+method: GET
+headers:
+  Authorization: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверяем, что рецепт в сохраненных\r
+
+      const response = pm.response.json();\r
+
+      const savedRecipe = response.items.find(r => r.recipeId ===
+      parseInt(pm.environment.get(\"recipeId\")));\r
+
+      pm.test(\"Recipe appears in saved list\", function () {\r
+
+      \    pm.expect(savedRecipe).to.exist;\r
+
+      });"
+    language: text/javascript
+order: 14000

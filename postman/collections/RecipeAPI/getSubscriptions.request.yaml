@@ -1,0 +1,33 @@
+$kind: http-request
+name: getSubscriptions
+url: "{{baseUrl}}/api/users/me/subscriptions?page=1&limit=10"
+method: GET
+headers:
+  - key: Authorization
+    value: " Bearer {{token}}"
+queryParams:
+  - key: page
+    value: "1"
+  - key: limit
+    value: "10"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      pm.test(\"Subscriptions structure is correct\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('items');\r
+
+      \    pm.expect(response.items).to.be.an('array');\r
+
+      });"
+    language: text/javascript
+order: 22000

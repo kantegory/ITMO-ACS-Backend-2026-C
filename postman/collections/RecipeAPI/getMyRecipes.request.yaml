@@ -1,0 +1,34 @@
+$kind: http-request
+name: getMyRecipes
+url: "{{baseUrl}}/api/users/me/recipes"
+method: GET
+headers:
+  Authorization: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверяем, что созданный рецепт есть в списке\r
+
+      const response = pm.response.json();\r
+
+      const myRecipe = response.items.find(r => r.recipeId ===
+      parseInt(pm.environment.get(\"recipeId\")));\r
+
+      pm.test(\"Created recipe appears in my recipes\", function () {\r
+
+      \    pm.expect(myRecipe).to.exist;\r
+
+      \    pm.expect(myRecipe.title).to.equal('Борщ классический');\r
+
+      });"
+    language: text/javascript
+order: 17000
