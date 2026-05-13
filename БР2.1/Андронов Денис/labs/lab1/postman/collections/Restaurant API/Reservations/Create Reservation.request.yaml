@@ -1,0 +1,21 @@
+$kind: http-request
+name: Create Reservation
+method: POST
+url: '{{baseUrl}}/reservations'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "restaurant_id": 1,
+      "reservation_time": "2026-06-01T18:00:00.000Z",
+      "guests_count": 2
+    }

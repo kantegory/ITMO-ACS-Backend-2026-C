@@ -1,0 +1,5 @@
+$kind: collection
+name: Restaurant API
+variables:
+  - key: baseUrl
+    value: 'http://localhost:4000'

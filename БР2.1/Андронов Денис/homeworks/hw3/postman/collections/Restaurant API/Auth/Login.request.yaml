@@ -1,0 +1,40 @@
+$kind: http-request
+name: Login
+method: POST
+url: '{{baseUrl}}/auth/login'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "ivan@example.com",
+      "password": "secret123"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response contains access_token", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.have.property("access_token");
+        pm.expect(json.access_token).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Token saved to environment", function () {
+        const json = pm.response.json();
+        if (json.access_token) {
+          pm.environment.set("token", json.access_token);
+          pm.expect(pm.environment.get("token")).to.eql(json.access_token);
+        }
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

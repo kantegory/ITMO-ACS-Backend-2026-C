@@ -1,0 +1,41 @@
+$kind: http-request
+name: Register
+method: POST
+url: '{{baseUrl}}/auth/register'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "first_name": "Ivan",
+      "last_name": "Ivanov",
+      "middle_name": "Ivanovich",
+      "email": "ivan@example.com",
+      "password": "secret123"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 201 Created", function () {
+        pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has user object", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("object");
+        pm.expect(json).to.have.property("id");
+        pm.expect(json).to.have.property("email");
+      });
+
+      pm.test("Email matches registered email", function () {
+        const json = pm.response.json();
+        pm.expect(json.email).to.eql("ivan@example.com");
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

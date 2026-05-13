@@ -1,0 +1,48 @@
+$kind: http-request
+name: Create Review
+method: POST
+url: '{{baseUrl}}/reviews'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "restaurant_id": 1,
+      "rating": 5,
+      "comment": "Great place!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 201 Created", function () {
+        pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has review object with required fields", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("object");
+        pm.expect(json).to.have.property("id");
+        pm.expect(json).to.have.property("restaurant_id");
+        pm.expect(json).to.have.property("rating");
+        pm.expect(json).to.have.property("comment");
+      });
+
+      pm.test("Review data matches request body", function () {
+        const json = pm.response.json();
+        pm.expect(json.restaurant_id).to.eql(1);
+        pm.expect(json.rating).to.eql(5);
+        pm.expect(json.comment).to.eql("Great place!");
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
