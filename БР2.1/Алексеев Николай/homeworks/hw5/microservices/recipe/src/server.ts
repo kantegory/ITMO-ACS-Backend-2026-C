@@ -6,6 +6,8 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/data-source';
 import recipeRoutes from './routes/recipe.routes';
+import { connectRabbitMQ } from './rabbitmq/connection';
+import { startRecipeConsumer } from './rabbitmq/consumer';
 
 dotenv.config();
 
@@ -26,7 +28,9 @@ app.get('/health', (req, res) => {
 });
 
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
+    await connectRabbitMQ();
+    await startRecipeConsumer();
     console.log(`Recipe Service running on port ${PORT}`);
     app.listen(PORT);
   })

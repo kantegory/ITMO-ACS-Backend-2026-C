@@ -6,6 +6,7 @@ import { Step } from '../entities/Step';
 import { Ingredient } from '../entities/Ingredient';
 import { Cuisine } from '../entities/Cuisine';
 import { TypeRecipe } from '../entities/TypeRecipe';
+import { publishEvent, EXCHANGES, EVENT_TYPES } from '../rabbitmq/connection';
 
 interface CountersResponse {
   likes: number;
@@ -224,6 +225,13 @@ export class RecipeController {
         await this.ingredientRepository.save(ingredientEntities);
       }
 
+      await publishEvent(EXCHANGES.RECIPE, EVENT_TYPES.RECIPE_CREATED, {
+        recipeId: recipe.id,
+        authorId: req.user!.userId,
+        title: recipe.title,
+        timestamp: new Date().toISOString(),
+      });
+
       const createdRecipe = await this.recipeRepository.findOne({
         where: { id: recipe.id },
         relations: ['steps', 'ingredients'],
@@ -255,6 +263,12 @@ export class RecipeController {
         relations: ['steps', 'ingredients'],
       });
 
+      await publishEvent(EXCHANGES.RECIPE, EVENT_TYPES.RECIPE_UPDATED, {
+        recipeId: recipe.id,
+        title: updatedRecipe?.title,
+        timestamp: new Date().toISOString(),
+      });
+
       res.json(updatedRecipe);
     } catch (error) {
       console.error('Update error:', error);
@@ -276,6 +290,12 @@ export class RecipeController {
       }
 
       await this.recipeRepository.delete(recipe.id);
+
+      await publishEvent(EXCHANGES.RECIPE, EVENT_TYPES.RECIPE_DELETED, {
+        recipeId: recipe.id,
+        timestamp: new Date().toISOString(),
+      });
+
       res.status(204).send();
     } catch (error) {
       console.error('Delete error:', error);
@@ -298,6 +318,14 @@ export class RecipeController {
 
       recipe.isPublished = true;
       await this.recipeRepository.save(recipe);
+
+      await publishEvent(EXCHANGES.RECIPE, EVENT_TYPES.RECIPE_PUBLISHED, {
+        recipeId: recipe.id,
+        title: recipe.title,
+        authorId: recipe.authorId,
+        timestamp: new Date().toISOString(),
+      });
+
       res.json(recipe);
     } catch (error) {
       console.error('Publish error:', error);

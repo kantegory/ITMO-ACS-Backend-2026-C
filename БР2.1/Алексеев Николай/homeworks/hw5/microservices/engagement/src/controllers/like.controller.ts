@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { AppDataSource } from '../config/data-source';
 import { Like } from '../entities/Like';
 import { Dislike } from '../entities/Dislike';
+import { publishEvent, EXCHANGES, EVENT_TYPES } from '../rabbitmq/connection';
 
 export class LikeController {
   private likeRepository = AppDataSource.getRepository(Like);
@@ -16,7 +17,7 @@ export class LikeController {
       const recipeId = parseInt(req.params.id as string);
 
       const recipeResponse = await fetch(
-        `${process.env.RECIPE_SERVICE_URL}/internal/recipes/${recipeId}`,
+        `${process.env.RECIPE_SERVICE_URL}/api/recipes/internal/recipes/${recipeId}`,
         {
           headers: { 'X-Service-Token': process.env.INTERNAL_TOKEN! },
         }
@@ -45,6 +46,12 @@ export class LikeController {
       const like = this.likeRepository.create({ userId, recipeId });
       await this.likeRepository.save(like);
 
+      await publishEvent(EXCHANGES.ENGAGEMENT, EVENT_TYPES.RECIPE_LIKED, {
+        recipeId,
+        userId,
+        timestamp: new Date().toISOString(),
+      });
+
       const likes = await this.likeRepository.countBy({ recipeId });
       const dislikes = await this.dislikeRepository.countBy({ recipeId });
 
@@ -61,6 +68,12 @@ export class LikeController {
       const recipeId = parseInt(req.params.id as string);
 
       await this.likeRepository.delete({ userId, recipeId });
+
+      await publishEvent(EXCHANGES.ENGAGEMENT, EVENT_TYPES.RECIPE_UNLIKED, {
+        recipeId,
+        userId,
+        timestamp: new Date().toISOString(),
+      });
 
       const likes = await this.likeRepository.countBy({ recipeId });
       const dislikes = await this.dislikeRepository.countBy({ recipeId });
@@ -106,6 +119,12 @@ export class LikeController {
       const dislike = this.dislikeRepository.create({ userId, recipeId });
       await this.dislikeRepository.save(dislike);
 
+      await publishEvent(EXCHANGES.ENGAGEMENT, EVENT_TYPES.RECIPE_DISLIKED, {
+        recipeId,
+        userId,
+        timestamp: new Date().toISOString(),
+      });
+
       const likes = await this.likeRepository.countBy({ recipeId });
       const dislikes = await this.dislikeRepository.countBy({ recipeId });
 
@@ -121,6 +140,12 @@ export class LikeController {
       const recipeId = parseInt(req.params.id as string);
 
       await this.dislikeRepository.delete({ userId, recipeId });
+
+      await publishEvent(EXCHANGES.ENGAGEMENT, EVENT_TYPES.RECIPE_UNDISLIKED, {
+        recipeId,
+        userId,
+        timestamp: new Date().toISOString(),
+      });
 
       const likes = await this.likeRepository.countBy({ recipeId });
       const dislikes = await this.dislikeRepository.countBy({ recipeId });

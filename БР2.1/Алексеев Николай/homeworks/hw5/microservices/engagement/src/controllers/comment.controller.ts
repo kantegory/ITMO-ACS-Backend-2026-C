@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AppDataSource } from '../config/data-source';
 import { Comment } from '../entities/Comment';
+import { publishEvent, EXCHANGES, EVENT_TYPES } from '../rabbitmq/connection';
 
 export class CommentController {
   private commentRepository = AppDataSource.getRepository(Comment);
@@ -36,7 +37,7 @@ export class CommentController {
       const { text } = req.body;
 
       const recipeResponse = await fetch(
-        `${process.env.RECIPE_SERVICE_URL}/internal/recipes/${recipeId}`,
+        `${process.env.RECIPE_SERVICE_URL}/api/recipes/internal/recipes/${recipeId}`,
         {
           headers: { 'X-Service-Token': process.env.INTERNAL_TOKEN! },
         }
@@ -53,6 +54,14 @@ export class CommentController {
       });
 
       await this.commentRepository.save(comment);
+
+      await publishEvent(EXCHANGES.ENGAGEMENT, EVENT_TYPES.RECIPE_COMMENTED, {
+        recipeId,
+        userId,
+        commentId: comment.id,
+        timestamp: new Date().toISOString(),
+      });
+
       res.status(201).json(comment);
     } catch (error) {
       res.status(500).json({ code: 500, message: 'Internal error' });
@@ -75,6 +84,13 @@ export class CommentController {
       }
 
       await this.commentRepository.delete(commentId);
+
+      await publishEvent(EXCHANGES.ENGAGEMENT, EVENT_TYPES.RECIPE_COMMENT_DELETED, {
+        recipeId: comment.recipeId,
+        commentId,
+        timestamp: new Date().toISOString(),
+      });
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ code: 500, message: 'Internal error' });

@@ -8,6 +8,8 @@ import { AppDataSource } from './config/data-source';
 import likeRoutes from './routes/like.routes';
 import commentRoutes from './routes/comment.routes';
 import saveRoutes from './routes/save.routes';
+import { connectRabbitMQ } from './rabbitmq/connection';
+import { startEngagementConsumer } from './rabbitmq/consumer';
 
 dotenv.config();
 
@@ -29,7 +31,9 @@ app.get('/health', (req, res) => {
 });
 
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
+    await connectRabbitMQ();
+    await startEngagementConsumer();
     console.log(`Engagement Service running on port ${PORT}`);
     app.listen(PORT);
   })

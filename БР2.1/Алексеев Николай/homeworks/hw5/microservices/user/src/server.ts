@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import { AppDataSource } from './config/data-source';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import { connectRabbitMQ } from './rabbitmq/connection';
+import { startUserServiceConsumer } from './rabbitmq/consumer';
 
 dotenv.config();
 
@@ -26,8 +28,10 @@ app.get('/health', (req, res) => {
 });
 
 AppDataSource.initialize()
-  .then(() => {
-    console.log(`User & Auth Service running on port ${PORT}`);
+  .then(async () => {
+    await connectRabbitMQ();
+    await startUserServiceConsumer();
+    console.log(`User Service running on port ${PORT}`);
     app.listen(PORT);
   })
   .catch((error) => {
