@@ -12,11 +12,18 @@ export class LikeController {
 
   like = async (req: AuthRequest, res: Response) => {
     try {
+
+      console.log('===== DEBUG LIKE =====');
+      console.log('req.params:', req.params);
+      console.log('req.params.id:', req.params.id);
+      console.log('typeof req.params.id:', typeof req.params.id);
       const userId = req.user!.userId;
       const recipeId = parseInt(req.params.id as string);
 
+      console.log('Parsed recipeId:', recipeId);
+
       const recipeResponse = await fetch(
-        `${process.env.RECIPE_SERVICE_URL}/internal/recipes/${recipeId}`,
+        `${process.env.RECIPE_SERVICE_URL}/api/recipes/internal/recipes/${recipeId}`,
         {
           headers: { 'X-Service-Token': process.env.INTERNAL_TOKEN! },
         }

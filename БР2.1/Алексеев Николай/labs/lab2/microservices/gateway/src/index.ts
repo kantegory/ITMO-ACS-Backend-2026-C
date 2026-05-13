@@ -46,7 +46,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-
 app.get('/', (req, res) => {
   res.redirect('/api-docs');
 });
@@ -67,29 +66,35 @@ app.use('/api/users', createProxyMiddleware({
   },
 }));
 
-app.use('/api/recipes/:id/like', createProxyMiddleware({
+const engagementProxy = createProxyMiddleware({
   target: 'http://localhost:8003',
   changeOrigin: true,
-  pathRewrite: {
-    '^/': '/api/recipes/:id/like/',
-  },
-}));
+});
 
-app.use('/api/recipes/:id/comments', createProxyMiddleware({
-  target: 'http://localhost:8003',
-  changeOrigin: true,
-  pathRewrite: {
-    '^/': '/api/recipes/:id/comments/',
-  },
-}));
+app.use('/api/recipes/:id/like', (req, res, next) => {
+  req.url = `/api/recipes/${req.params.id}/like`;
+  engagementProxy(req, res, next);
+});
 
-app.use('/api/comments/:id', createProxyMiddleware({
-  target: 'http://localhost:8003',
-  changeOrigin: true,
-  pathRewrite: {
-    '^/': '/api/comments/:id/',
-  },
-}));
+app.use('/api/recipes/:id/dislike', (req, res, next) => {
+  req.url = `/api/recipes/${req.params.id}/dislike`;
+  engagementProxy(req, res, next);
+});
+
+app.use('/api/recipes/:id/save', (req, res, next) => {
+  req.url = `/api/recipes/${req.params.id}/save`;
+  engagementProxy(req, res, next);
+});
+
+app.use('/api/recipes/:id/comments', (req, res, next) => {
+  req.url = `/api/recipes/${req.params.id}/comments`;
+  engagementProxy(req, res, next);
+});
+
+app.use('/api/comments/:id', (req, res, next) => {
+  req.url = `/api/comments/${req.params.id}`;
+  engagementProxy(req, res, next);
+});
 
 app.use('/api/recipes', createProxyMiddleware({
   target: 'http://localhost:8002',

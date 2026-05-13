@@ -12,7 +12,7 @@ export class SaveController {
       const recipeId = parseInt(req.params.id as string);
 
       const recipeResponse = await fetch(
-        `${process.env.RECIPE_SERVICE_URL}/internal/recipes/${recipeId}`,
+        `${process.env.RECIPE_SERVICE_URL}/api/recipes/internal/recipes/${recipeId}`,
         {
           headers: { 'X-Service-Token': process.env.INTERNAL_TOKEN! },
         }

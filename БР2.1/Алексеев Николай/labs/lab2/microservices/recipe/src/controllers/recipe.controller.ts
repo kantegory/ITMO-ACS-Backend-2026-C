@@ -395,6 +395,8 @@ export class RecipeController {
       }
 
       const recipeId = parseInt(req.params.id as string);
+      console.log(recipeId);
+      
       const recipe = await this.recipeRepository.findOne({
         where: { id: recipeId },
         select: ['id', 'title', 'authorId', 'isPublished'],
