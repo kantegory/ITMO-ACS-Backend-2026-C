@@ -44,6 +44,18 @@ export class Recipe {
   @Column({ name: 'people_amount', type: 'smallint', default: 2 })
   peopleAmount: number;
 
+  @Column({ default: 0 })
+  likes: number;
+
+  @Column({ default: 0 })
+  dislikes: number;
+
+  @Column({ default: 0 })
+  comments: number;
+
+  @Column({ default: 0 })
+  saves: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
