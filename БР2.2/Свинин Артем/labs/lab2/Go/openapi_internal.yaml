@@ -1,0 +1,2871 @@
+openapi: 3.0.0
+info:
+  title: Rental Platform - Internal Microservices API
+  version: 1.0.0
+  description: |
+    ## Внутренний API для межсервисного взаимодействия
+    
+    ### Сервисы:
+    - **Auth Service** (`/internal/auth/*`) - Валидация токенов и пользователей
+    - **User Service** (`/internal/users/*`) - Данные пользователей
+    - **Property Service** (`/internal/properties/*`) - Объекты недвижимости
+    - **Booking Service** (`/internal/bookings/*`) - Бронирования
+    - **Payment Service** (`/internal/payments/*`) - Транзакции
+    - **Review Service** (`/internal/reviews/*`) - Отзывы и рейтинги
+    - **Communication Service** (`/internal/chats/*`) - Чаты
+
+    ### Аутентификация:
+    Все запросы требуют Service Token в заголовке:
+    ```
+    X-Service-Token: <service_secret_token>
+    ```
+
+servers:
+  - url: http://localhost:8080/internal
+
+tags:
+  - name: Auth Service Internal
+    description: Валидация токенов и пользователей для других сервисов
+  - name: User Service Internal
+    description: Данные пользователей для межсервисного использования
+  - name: Property Service Internal
+    description: Объекты недвижимости, доступность, владельцы
+  - name: Booking Service Internal
+    description: Бронирования, статусы, доступность дат
+  - name: Payment Service Internal
+    description: Транзакции, статусы оплат, webhook
+  - name: Review Service Internal
+    description: Отзывы, рейтинги, проверка возможности отзыва
+  - name: Communication Service Internal
+    description: Чаты, сообщения, участники
+
+paths:
+  # ==================== AUTH SERVICE INTERNAL ====================
+  /auth/tokens/validate:
+    post:
+      tags:
+        - Auth Service Internal
+      summary: Валидация JWT токена пользователя
+      description: |
+        Проверка валидности JWT токена для других сервисов.
+        Используется API Gateway и сервисами для проверки авторизации запросов.
+      operationId: validateUserToken
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenValidationRequest'
+            examples:
+              validToken:
+                summary: Валидный токен
+                value:
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+              expiredToken:
+                summary: Истекший токен
+                value:
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.expired"
+      responses:
+        '200':
+          description: Токен валиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidationResponse'
+              examples:
+                valid:
+                  summary: Токен валиден
+                  value:
+                    valid: true
+                    userId: 1
+                    email: "user@example.com"
+                    role: "USER"
+                    expiresAt: "2024-12-31T23:59:59Z"
+                    isActive: true
+                expired:
+                  summary: Токен истек
+                  value:
+                    valid: false
+                    reason: "Token expired"
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                missingToken:
+                  summary: Токен не предоставлен
+                  value:
+                    code: 400
+                    message: "Токен обязателен"
+                    details:
+                      - field: "token"
+                        error: "required"
+        '401':
+          description: Неавторизован (невалидный service token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '503':
+          description: Сервис аутентификации недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /auth/users/{id}:
+    get:
+      tags:
+        - Auth Service Internal
+      summary: Получить данные пользователя по ID
+      description: |
+        Возвращает базовые данные пользователя для других сервисов.
+        Используется когда сервису нужно получить информацию о пользователе по ID.
+      operationId: getUserById
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+            format: int32
+          examples:
+            validId:
+              summary: Существующий пользователь
+              value: 1
+            invalidId:
+              summary: Не существует
+              value: 99999
+      responses:
+        '200':
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalUserResponse'
+              examples:
+                userFound:
+                  summary: Пользователь найден
+                  value:
+                    id: 1
+                    email: "user@example.com"
+                    firstName: "Иван"
+                    lastName: "Иванов"
+                    role: "USER"
+                    isActive: true
+                    isVerified: true
+                    createdAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                notFound:
+                  summary: Пользователь не найден
+                  value:
+                    code: 404
+                    message: "Пользователь не найден"
+                    details:
+                      - field: "id"
+                        error: "user does not exist"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /auth/users/validate:
+    post:
+      tags:
+        - Auth Service Internal
+      summary: Массовая валидация пользователей
+      description: |
+        Проверка существования и статуса нескольких пользователей одновременно.
+        Используется для оптимизации запросов при работе со списками.
+      operationId: validateUsersBatch
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: integer
+                    format: int32
+                  minItems: 1
+                  maxItems: 100
+              required:
+                - userIds
+            examples:
+              batchValidation:
+                summary: Валидация нескольких пользователей
+                value:
+                  userIds: [1, 2, 3, 4, 5]
+      responses:
+        '200':
+          description: Результат валидации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: integer
+                        isActive:
+                          type: boolean
+                  invalid:
+                    type: array
+                    items:
+                      type: integer
+              examples:
+                validationResult:
+                  summary: Результат валидации
+                  value:
+                    valid:
+                      - userId: 1
+                        isActive: true
+                      - userId: 2
+                        isActive: true
+                      - userId: 3
+                        isActive: false
+                    invalid:
+                      - 4
+                      - 5
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  # ==================== USER SERVICE INTERNAL ====================
+  /users/{id}/profile:
+    get:
+      tags:
+        - User Service Internal
+      summary: Получить профиль пользователя
+      description: |
+        Возвращает расширенный профиль пользователя для других сервисов.
+        Включает дополнительную информацию не доступную в Auth Service.
+      operationId: getUserProfile
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalUserProfile'
+              examples:
+                profile:
+                  summary: Профиль пользователя
+                  value:
+                    id: 1
+                    email: "user@example.com"
+                    firstName: "Иван"
+                    lastName: "Иванов"
+                    middleName: "Иванович"
+                    phone: "+79991234567"
+                    role: "USER"
+                    isVerified: true
+                    isActive: true
+                    propertiesCount: 5
+                    bookingsCount: 12
+                    averageRating: 4.8
+                    totalReviews: 25
+                    createdAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /users/{id}/properties:
+    get:
+      tags:
+        - User Service Internal
+      summary: Получить объекты пользователя
+      description: |
+        Возвращает список ID объектов недвижимости, принадлежащих пользователю.
+        Используется для проверки прав доступа.
+      operationId: getUserProperties
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+            format: int32
+        - name: limit
+          in: query
+          description: Максимальное количество записей
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Список объектов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  propertyIds:
+                    type: array
+                    items:
+                      type: integer
+                      format: int32
+                  total:
+                    type: integer
+                    format: int32
+              examples:
+                properties:
+                  summary: Объекты пользователя
+                  value:
+                    propertyIds: [10, 15, 20, 25, 30]
+                    total: 5
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /users/validate-ownership:
+    post:
+      tags:
+        - User Service Internal
+      summary: Проверка права владения
+      description: |
+        Проверяет, принадлежит ли объект недвижимости пользователю.
+        Используется для авторизации операций с объектами.
+      operationId: validateOwnership
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  format: int32
+                propertyId:
+                  type: integer
+                  format: int32
+              required:
+                - userId
+                - propertyId
+            examples:
+              ownershipCheck:
+                summary: Проверка владения
+                value:
+                  userId: 1
+                  propertyId: 10
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isOwner:
+                    type: boolean
+                  propertyId:
+                    type: integer
+                  userId:
+                    type: integer
+              examples:
+                isOwner:
+                  summary: Пользователь владелец
+                  value:
+                    isOwner: true
+                    propertyId: 10
+                    userId: 1
+                notOwner:
+                  summary: Пользователь не владелец
+                  value:
+                    isOwner: false
+                    propertyId: 10
+                    userId: 2
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  # ==================== PROPERTY SERVICE INTERNAL ====================
+  /properties/{id}:
+    get:
+      tags:
+        - Property Service Internal
+      summary: Получить данные объекта
+      description: |
+        Возвращает базовые данные объекта недвижимости для других сервисов.
+        Включает только необходимые поля для межсервисного взаимодействия.
+      operationId: getPropertyById
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+        - name: include
+          in: query
+          description: Дополнительные данные для включения
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [address, owner, images, facilities]
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Данные объекта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalProperty'
+              examples:
+                propertyBasic:
+                  summary: Базовые данные
+                  value:
+                    id: 10
+                    ownerId: 1
+                    typeId: 1
+                    title: "Уютная квартира в центре"
+                    pricePerDay: 5000
+                    pricePerMonth: 120000
+                    isAvailable: true
+                    maxGuests: 3
+                    bedrooms: 1
+                    bathrooms: 1
+                propertyFull:
+                  summary: Полные данные
+                  value:
+                    id: 10
+                    ownerId: 1
+                    typeId: 1
+                    title: "Уютная квартира в центре"
+                    pricePerDay: 5000
+                    pricePerMonth: 120000
+                    isAvailable: true
+                    maxGuests: 3
+                    bedrooms: 1
+                    bathrooms: 1
+                    address:
+                      id: 5
+                      city: "Москва"
+                      district: "Центральный"
+                      fullAddress: "Москва, Центральный р-н, ул. Примерная, д. 10"
+                    owner:
+                      id: 1
+                      firstName: "Иван"
+                      lastName: "Иванов"
+                      email: "owner@example.com"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                notFound:
+                  summary: Объект не найден
+                  value:
+                    code: 404
+                    message: "Объект недвижимости не найден"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /properties/{id}/availability:
+    get:
+      tags:
+        - Property Service Internal
+      summary: Проверить доступность объекта
+      description: |
+        Проверяет доступность объекта в указанные даты.
+        Критически важный эндпоинт для Booking Service при создании бронирования.
+      operationId: checkPropertyAvailability
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+        - name: startDate
+          in: query
+          required: true
+          description: Дата начала
+          schema:
+            type: string
+            format: date-time
+          examples:
+            startDate:
+              value: "2024-02-01T14:00:00Z"
+        - name: endDate
+          in: query
+          required: true
+          description: Дата окончания
+          schema:
+            type: string
+            format: date-time
+          examples:
+            endDate:
+              value: "2024-02-05T12:00:00Z"
+      responses:
+        '200':
+          description: Результат проверки доступности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+              examples:
+                available:
+                  summary: Объект доступен
+                  value:
+                    available: true
+                    propertyId: 10
+                    startDate: "2024-02-01T14:00:00Z"
+                    endDate: "2024-02-05T12:00:00Z"
+                    pricePerDay: 5000
+                    totalPrice: 20000
+                    minRentDays: 1
+                    maxRentDays: 30
+                notAvailable:
+                  summary: Объект недоступен
+                  value:
+                    available: false
+                    propertyId: 10
+                    startDate: "2024-02-01T14:00:00Z"
+                    endDate: "2024-02-05T12:00:00Z"
+                    reason: "PROPERTY_NOT_AVAILABLE"
+                    message: "Объект временно недоступен"
+                dateConflict:
+                  summary: Даты заняты
+                  value:
+                    available: false
+                    propertyId: 10
+                    startDate: "2024-02-01T14:00:00Z"
+                    endDate: "2024-02-05T12:00:00Z"
+                    reason: "DATE_CONFLICT"
+                    message: "Объект забронирован на выбранные даты"
+                    conflictingBookings:
+                      - bookingId: 100
+                        startDate: "2024-01-28T14:00:00Z"
+                        endDate: "2024-02-03T12:00:00Z"
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                invalidDates:
+                  summary: Некорректные даты
+                  value:
+                    code: 400
+                    message: "Дата окончания должна быть позже даты начала"
+                    details:
+                      - field: "endDate"
+                        error: "must be after startDate"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /properties/{id}/owner:
+    get:
+      tags:
+        - Property Service Internal
+      summary: Получить владельца объекта
+      description: |
+        Возвращает данные владельца объекта недвижимости.
+        Используется Communication Service для создания чата.
+      operationId: getPropertyOwner
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Данные владельца
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ownerId:
+                    type: integer
+                    format: int32
+                  ownerEmail:
+                    type: string
+                  ownerFirstName:
+                    type: string
+                  ownerLastName:
+                    type: string
+                  ownerPhone:
+                    type: string
+                  isVerified:
+                    type: boolean
+              examples:
+                ownerData:
+                  summary: Данные владельца
+                  value:
+                    ownerId: 1
+                    ownerEmail: "owner@example.com"
+                    ownerFirstName: "Иван"
+                    ownerLastName: "Иванов"
+                    ownerPhone: "+79991234567"
+                    isVerified: true
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /properties/validate:
+    post:
+      tags:
+        - Property Service Internal
+      summary: Массовая валидация объектов
+      description: |
+        Проверка существования и статуса нескольких объектов одновременно.
+        Используется для оптимизации запросов.
+      operationId: validatePropertiesBatch
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyIds:
+                  type: array
+                  items:
+                    type: integer
+                    format: int32
+                  minItems: 1
+                  maxItems: 100
+              required:
+                - propertyIds
+            examples:
+              batchValidation:
+                summary: Валидация нескольких объектов
+                value:
+                  propertyIds: [10, 15, 20, 25, 30]
+      responses:
+        '200':
+          description: Результат валидации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        propertyId:
+                          type: integer
+                        isAvailable:
+                          type: boolean
+                        ownerId:
+                          type: integer
+                  invalid:
+                    type: array
+                    items:
+                      type: integer
+              examples:
+                validationResult:
+                  summary: Результат валидации
+                  value:
+                    valid:
+                      - propertyId: 10
+                        isAvailable: true
+                        ownerId: 1
+                      - propertyId: 15
+                        isAvailable: true
+                        ownerId: 2
+                      - propertyId: 20
+                        isAvailable: false
+                        ownerId: 1
+                    invalid:
+                      - 25
+                      - 30
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /properties/by-owner/{ownerId}:
+    get:
+      tags:
+        - Property Service Internal
+      summary: Получить объекты владельца
+      description: |
+        Возвращает список объектов недвижимости, принадлежащих владельцу.
+        Используется для проверки прав и отображения объектов владельца.
+      operationId: getPropertiesByOwner
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: ownerId
+          in: path
+          required: true
+          description: ID владельца
+          schema:
+            type: integer
+            format: int32
+        - name: isAvailable
+          in: query
+          description: Фильтрация по доступности
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          description: Максимальное количество записей
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Список объектов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  properties:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InternalProperty'
+                  total:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Владелец не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  # ==================== BOOKING SERVICE INTERNAL ====================
+  /bookings/{id}:
+    get:
+      tags:
+        - Booking Service Internal
+      summary: Получить данные бронирования
+      description: |
+        Возвращает данные бронирования для других сервисов.
+        Используется Payment, Review, Communication сервисами.
+      operationId: getBookingById
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+        - name: include
+          in: query
+          description: Дополнительные данные
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [property, occupier, owner]
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: Данные бронирования
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalBooking'
+              examples:
+                bookingBasic:
+                  summary: Базовые данные
+                  value:
+                    id: 100
+                    propertyId: 10
+                    occupierId: 2
+                    ownerId: 1
+                    startDate: "2024-02-01T14:00:00Z"
+                    endDate: "2024-02-05T12:00:00Z"
+                    status: "CONFIRMED"
+                    totalPrice: 20000
+                    guestsCount: 2
+                    createdAt: "2024-01-15T10:30:00Z"
+                bookingFull:
+                  summary: Полные данные
+                  value:
+                    id: 100
+                    propertyId: 10
+                    occupierId: 2
+                    ownerId: 1
+                    startDate: "2024-02-01T14:00:00Z"
+                    endDate: "2024-02-05T12:00:00Z"
+                    status: "CONFIRMED"
+                    totalPrice: 20000
+                    guestsCount: 2
+                    createdAt: "2024-01-15T10:30:00Z"
+                    property:
+                      id: 10
+                      title: "Уютная квартира в центре"
+                      address:
+                        city: "Москва"
+                    occupier:
+                      id: 2
+                      firstName: "Петр"
+                      lastName: "Петров"
+                      email: "guest@example.com"
+                    owner:
+                      id: 1
+                      firstName: "Иван"
+                      lastName: "Иванов"
+                      email: "owner@example.com"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                notFound:
+                  summary: Бронирование не найдено
+                  value:
+                    code: 404
+                    message: "Бронирование не найдено"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /bookings/{id}/status:
+    patch:
+      tags:
+        - Booking Service Internal
+      summary: Обновить статус бронирования
+      description: |
+        Обновление статуса бронирования из других сервисов.
+        Используется Payment Service после успешной оплаты.
+      operationId: updateBookingStatus
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingStatusUpdateRequest'
+            examples:
+              confirmBooking:
+                summary: Подтвердить бронирование
+                value:
+                  status: "CONFIRMED"
+                  paymentId: "pay_abc123"
+              cancelBooking:
+                summary: Отменить бронирование
+                value:
+                  status: "CANCELLED"
+                  cancellationReason: "Payment failed"
+              completeBooking:
+                summary: Завершить бронирование
+                value:
+                  status: "COMPLETED"
+      responses:
+        '200':
+          description: Статус обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalBooking'
+              examples:
+                statusUpdated:
+                  summary: Статус обновлен
+                  value:
+                    id: 100
+                    propertyId: 10
+                    occupierId: 2
+                    status: "CONFIRMED"
+                    updatedAt: "2024-01-15T11:00:00Z"
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                invalidTransition:
+                  summary: Недопустимый переход статуса
+                  value:
+                    code: 400
+                    message: "Недопустимый переход статуса"
+                    details:
+                      - field: "status"
+                        error: "cannot transition from COMPLETED to PENDING"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '409':
+          description: Конфликт состояния
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+              examples:
+                statusConflict:
+                  summary: Конфликт статуса
+                  value:
+                    code: 409
+                    message: "Нельзя изменить статус завершенного бронирования"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /bookings/by-property/{propertyId}:
+    get:
+      tags:
+        - Booking Service Internal
+      summary: Получить бронирования объекта
+      description: |
+        Возвращает все бронирования для конкретного объекта недвижимости.
+        Используется для проверки доступности дат.
+      operationId: getBookingsByProperty
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+        - name: startDate
+          in: query
+          description: Фильтрация по дате начала (от)
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: Фильтрация по дате окончания (до)
+          schema:
+            type: string
+            format: date-time
+        - name: status
+          in: query
+          description: Фильтрация по статусу
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [PENDING, CONFIRMED, ACTIVE, COMPLETED, CANCELLED, REJECTED]
+          style: form
+          explode: false
+        - name: limit
+          in: query
+          description: Максимальное количество записей
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Список бронирований
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          format: int32
+                        startDate:
+                          type: string
+                          format: date-time
+                        endDate:
+                          type: string
+                          format: date-time
+                        status:
+                          type: string
+                        occupierId:
+                          type: integer
+                          format: int32
+                  total:
+                    type: integer
+                    format: int32
+              examples:
+                bookingsList:
+                  summary: Бронирования объекта
+                  value:
+                    bookings:
+                      - id: 100
+                        startDate: "2024-02-01T14:00:00Z"
+                        endDate: "2024-02-05T12:00:00Z"
+                        status: "CONFIRMED"
+                        occupierId: 2
+                      - id: 101
+                        startDate: "2024-02-10T14:00:00Z"
+                        endDate: "2024-02-15T12:00:00Z"
+                        status: "PENDING"
+                        occupierId: 3
+                    total: 2
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /bookings/by-user/{userId}:
+    get:
+      tags:
+        - Booking Service Internal
+      summary: Получить бронирования пользователя
+      description: |
+        Возвращает все бронирования пользователя (как арендатора).
+        Используется для проверки истории бронирований.
+      operationId: getBookingsByUser
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+            format: int32
+        - name: role
+          in: query
+          description: Роль пользователя в бронировании
+          schema:
+            type: string
+            enum: [OCCUPIER, OWNER]
+            default: OCCUPIER
+        - name: status
+          in: query
+          description: Фильтрация по статусу
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [PENDING, CONFIRMED, ACTIVE, COMPLETED, CANCELLED, REJECTED]
+          style: form
+          explode: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Список бронирований
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          format: int32
+                        propertyId:
+                          type: integer
+                          format: int32
+                        startDate:
+                          type: string
+                          format: date-time
+                        endDate:
+                          type: string
+                          format: date-time
+                        status:
+                          type: string
+                  total:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /bookings/validate-review-eligibility:
+    post:
+      tags:
+        - Booking Service Internal
+      summary: Проверка возможности оставить отзыв
+      description: |
+        Проверяет, может ли пользователь оставить отзыв на бронирование.
+        Используется Review Service перед созданием отзыва.
+      operationId: validateReviewEligibility
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: integer
+                  format: int32
+                userId:
+                  type: integer
+                  format: int32
+              required:
+                - bookingId
+                - userId
+            examples:
+              eligibilityCheck:
+                summary: Проверка возможности отзыва
+                value:
+                  bookingId: 100
+                  userId: 2
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canReview:
+                    type: boolean
+                  reason:
+                    type: string
+                  bookingStatus:
+                    type: string
+                  completedAt:
+                    type: string
+                    format: date-time
+              examples:
+                canReview:
+                  summary: Можно оставить отзыв
+                  value:
+                    canReview: true
+                    reason: "Booking completed"
+                    bookingStatus: "COMPLETED"
+                    completedAt: "2024-02-05T12:00:00Z"
+                cannotReview:
+                  summary: Нельзя оставить отзыв
+                  value:
+                    canReview: false
+                    reason: "Booking not completed yet"
+                    bookingStatus: "ACTIVE"
+                alreadyReviewed:
+                  summary: Уже есть отзыв
+                  value:
+                    canReview: false
+                    reason: "Review already exists"
+                    bookingStatus: "COMPLETED"
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  # ==================== PAYMENT SERVICE INTERNAL ====================
+  /payments/transactions/by-booking/{bookingId}:
+    get:
+      tags:
+        - Payment Service Internal
+      summary: Получить транзакции по бронированию
+      description: |
+        Возвращает все транзакции, связанные с бронированием.
+        Используется Booking Service для проверки статуса оплаты.
+      operationId: getTransactionsByBooking
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Список транзакций
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InternalTransaction'
+                  totalAmount:
+                    type: number
+                    format: decimal
+                  paidAmount:
+                    type: number
+                    format: decimal
+                  refundedAmount:
+                    type: number
+                    format: decimal
+              examples:
+                transactionsList:
+                  summary: Транзакции бронирования
+                  value:
+                    transactions:
+                      - id: 500
+                        bookingId: 100
+                        status: "SUCCESS"
+                        amount: 20000
+                        currency: "RUB"
+                        paymentMethod: "CARD"
+                        transactionDate: "2024-01-15T10:30:00Z"
+                    totalAmount: 20000
+                    paidAmount: 20000
+                    refundedAmount: 0
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /payments/transactions/{id}:
+    get:
+      tags:
+        - Payment Service Internal
+      summary: Получить данные транзакции
+      description: |
+        Возвращает детали транзакции для других сервисов.
+      operationId: getTransactionById
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID транзакции
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Данные транзакции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalTransaction'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /payments/transactions/{id}/status:
+    patch:
+      tags:
+        - Payment Service Internal
+      summary: Обновить статус транзакции
+      description: |
+        Обновление статуса транзакции (обычно из webhook платежного шлюза).
+        После обновления отправляется событие в Message Broker.
+      operationId: updateTransactionStatus
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID транзакции
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [PENDING, SUCCESS, FAILED, REFUNDED]
+                paymentGatewayResponse:
+                  type: object
+                  properties:
+                    gatewayTransactionId:
+                      type: string
+                    errorCode:
+                      type: string
+                    errorMessage:
+                      type: string
+              required:
+                - status
+            examples:
+              markSuccess:
+                summary: Успешная оплата
+                value:
+                  status: "SUCCESS"
+                  paymentGatewayResponse:
+                    gatewayTransactionId: "gw_txn_abc123"
+              markFailed:
+                summary: Оплата не удалась
+                value:
+                  status: "FAILED"
+                  paymentGatewayResponse:
+                    errorCode: "INSUFFICIENT_FUNDS"
+                    errorMessage: "Недостаточно средств на карте"
+      responses:
+        '200':
+          description: Статус обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalTransaction'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '409':
+          description: Конфликт состояния
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /payments/webhook:
+    post:
+      tags:
+        - Payment Service Internal
+      summary: Webhook от платежного шлюза
+      description: |
+        Обработка webhook от внешнего платежного шлюза.
+        Автоматически обновляет статус транзакции и отправляет события.
+      operationId: paymentWebhook
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentId:
+                  type: string
+                transactionId:
+                  type: integer
+                  format: int32
+                status:
+                  type: string
+                amount:
+                  type: number
+                currency:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+                signature:
+                  type: string
+              required:
+                - paymentId
+                - status
+                - signature
+            examples:
+              webhookSuccess:
+                summary: Webhook успешной оплаты
+                value:
+                  paymentId: "pay_abc123"
+                  transactionId: 500
+                  status: "SUCCESS"
+                  amount: 20000
+                  currency: "RUB"
+                  timestamp: "2024-01-15T10:35:00Z"
+                  signature: "sha256_signature_here"
+      responses:
+        '200':
+          description: Webhook обработан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acknowledged:
+                    type: boolean
+                  transactionId:
+                    type: integer
+                  newStatus:
+                    type: string
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  # ==================== REVIEW SERVICE INTERNAL ====================
+  /reviews/can-create:
+    post:
+      tags:
+        - Review Service Internal
+      summary: Проверка возможности создания отзыва
+      description: |
+        Проверяет, может ли пользователь оставить отзыв.
+        Используется внешним API перед созданием отзыва.
+      operationId: canCreateReview
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: integer
+                  format: int32
+                userId:
+                  type: integer
+                  format: int32
+                targetType:
+                  type: string
+                  enum: [PROPERTY, OWNER, OCCUPIER]
+              required:
+                - bookingId
+                - userId
+                - targetType
+            examples:
+              eligibilityCheck:
+                summary: Проверка возможности отзыва
+                value:
+                  bookingId: 100
+                  userId: 2
+                  targetType: "PROPERTY"
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canCreate:
+                    type: boolean
+                  reason:
+                    type: string
+                  existingReviewId:
+                    type: integer
+                    format: int32
+              examples:
+                canCreate:
+                  summary: Можно создать отзыв
+                  value:
+                    canCreate: true
+                    reason: "Booking completed, no existing review"
+                cannotCreate:
+                  summary: Нельзя создать отзыв
+                  value:
+                    canCreate: false
+                    reason: "Review already exists"
+                    existingReviewId: 50
+                bookingNotCompleted:
+                  summary: Бронирование не завершено
+                  value:
+                    canCreate: false
+                    reason: "Booking not completed yet"
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /reviews/property-rating/{propertyId}:
+    get:
+      tags:
+        - Review Service Internal
+      summary: Получить рейтинг объекта
+      description: |
+        Возвращает средний рейтинг и количество отзывов для объекта.
+        Используется Property Service для отображения рейтинга.
+      operationId: getPropertyRating
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Рейтинг объекта
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  propertyId:
+                    type: integer
+                    format: int32
+                  averageRating:
+                    type: number
+                    format: decimal
+                    minimum: 0
+                    maximum: 5
+                  totalReviews:
+                    type: integer
+                    format: int32
+                  ratingDistribution:
+                    type: object
+                    properties:
+                      "5":
+                        type: integer
+                      "4":
+                        type: integer
+                      "3":
+                        type: integer
+                      "2":
+                        type: integer
+                      "1":
+                        type: integer
+              examples:
+                propertyRating:
+                  summary: Рейтинг объекта
+                  value:
+                    propertyId: 10
+                    averageRating: 4.8
+                    totalReviews: 25
+                    ratingDistribution:
+                      "5": 20
+                      "4": 4
+                      "3": 1
+                      "2": 0
+                      "1": 0
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /reviews/user-rating/{userId}:
+    get:
+      tags:
+        - Review Service Internal
+      summary: Получить рейтинг пользователя
+      description: |
+        Возвращает средний рейтинг пользователя (как владельца или гостя).
+      operationId: getUserRating
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+            format: int32
+        - name: targetType
+          in: query
+          description: Тип рейтинга
+          schema:
+            type: string
+            enum: [OWNER, OCCUPIER]
+            default: OWNER
+      responses:
+        '200':
+          description: Рейтинг пользователя
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                    format: int32
+                  targetType:
+                    type: string
+                  averageRating:
+                    type: number
+                    format: decimal
+                  totalReviews:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /reviews/by-booking/{bookingId}:
+    get:
+      tags:
+        - Review Service Internal
+      summary: Получить отзывы по бронированию
+      description: |
+        Возвращает все отзывы, связанные с бронированием.
+        Используется для проверки是否存在 отзыва.
+      operationId: getReviewsByBooking
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Список отзывов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          format: int32
+                        targetType:
+                          type: string
+                        rating:
+                          type: integer
+                        reviewerId:
+                          type: integer
+                          format: int32
+                        createdAt:
+                          type: string
+                          format: date-time
+              examples:
+                bookingReviews:
+                  summary: Отзывы по бронированию
+                  value:
+                    reviews:
+                      - id: 50
+                        targetType: "PROPERTY"
+                        rating: 5
+                        reviewerId: 2
+                        createdAt: "2024-02-06T10:00:00Z"
+                      - id: 51
+                        targetType: "OWNER"
+                        rating: 5
+                        reviewerId: 2
+                        createdAt: "2024-02-06T10:05:00Z"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  # ==================== COMMUNICATION SERVICE INTERNAL ====================
+  /chats/by-property/{propertyId}:
+    get:
+      tags:
+        - Communication Service Internal
+      summary: Получить чаты по объекту
+      description: |
+        Возвращает все чаты, связанные с объектом недвижимости.
+        Используется для проверки существующих чатов.
+      operationId: getChatsByProperty
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+        - name: ownerId
+          in: query
+          description: Фильтрация по владельцу
+          schema:
+            type: integer
+            format: int32
+        - name: occupierId
+          in: query
+          description: Фильтрация по гостю
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Список чатов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          format: int32
+                        ownerId:
+                          type: integer
+                          format: int32
+                        occupierId:
+                          type: integer
+                          format: int32
+                        bookingId:
+                          type: integer
+                          format: int32
+                        createdAt:
+                          type: string
+                          format: date-time
+                        lastMessageAt:
+                          type: string
+                          format: date-time
+                  total:
+                    type: integer
+                    format: int32
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /chats/by-booking/{bookingId}:
+    get:
+      tags:
+        - Communication Service Internal
+      summary: Получить чат по бронированию
+      description: |
+        Возвращает чат, связанный с бронированием.
+        Используется для проверки существующего чата.
+      operationId: getChatByBooking
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Данные чата
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chat:
+                    $ref: '#/components/schemas/InternalChat'
+                  exists:
+                    type: boolean
+              examples:
+                chatFound:
+                  summary: Чат найден
+                  value:
+                    chat:
+                      id: 10
+                      ownerId: 1
+                      occupierId: 2
+                      propertyId: 10
+                      bookingId: 100
+                      createdAt: "2024-01-15T10:30:00Z"
+                      lastMessageAt: "2024-01-15T11:00:00Z"
+                    exists: true
+                chatNotFound:
+                  summary: Чат не найден
+                  value:
+                    chat: null
+                    exists: false
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /chats/{id}/participants:
+    get:
+      tags:
+        - Communication Service Internal
+      summary: Получить участников чата
+      description: |
+        Возвращает список участников чата.
+        Используется для проверки прав доступа к сообщениям.
+      operationId: getChatParticipants
+      security:
+        - ServiceTokenAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID чата
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Участники чата
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chatId:
+                    type: integer
+                    format: int32
+                  participants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId:
+                          type: integer
+                          format: int32
+                        role:
+                          type: string
+                          enum: [OWNER, OCCUPIER]
+                        joinedAt:
+                          type: string
+                          format: date-time
+              examples:
+                participants:
+                  summary: Участники чата
+                  value:
+                    chatId: 10
+                    participants:
+                      - userId: 1
+                        role: "OWNER"
+                        joinedAt: "2024-01-15T10:30:00Z"
+                      - userId: 2
+                        role: "OCCUPIER"
+                        joinedAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Чат не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+  /chats/validate-participant:
+    post:
+      tags:
+        - Communication Service Internal
+      summary: Проверить участника чата
+      description: |
+        Проверяет, является ли пользователь участником чата.
+        Используется для авторизации отправки сообщений.
+      operationId: validateChatParticipant
+      security:
+        - ServiceTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: integer
+                  format: int32
+                userId:
+                  type: integer
+                  format: int32
+              required:
+                - chatId
+                - userId
+            examples:
+              participantCheck:
+                summary: Проверка участника
+                value:
+                  chatId: 10
+                  userId: 2
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isParticipant:
+                    type: boolean
+                  role:
+                    type: string
+                    enum: [OWNER, OCCUPIER]
+              examples:
+                isParticipant:
+                  summary: Пользователь участник
+                  value:
+                    isParticipant: true
+                    role: "OCCUPIER"
+                notParticipant:
+                  summary: Пользователь не участник
+                  value:
+                    isParticipant: false
+                    role: null
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '404':
+          description: Чат не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalApiError'
+
+components:
+  securitySchemes:
+    ServiceTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Service-Token
+      description: |
+        Service-to-Service аутентификация.
+        
+        Каждый сервис имеет свой секретный токен для внутренних вызовов.
+        Токены должны храниться в secure vault (HashiCorp Vault, AWS Secrets Manager).
+        
+        Пример:
+        ```
+        X-Service-Token: svc_booking_service_abc123xyz789
+        ```
+
+  schemas:
+    # === Common Error ===
+    InternalApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: HTTP код ошибки
+          example: 400
+        message:
+          type: string
+          description: Сообщение об ошибке
+          example: "Некорректный запрос"
+        details:
+          type: array
+          description: Детали ошибки валидации
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Поле с ошибкой
+              error:
+                type: string
+                description: Описание ошибки
+        traceId:
+          type: string
+          description: ID трассировки для отладки
+          example: "trace_abc123"
+        timestamp:
+          type: string
+          format: date-time
+          description: Время возникновения ошибки
+        service:
+          type: string
+          description: Имя сервиса, вернувшего ошибку
+          example: "property-service"
+
+    # === Auth Schemas ===
+    TokenValidationRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: JWT токен пользователя для валидации
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    TokenValidationResponse:
+      type: object
+      required:
+        - valid
+      properties:
+        valid:
+          type: boolean
+          description: Валиден ли токен
+        userId:
+          type: integer
+          format: int32
+          description: ID пользователя (если валиден)
+        email:
+          type: string
+          description: Email пользователя
+        role:
+          type: string
+          enum: [ADMIN, USER]
+        expiresAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        reason:
+          type: string
+          description: Причина невалидности (если valid=false)
+
+    InternalUserResponse:
+      type: object
+      required:
+        - id
+        - email
+        - role
+        - isActive
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, USER]
+        isActive:
+          type: boolean
+        isVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    InternalUserProfile:
+      type: object
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        middleName:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        isVerified:
+          type: boolean
+        isActive:
+          type: boolean
+        propertiesCount:
+          type: integer
+          format: int32
+        bookingsCount:
+          type: integer
+          format: int32
+        averageRating:
+          type: number
+          format: decimal
+        totalReviews:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+
+    # === Property Schemas ===
+    InternalProperty:
+      type: object
+      required:
+        - id
+        - ownerId
+        - title
+        - pricePerDay
+        - isAvailable
+      properties:
+        id:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+        typeId:
+          type: integer
+          format: int32
+        title:
+          type: string
+        pricePerDay:
+          type: number
+          format: decimal
+        pricePerMonth:
+          type: number
+          format: decimal
+        isAvailable:
+          type: boolean
+        maxGuests:
+          type: integer
+          format: int32
+        bedrooms:
+          type: integer
+          format: int32
+        bathrooms:
+          type: integer
+          format: int32
+        address:
+          type: object
+          properties:
+            id:
+              type: integer
+            city:
+              type: string
+            district:
+              type: string
+            fullAddress:
+              type: string
+        owner:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              imageUrl:
+                type: string
+              isMain:
+                type: boolean
+        facilities:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              type:
+                type: string
+
+    AvailabilityResponse:
+      type: object
+      required:
+        - available
+        - propertyId
+      properties:
+        available:
+          type: boolean
+        propertyId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          enum: [PROPERTY_NOT_AVAILABLE, DATE_CONFLICT, MIN_RENT_DAYS, MAX_RENT_DAYS]
+        message:
+          type: string
+        pricePerDay:
+          type: number
+          format: decimal
+        totalPrice:
+          type: number
+          format: decimal
+        minRentDays:
+          type: integer
+          format: int32
+        maxRentDays:
+          type: integer
+          format: int32
+        conflictingBookings:
+          type: array
+          items:
+            type: object
+            properties:
+              bookingId:
+                type: integer
+              startDate:
+                type: string
+                format: date-time
+              endDate:
+                type: string
+                format: date-time
+
+    # === Booking Schemas ===
+    InternalBooking:
+      type: object
+      required:
+        - id
+        - propertyId
+        - occupierId
+        - status
+        - startDate
+        - endDate
+        - totalPrice
+      properties:
+        id:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        occupierId:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, ACTIVE, COMPLETED, CANCELLED, REJECTED]
+        totalPrice:
+          type: number
+          format: decimal
+        guestsCount:
+          type: integer
+          format: int32
+        specialRequest:
+          type: string
+        cancellationReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        property:
+          type: object
+          properties:
+            id:
+              type: integer
+            title:
+              type: string
+            address:
+              type: object
+              properties:
+                city:
+                  type: string
+        occupier:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+        owner:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+
+    BookingStatusUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, ACTIVE, COMPLETED, CANCELLED, REJECTED]
+        paymentId:
+          type: string
+          description: ID платежа (для перехода в CONFIRMED)
+        cancellationReason:
+          type: string
+          maxLength: 1000
+        updatedBy:
+          type: string
+          description: Сервис, обновивший статус
+          enum: [PAYMENT_SERVICE, BOOKING_SERVICE, ADMIN]
+
+    # === Payment Schemas ===
+    InternalTransaction:
+      type: object
+      required:
+        - id
+        - bookingId
+        - status
+        - amount
+        - currency
+      properties:
+        id:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        paymentMethod:
+          type: string
+          enum: [CARD, BANK_TRANSFER, ELECTRONIC_WALLET, CASH]
+        status:
+          type: string
+          enum: [PENDING, SUCCESS, FAILED, REFUNDED]
+        transactionDate:
+          type: string
+          format: date-time
+        paymentId:
+          type: string
+          description: ID в платежном шлюзе
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        amount:
+          type: number
+          format: decimal
+        feeAmount:
+          type: number
+          format: decimal
+        refundedAmount:
+          type: number
+          format: decimal
+
+    # === Communication Schemas ===
+    InternalChat:
+      type: object
+      required:
+        - id
+        - ownerId
+        - occupierId
+        - propertyId
+      properties:
+        id:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+        occupierId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        lastMessageAt:
+          type: string
+          format: date-time
+        lastMessage:
+          type: object
+          properties:
+            id:
+              type: integer
+            content:
+              type: string
+            sentAt:
+              type: string
+              format: date-time
+        unreadCount:
+          type: integer
+          format: int32
+
+security:
+  - ServiceTokenAuth: []

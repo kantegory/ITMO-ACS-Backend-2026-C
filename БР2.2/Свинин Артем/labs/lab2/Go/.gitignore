@@ -1,0 +1,5 @@
+# Local environment overrides
+.env
+
+# Keep sample config in repository
+!.env.example

@@ -1,0 +1,3977 @@
+# swagger-gateway.yaml
+openapi: 3.0.0
+info:
+  title: Rental Platform - API Gateway
+  version: 1.0.0
+
+servers:
+  - url: https://api.rental-platform.com/v1
+    description: Production
+  - url: https://staging-api.rental-platform.com/v1
+    description: Staging
+  - url: http://localhost:8080/v1
+    description: Local Development
+
+tags:
+  - name: Auth Service
+    description: Аутентификация и управление сессиями
+  - name: User Service
+    description: Профили пользователей и избранное
+  - name: Property Service
+    description: Объекты недвижимости, адреса, фото
+  - name: Booking Service
+    description: Бронирования и доступность
+  - name: Payment Service
+    description: Платежи и транзакции
+  - name: Review Service
+    description: Отзывы и рейтинги
+  - name: Communication Service
+    description: Чаты и сообщения
+
+paths:
+  # ==================== AUTH SERVICE ====================
+  /auth/login:
+    post:
+      tags:
+        - Auth Service
+      summary: Вход в систему
+      description: Аутентификация пользователя и получение JWT токенов
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              validLogin:
+                summary: Корректный вход
+                value:
+                  email: "user@example.com"
+                  password: "SecurePass123"
+              invalidEmail:
+                summary: Неверный email
+                value:
+                  email: "invalid"
+                  password: "SecurePass123"
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+              examples:
+                success:
+                  summary: Успешный ответ
+                  value:
+                    accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    refreshToken: "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
+                    expiresIn: 3600
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                missingField:
+                  summary: Отсутствует поле
+                  value:
+                    code: 400
+                    message: "Поле 'email' обязательно"
+                    details:
+                      - field: "email"
+                        error: "required"
+        '401':
+          description: Неверные учетные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidCredentials:
+                  summary: Неверный логин или пароль
+                  value:
+                    code: 401
+                    message: "Неверный email или пароль"
+        '429':
+          description: Слишком много попыток входа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                rateLimited:
+                  summary: Превышен лимит попыток
+                  value:
+                    code: 429
+                    message: "Слишком много попыток входа. Попробуйте через 15 минут"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                serverError:
+                  summary: Ошибка сервера
+                  value:
+                    code: 500
+                    message: "Внутренняя ошибка сервера"
+                    traceId: "abc123-def456"
+
+  /auth/register:
+    post:
+      tags:
+        - Auth Service
+      summary: Регистрация нового пользователя
+      description: Создание нового аккаунта пользователя
+      operationId: authRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              validRegistration:
+                summary: Корректная регистрация
+                value:
+                  firstName: "Иван"
+                  lastName: "Иванов"
+                  email: "ivan@example.com"
+                  password: "SecurePass123"
+              weakPassword:
+                summary: Слабый пароль
+                value:
+                  firstName: "Иван"
+                  lastName: "Иванов"
+                  email: "ivan@example.com"
+                  password: "123"
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          description: Некорректные данные регистрации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                weakPassword:
+                  summary: Слабый пароль
+                  value:
+                    code: 400
+                    message: "Пароль должен содержать минимум 8 символов"
+                    details:
+                      - field: "password"
+                        error: "minLength"
+                invalidEmail:
+                  summary: Неверный email
+                  value:
+                    code: 400
+                    message: "Некорректный формат email"
+                    details:
+                      - field: "email"
+                        error: "format"
+        '409':
+          description: Пользователь уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                duplicateEmail:
+                  summary: Email уже занят
+                  value:
+                    code: 409
+                    message: "Пользователь с таким email уже существует"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth Service
+      summary: Выход из системы
+      description: Инвалидация refresh токена
+      operationId: authLogout
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh токен для инвалидации
+              required:
+                - refreshToken
+      responses:
+        '204':
+          description: Успешный выход
+        '400':
+          description: Неверный refresh токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth Service
+      summary: Обновление access токена
+      description: Получение новой пары токенов по refresh токену
+      operationId: authRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required:
+                - refreshToken
+      responses:
+        '200':
+          description: Токены успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          description: Refresh токен истек или недействителен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ==================== USER SERVICE ====================
+  /users/me:
+    get:
+      tags:
+        - User Service
+      summary: Получить профиль текущего пользователя
+      description: Возвращает данные профиля авторизованного пользователя
+      operationId: getUserProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                userProfile:
+                  summary: Профиль пользователя
+                  value:
+                    id: 1
+                    firstName: "Иван"
+                    lastName: "Иванов"
+                    middleName: "Иванович"
+                    email: "ivan@example.com"
+                    phone: "+79991234567"
+                    role: "USER"
+                    isVerified: true
+                    isActive: true
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-15T10:30:00Z"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                unauthorized:
+                  summary: Токен отсутствует или истек
+                  value:
+                    code: 401
+                    message: "Требуется аутентификация"
+        '404':
+          description: Профиль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    patch:
+      tags:
+        - User Service
+      summary: Обновить профиль текущего пользователя
+      description: Обновление данных профиля авторизованного пользователя
+      operationId: updateUserProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+            examples:
+              updateName:
+                summary: Обновление имени
+                value:
+                  firstName: "Иван"
+                  lastName: "Петров"
+              updateEmail:
+                summary: Обновление email
+                value:
+                  email: "new.email@example.com"
+              updatePhone:
+                summary: Обновление телефона
+                value:
+                  phone: "+79997654321"
+      responses:
+        '200':
+          description: Профиль успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidEmail:
+                  summary: Неверный формат email
+                  value:
+                    code: 400
+                    message: "Некорректный формат email"
+                    details:
+                      - field: "email"
+                        error: "format"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Email уже занят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /users/{id}:
+    get:
+      tags:
+        - User Service
+      summary: Получить профиль пользователя по ID
+      description: Возвращает данные профиля пользователя по идентификатору
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: integer
+            format: int32
+          examples:
+            validId:
+              summary: Корректный ID
+              value: 1
+            invalidId:
+              summary: Не существует
+              value: 99999
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                forbidden:
+                  summary: Недостаточно прав
+                  value:
+                    code: 403
+                    message: "Доступ к профилю другого пользователя запрещен"
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                notFound:
+                  summary: Пользователь не найден
+                  value:
+                    code: 404
+                    message: "Пользователь не найден"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /favourites:
+    get:
+      tags:
+        - User Service
+      summary: Получить список избранного
+      description: Возвращает список объектов в избранном текущего пользователя
+      operationId: getFavourites
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseFavourite'
+              examples:
+                favouritesList:
+                  summary: Список избранного
+                  value:
+                    items:
+                      - id: 1
+                        userId: 1
+                        propertyId: 10
+                        addedAt: "2024-01-15T10:30:00Z"
+                        property:
+                          id: 10
+                          title: "Уютная квартира в центре"
+                          pricePerDay: 5000
+                      - id: 2
+                        userId: 1
+                        propertyId: 15
+                        addedAt: "2024-01-16T14:20:00Z"
+                        property:
+                          id: 15
+                          title: "Дом у моря"
+                          pricePerDay: 12000
+                    total: 2
+                    page: 1
+                    pageSize: 10
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    post:
+      tags:
+        - User Service
+      summary: Добавить объект в избранное
+      description: Добавляет объект недвижимости в избранное текущего пользователя
+      operationId: addFavourite
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                  description: ID объекта недвижимости
+              required:
+                - propertyId
+            examples:
+              validProperty:
+                summary: Корректный ID объекта
+                value:
+                  propertyId: 10
+              invalidProperty:
+                summary: Объект не существует
+                value:
+                  propertyId: 99999
+      responses:
+        '201':
+          description: Объект добавлен в избранное
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Favourite'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Объект уже в избранном
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                duplicate:
+                  summary: Уже в избранном
+                  value:
+                    code: 409
+                    message: "Объект уже находится в избранном"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /favourites/{id}:
+    delete:
+      tags:
+        - User Service
+      summary: Удалить объект из избранного
+      description: Удаляет объект из избранного текущего пользователя
+      operationId: removeFavourite
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID записи в избранном
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешно удалено
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Запись не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ==================== PROPERTY SERVICE ====================
+  /properties:
+    get:
+      tags:
+        - Property Service
+      summary: Поиск объектов недвижимости
+      description: Возвращает список объектов с фильтрацией и пагинацией
+      operationId: searchProperties
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: search
+          in: query
+          description: Поиск по названию или описанию
+          schema:
+            type: string
+          examples:
+            searchTerm:
+              summary: Поисковый запрос
+              value: "квартира в центре"
+        - name: city
+          in: query
+          description: Фильтрация по городу
+          schema:
+            type: string
+          examples:
+            cityName:
+              summary: Город
+              value: "Москва"
+        - name: minPricePerDay
+          in: query
+          description: Минимальная цена за сутки
+          schema:
+            type: number
+            format: decimal
+          examples:
+            minPrice:
+              summary: Минимальная цена
+              value: 3000
+        - name: maxPricePerDay
+          in: query
+          description: Максимальная цена за сутки
+          schema:
+            type: number
+            format: decimal
+          examples:
+            maxPrice:
+              summary: Максимальная цена
+              value: 10000
+        - name: minArea
+          in: query
+          description: Минимальная площадь (кв.м)
+          schema:
+            type: integer
+            format: int32
+        - name: maxArea
+          in: query
+          description: Максимальная площадь (кв.м)
+          schema:
+            type: integer
+            format: int32
+        - name: bedrooms
+          in: query
+          description: Количество спален
+          schema:
+            type: integer
+            format: int32
+        - name: bathrooms
+          in: query
+          description: Количество ванных комнат
+          schema:
+            type: integer
+            format: int32
+        - name: maxGuests
+          in: query
+          description: Максимальное количество гостей
+          schema:
+            type: integer
+            format: int32
+        - name: facilities
+          in: query
+          description: ID удобств (через запятую)
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: false
+        - name: isAvailable
+          in: query
+          description: Только доступные объекты
+          schema:
+            type: boolean
+        - name: typeId
+          in: query
+          description: ID типа недвижимости
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseProperty'
+              examples:
+                propertiesList:
+                  summary: Список объектов
+                  value:
+                    items:
+                      - id: 10
+                        ownerId: 1
+                        typeId: 1
+                        title: "Уютная квартира в центре"
+                        description: "Светлая квартира с ремонтом"
+                        pricePerDay: 5000
+                        pricePerMonth: 120000
+                        areaSqM: 45
+                        maxGuests: 3
+                        bedrooms: 1
+                        bathrooms: 1
+                        isAvailable: true
+                        address:
+                          id: 5
+                          country: "Россия"
+                          city: "Москва"
+                          district: "Центральный"
+                          houseNumber: "10"
+                        images:
+                          - id: 1
+                            imageUrl: "https://cdn.example.com/img1.jpg"
+                            isMain: true
+                    total: 150
+                    page: 1
+                    pageSize: 10
+        '400':
+          description: Некорректные параметры фильтрации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidFilter:
+                  summary: Неверный параметр
+                  value:
+                    code: 400
+                    message: "Некорректное значение параметра minPricePerDay"
+                    details:
+                      - field: "minPricePerDay"
+                        error: "must be a number"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Сервис недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                serviceUnavailable:
+                  summary: Сервис временно недоступен
+                  value:
+                    code: 503
+                    message: "Сервис недвижимости временно недоступен"
+                    retryAfter: 60
+
+    post:
+      tags:
+        - Property Service
+      summary: Создать объект недвижимости
+      description: Создание нового объекта недвижимости (только для владельцев)
+      operationId: createProperty
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyCreateRequest'
+            examples:
+              validProperty:
+                summary: Корректные данные
+                value:
+                  typeId: 1
+                  addressId: 5
+                  title: "Уютная квартира в центре"
+                  description: "Светлая квартира с современным ремонтом"
+                  pricePerDay: 5000
+                  pricePerMonth: 120000
+                  areaSqM: 45
+                  maxGuests: 3
+                  bedrooms: 1
+                  bathrooms: 1
+                  isAvailable: true
+                  minRentDays: 1
+                  maxRentDays: 30
+              missingField:
+                summary: Отсутствует обязательное поле
+                value:
+                  typeId: 1
+                  title: "Квартира"
+                  # addressId отсутствует
+      responses:
+        '201':
+          description: Объект успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                validationError:
+                  summary: Ошибка валидации
+                  value:
+                    code: 400
+                    message: "Ошибка валидации данных"
+                    details:
+                      - field: "addressId"
+                        error: "required"
+                      - field: "pricePerDay"
+                        error: "must be >= 0"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /properties/{id}:
+    get:
+      tags:
+        - Property Service
+      summary: Получить детали объекта
+      description: Возвращает полную информацию об объекте недвижимости
+      operationId: getPropertyById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+              examples:
+                propertyDetails:
+                  summary: Детали объекта
+                  value:
+                    id: 10
+                    ownerId: 1
+                    typeId: 1
+                    type:
+                      id: 1
+                      name: "Квартира"
+                    addressId: 5
+                    address:
+                      id: 5
+                      country: "Россия"
+                      city: "Москва"
+                      district: "Центральный"
+                      houseNumber: "10"
+                      apartment: "25"
+                      postalCode: "101000"
+                      lat: 55.7558
+                      lon: 37.6173
+                      fullAddress: "Россия, Москва, Центральный р-н, ул. Примерная, д. 10, кв. 25"
+                    title: "Уютная квартира в центре"
+                    description: "Светлая квартира с современным ремонтом"
+                    pricePerDay: 5000
+                    pricePerMonth: 120000
+                    areaSqM: 45
+                    maxGuests: 3
+                    bedrooms: 1
+                    bathrooms: 1
+                    isAvailable: true
+                    minRentDays: 1
+                    maxRentDays: 30
+                    images:
+                      - id: 1
+                        imageUrl: "https://cdn.example.com/img1.jpg"
+                        isMain: true
+                      - id: 2
+                        imageUrl: "https://cdn.example.com/img2.jpg"
+                        isMain: false
+                    facilities:
+                      - id: 1
+                        type: "WiFi"
+                      - id: 2
+                        type: "Кондиционер"
+                    owner:
+                      id: 1
+                      firstName: "Иван"
+                      lastName: "Иванов"
+                      isVerified: true
+                    rating:
+                      average: 4.8
+                      totalReviews: 25
+                    createdAt: "2024-01-10T08:00:00Z"
+                    updatedAt: "2024-01-15T12:30:00Z"
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                notFound:
+                  summary: Объект не найден
+                  value:
+                    code: 404
+                    message: "Объект недвижимости не найден"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    patch:
+      tags:
+        - Property Service
+      summary: Обновить объект недвижимости
+      description: Обновление данных объекта (только владелец или админ)
+      operationId: updateProperty
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertyUpdateRequest'
+            examples:
+              updatePrice:
+                summary: Обновление цены
+                value:
+                  pricePerDay: 6000
+                  pricePerMonth: 140000
+              updateAvailability:
+                summary: Обновление доступности
+                value:
+                  isAvailable: false
+              updateDescription:
+                summary: Обновление описания
+                value:
+                  description: "Обновленное описание объекта"
+      responses:
+        '200':
+          description: Объект успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Property'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                forbidden:
+                  summary: Не владелец объекта
+                  value:
+                    code: 403
+                    message: "Только владелец может редактировать объект"
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    delete:
+      tags:
+        - Property Service
+      summary: Удалить объект недвижимости
+      description: Удаление объекта (только владелец или админ)
+      operationId: deleteProperty
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID объекта недвижимости
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешно удалено
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Нельзя удалить объект с активными бронированиями
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                hasBookings:
+                  summary: Есть активные бронирования
+                  value:
+                    code: 409
+                    message: "Нельзя удалить объект с активными бронированиями"
+                    details:
+                      - field: "activeBookings"
+                        error: "object has 2 active bookings"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /properties/my:
+    get:
+      tags:
+        - Property Service
+      summary: Получить мои объекты
+      description: Список объектов недвижимости текущего пользователя
+      operationId: getMyProperties
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: isAvailable
+          in: query
+          description: Фильтрация по доступности
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseProperty'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /addresses:
+    post:
+      tags:
+        - Property Service
+      summary: Создать адрес
+      description: Создание нового адреса для объекта недвижимости
+      operationId: createAddress
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressCreateRequest'
+            examples:
+              validAddress:
+                summary: Корректный адрес
+                value:
+                  country: "Россия"
+                  city: "Москва"
+                  district: "Центральный"
+                  houseNumber: "10"
+                  apartment: "25"
+                  postalCode: "101000"
+                  lat: 55.7558
+                  lon: 37.6173
+      responses:
+        '201':
+          description: Адрес успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /facilities:
+    get:
+      tags:
+        - Property Service
+      summary: Получить список удобств
+      description: Возвращает все доступные типы удобств
+      operationId: getFacilities
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Facility'
+              examples:
+                facilitiesList:
+                  summary: Список удобств
+                  value:
+                    - id: 1
+                      type: "WiFi"
+                    - id: 2
+                      type: "Кондиционер"
+                    - id: 3
+                      type: "Парковка"
+                    - id: 4
+                      type: "Бассейн"
+                    - id: 5
+                      type: "Тренажерный зал"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /images:
+    post:
+      tags:
+        - Property Service
+      summary: Добавить фото объекта
+      description: Добавление фотографии к объекту недвижимости
+      operationId: addImage
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                imageUrl:
+                  type: string
+                  format: uri
+                isMain:
+                  type: boolean
+                  default: false
+              required:
+                - propertyId
+                - imageUrl
+      responses:
+        '201':
+          description: Фото успешно добавлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Image'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ==================== BOOKING SERVICE ====================
+  /bookings:
+    post:
+      tags:
+        - Booking Service
+      summary: Создать бронирование
+      description: Создание нового бронирования объекта
+      operationId: createBooking
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreateRequest'
+            examples:
+              validBooking:
+                summary: Корректное бронирование
+                value:
+                  propertyId: 10
+                  startDate: "2024-02-01T14:00:00Z"
+                  endDate: "2024-02-05T12:00:00Z"
+                  guestsCount: 2
+                  specialRequest: "Нужна детская кроватка"
+              dateConflict:
+                summary: Даты заняты
+                value:
+                  propertyId: 10
+                  startDate: "2024-01-20T14:00:00Z"
+                  endDate: "2024-01-25T12:00:00Z"
+                  guestsCount: 2
+      responses:
+        '201':
+          description: Бронирование успешно создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+              examples:
+                bookingCreated:
+                  summary: Бронирование создано
+                  value:
+                    id: 100
+                    propertyId: 10
+                    occupierId: 1
+                    startDate: "2024-02-01T14:00:00Z"
+                    endDate: "2024-02-05T12:00:00Z"
+                    totalPrice: 20000
+                    status: "PENDING"
+                    guestsCount: 2
+                    specialRequest: "Нужна детская кроватка"
+                    createdAt: "2024-01-15T10:30:00Z"
+                    updatedAt: "2024-01-15T10:30:00Z"
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidDates:
+                  summary: Некорректные даты
+                  value:
+                    code: 400
+                    message: "Дата окончания должна быть позже даты начала"
+                    details:
+                      - field: "endDate"
+                        error: "must be after startDate"
+                tooManyGuests:
+                  summary: Превышено количество гостей
+                  value:
+                    code: 400
+                    message: "Превышено максимальное количество гостей"
+                    details:
+                      - field: "guestsCount"
+                        error: "maxGuests is 3"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Конфликт бронирования
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                dateConflict:
+                  summary: Даты уже забронированы
+                  value:
+                    code: 409
+                    message: "Объект недоступен в выбранные даты"
+                    details:
+                      - field: "startDate"
+                        error: "dates are already booked"
+                notAvailable:
+                  summary: Объект недоступен
+                  value:
+                    code: 409
+                    message: "Объект временно недоступен для бронирования"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Сервис недвижимости недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                propertyServiceDown:
+                  summary: Property Service недоступен
+                  value:
+                    code: 503
+                    message: "Не удалось проверить доступность объекта"
+                    retryAfter: 30
+
+    get:
+      tags:
+        - Booking Service
+      summary: Получить список бронирований
+      description: Список бронирований с фильтрацией (для администратора)
+      operationId: listBookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          description: Фильтрация по объекту
+          schema:
+            type: integer
+            format: int32
+        - name: status
+          in: query
+          description: Фильтрация по статусу
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+        - name: startDate
+          in: query
+          description: Фильтрация по дате начала (от)
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: Фильтрация по дате окончания (до)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseBooking'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав (только админ)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /bookings/my:
+    get:
+      tags:
+        - Booking Service
+      summary: Получить мои бронирования
+      description: Список бронирований текущего пользователя как арендатора
+      operationId: getMyBookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: status
+          in: query
+          description: Фильтрация по статусу
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseBooking'
+              examples:
+                myBookings:
+                  summary: Мои бронирования
+                  value:
+                    items:
+                      - id: 100
+                        propertyId: 10
+                        occupierId: 1
+                        startDate: "2024-02-01T14:00:00Z"
+                        endDate: "2024-02-05T12:00:00Z"
+                        totalPrice: 20000
+                        status: "CONFIRMED"
+                        guestsCount: 2
+                        property:
+                          id: 10
+                          title: "Уютная квартира в центре"
+                          address:
+                            city: "Москва"
+                    total: 5
+                    page: 1
+                    pageSize: 10
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /bookings/incoming:
+    get:
+      tags:
+        - Booking Service
+      summary: Получить входящие бронирования
+      description: Список бронирований объектов текущего пользователя как владельца
+      operationId: getIncomingBookings
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          description: Фильтрация по объекту
+          schema:
+            type: integer
+            format: int32
+        - name: status
+          in: query
+          description: Фильтрация по статусу
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseBooking'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /bookings/{id}:
+    get:
+      tags:
+        - Booking Service
+      summary: Получить детали бронирования
+      description: Возвращает полную информацию о бронировании
+      operationId: getBookingById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                forbidden:
+                  summary: Не участник бронирования
+                  value:
+                    code: 403
+                    message: "Доступ только для владельца или арендатора"
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    patch:
+      tags:
+        - Booking Service
+      summary: Обновить бронирование
+      description: Обновление статуса или данных бронирования
+      operationId: updateBooking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/BookingStatus'
+                specialRequest:
+                  type: string
+                cancellationReason:
+                  type: string
+            examples:
+              confirmBooking:
+                summary: Подтвердить бронирование
+                value:
+                  status: "CONFIRMED"
+              cancelBooking:
+                summary: Отменить бронирование
+                value:
+                  status: "CANCELLED"
+                  cancellationReason: "Изменились планы"
+      responses:
+        '200':
+          description: Бронирование успешно обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidStatus:
+                  summary: Недопустимый статус
+                  value:
+                    code: 400
+                    message: "Недопустимый статус бронирования"
+                    details:
+                      - field: "status"
+                        error: "invalid transition"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Конфликт состояния
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                statusConflict:
+                  summary: Нельзя изменить статус
+                  value:
+                    code: 409
+                    message: "Нельзя отменить завершенное бронирование"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    delete:
+      tags:
+        - Booking Service
+      summary: Удалить бронирование
+      description: Удаление бронирования (только владелец или админ)
+      operationId: deleteBooking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешно удалено
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ==================== PAYMENT SERVICE ====================
+  /transactions:
+    post:
+      tags:
+        - Payment Service
+      summary: Создать транзакцию
+      description: Создание новой транзакции оплаты
+      operationId: createTransaction
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionCreateRequest'
+            examples:
+              validTransaction:
+                summary: Корректная транзакция
+                value:
+                  bookingId: 100
+                  paymentMethod: "CARD"
+                  currency: "RUB"
+                  amount: 20000
+              invalidAmount:
+                summary: Некорректная сумма
+                value:
+                  bookingId: 100
+                  paymentMethod: "CARD"
+                  currency: "RUB"
+                  amount: -100
+      responses:
+        '201':
+          description: Транзакция успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+              examples:
+                transactionCreated:
+                  summary: Транзакция создана
+                  value:
+                    id: 500
+                    bookingId: 100
+                    paymentMethod: "CARD"
+                    status: "PENDING"
+                    transactionDate: "2024-01-15T10:30:00Z"
+                    paymentId: "pay_abc123xyz"
+                    currency: "RUB"
+                    amount: 20000
+                    feeAmount: 600
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidAmount:
+                  summary: Отрицательная сумма
+                  value:
+                    code: 400
+                    message: "Сумма должна быть положительной"
+                    details:
+                      - field: "amount"
+                        error: "must be > 0"
+                invalidCurrency:
+                  summary: Недопустимая валюта
+                  value:
+                    code: 400
+                    message: "Недопустимый код валюты"
+                    details:
+                      - field: "currency"
+                        error: "must be 3-letter ISO code"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Бронирование не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Транзакция уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                duplicateTransaction:
+                  summary: Уже оплачено
+                  value:
+                    code: 409
+                    message: "Бронирование уже оплачено"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '503':
+          description: Платежный шлюз недоступен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                gatewayDown:
+                  summary: Платежный шлюз недоступен
+                  value:
+                    code: 503
+                    message: "Платежный шлюз временно недоступен"
+                    retryAfter: 60
+
+    get:
+      tags:
+        - Payment Service
+      summary: Получить список транзакций
+      description: Список транзакций с фильтрацией
+      operationId: listTransactions
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: bookingId
+          in: query
+          description: Фильтрация по бронированию
+          schema:
+            type: integer
+            format: int32
+        - name: status
+          in: query
+          description: Фильтрация по статусу
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+        - name: startDate
+          in: query
+          description: Фильтрация по дате (от)
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: Фильтрация по дате (до)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseTransaction'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /transactions/{id}:
+    get:
+      tags:
+        - Payment Service
+      summary: Получить детали транзакции
+      description: Возвращает полную информацию о транзакции
+      operationId: getTransactionById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID транзакции
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    patch:
+      tags:
+        - Payment Service
+      summary: Обновить статус транзакции
+      description: Обновление статуса транзакции (обычно из webhook платежного шлюза)
+      operationId: updateTransaction
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID транзакции
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  $ref: '#/components/schemas/TransactionStatus'
+                refundedAmount:
+                  type: number
+                  format: decimal
+            examples:
+              markSuccess:
+                summary: Успешная оплата
+                value:
+                  status: "SUCCESS"
+              markRefunded:
+                summary: Возврат средств
+                value:
+                  status: "REFUNDED"
+                  refundedAmount: 20000
+      responses:
+        '200':
+          description: Транзакция успешно обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Транзакция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Конфликт состояния
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                statusConflict:
+                  summary: Нельзя изменить статус
+                  value:
+                    code: 409
+                    message: "Нельзя изменить статус успешной транзакции"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ==================== REVIEW SERVICE ====================
+  /reviews:
+    post:
+      tags:
+        - Review Service
+      summary: Оставить отзыв
+      description: Создание отзыва после завершения бронирования
+      operationId: createReview
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+            examples:
+              validReview:
+                summary: Корректный отзыв
+                value:
+                  bookingId: 100
+                  propertyId: 10
+                  targetType: "PROPERTY"
+                  rating: 5
+                  comment: "Отличная квартира, всё понравилось!"
+              invalidRating:
+                summary: Некорректный рейтинг
+                value:
+                  bookingId: 100
+                  propertyId: 10
+                  targetType: "PROPERTY"
+                  rating: 6
+                  comment: "Слишком высокий рейтинг"
+      responses:
+        '201':
+          description: Отзыв успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+              examples:
+                reviewCreated:
+                  summary: Отзыв создан
+                  value:
+                    id: 50
+                    bookingId: 100
+                    propertyId: 10
+                    reviewerId: 1
+                    targetType: "PROPERTY"
+                    rating: 5
+                    comment: "Отличная квартира, всё понравилось!"
+                    createdAt: "2024-02-06T10:00:00Z"
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                invalidRating:
+                  summary: Рейтинг вне диапазона
+                  value:
+                    code: 400
+                    message: "Рейтинг должен быть от 1 до 5"
+                    details:
+                      - field: "rating"
+                        error: "must be between 1 and 5"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                notEligible:
+                  summary: Нельзя оставить отзыв
+                  value:
+                    code: 403
+                    message: "Отзыв можно оставить только после завершения бронирования"
+        '404':
+          description: Бронирование или объект не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Отзыв уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                duplicateReview:
+                  summary: Уже оставлен отзыв
+                  value:
+                    code: 409
+                    message: "Отзыв на это бронирование уже существует"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    get:
+      tags:
+        - Review Service
+      summary: Получить список отзывов
+      description: Список отзывов с фильтрацией
+      operationId: listReviews
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          description: Фильтрация по объекту
+          schema:
+            type: integer
+            format: int32
+        - name: reviewerId
+          in: query
+          description: Фильтрация по автору
+          schema:
+            type: integer
+            format: int32
+        - name: targetType
+          in: query
+          description: Фильтрация по типу цели
+          schema:
+            $ref: '#/components/schemas/ReviewTargetType'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseReview'
+              examples:
+                reviewsList:
+                  summary: Список отзывов
+                  value:
+                    items:
+                      - id: 50
+                        bookingId: 100
+                        propertyId: 10
+                        reviewerId: 1
+                        targetType: "PROPERTY"
+                        rating: 5
+                        comment: "Отличная квартира!"
+                        responseText: "Спасибо за отзыв!"
+                        responseDate: "2024-02-07T10:00:00Z"
+                        createdAt: "2024-02-06T10:00:00Z"
+                        reviewer:
+                          id: 1
+                          firstName: "Иван"
+                          lastName: "Иванов"
+                    total: 25
+                    page: 1
+                    pageSize: 10
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /reviews/{id}:
+    get:
+      tags:
+        - Review Service
+      summary: Получить отзыв по ID
+      description: Возвращает полную информацию об отзыве
+      operationId: getReviewById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID отзыва
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '404':
+          description: Отзыв не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    patch:
+      tags:
+        - Review Service
+      summary: Ответить на отзыв
+      description: Владелец отвечает на отзыв
+      operationId: respondToReview
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID отзыва
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                responseText:
+                  type: string
+                  minLength: 1
+              required:
+                - responseText
+            examples:
+              ownerResponse:
+                summary: Ответ владельца
+                value:
+                  responseText: "Спасибо за ваш отзыв! Будем рады видеть вас снова!"
+      responses:
+        '200':
+          description: Ответ успешно добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Недостаточно прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                notOwner:
+                  summary: Не владелец объекта
+                  value:
+                    code: 403
+                    message: "Только владелец объекта может ответить на отзыв"
+        '404':
+          description: Отзыв не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Ответ уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                alreadyResponded:
+                  summary: Уже есть ответ
+                  value:
+                    code: 409
+                    message: "Ответ на этот отзыв уже существует"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    delete:
+      tags:
+        - Review Service
+      summary: Удалить отзыв
+      description: Удаление отзыва (только админ или автор)
+      operationId: deleteReview
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID отзыва
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Успешно удалено
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Отзыв не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  # ==================== COMMUNICATION SERVICE ====================
+  /chats:
+    post:
+      tags:
+        - Communication Service
+      summary: Создать чат
+      description: Создание нового чата между владельцем и гостем
+      operationId: createChat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyId:
+                  type: integer
+                  format: int32
+                bookingId:
+                  type: integer
+                  format: int32
+              required:
+                - propertyId
+      responses:
+        '201':
+          description: Чат успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Объект не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Чат уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    get:
+      tags:
+        - Communication Service
+      summary: Получить список чатов
+      description: Список чатов текущего пользователя
+      operationId: listChats
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+        - name: propertyId
+          in: query
+          description: Фильтрация по объекту
+          schema:
+            type: integer
+            format: int32
+        - name: bookingId
+          in: query
+          description: Фильтрация по бронированию
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseChat'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /chats/{id}:
+    get:
+      tags:
+        - Communication Service
+      summary: Получить детали чата
+      description: Возвращает информацию о чате
+      operationId: getChatById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID чата
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Чат не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /messages:
+    post:
+      tags:
+        - Communication Service
+      summary: Отправить сообщение
+      description: Отправка сообщения в чат
+      operationId: sendMessage
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatId:
+                  type: integer
+                  format: int32
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+              required:
+                - chatId
+                - content
+            examples:
+              validMessage:
+                summary: Корректное сообщение
+                value:
+                  chatId: 10
+                  content: "Здравствуйте! Когда можно заселиться?"
+              emptyMessage:
+                summary: Пустое сообщение
+                value:
+                  chatId: 10
+                  content: ""
+      responses:
+        '201':
+          description: Сообщение успешно отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              examples:
+                messageSent:
+                  summary: Сообщение отправлено
+                  value:
+                    id: 200
+                    chatId: 10
+                    senderId: 1
+                    content: "Здравствуйте! Когда можно заселиться?"
+                    sentAt: "2024-01-15T10:30:00Z"
+                    isRead: false
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                emptyMessage:
+                  summary: Пустое сообщение
+                  value:
+                    code: 400
+                    message: "Сообщение не может быть пустым"
+                    details:
+                      - field: "content"
+                        error: "minLength"
+                tooLong:
+                  summary: Слишком длинное сообщение
+                  value:
+                    code: 400
+                    message: "Сообщение превышает максимальную длину"
+                    details:
+                      - field: "content"
+                        error: "maxLength is 5000"
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                notParticipant:
+                  summary: Не участник чата
+                  value:
+                    code: 403
+                    message: "Только участники чата могут отправлять сообщения"
+        '404':
+          description: Чат не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    get:
+      tags:
+        - Communication Service
+      summary: Получить сообщения чата
+      description: Список сообщений чата с пагинацией
+      operationId: listMessages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: chatId
+          in: query
+          required: true
+          description: ID чата
+          schema:
+            type: integer
+            format: int32
+        - $ref: '#/components/parameters/PaginationParams.page'
+        - $ref: '#/components/parameters/PaginationParams.pageSize'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponseMessage'
+              examples:
+                messagesList:
+                  summary: Список сообщений
+                  value:
+                    items:
+                      - id: 200
+                        chatId: 10
+                        senderId: 1
+                        content: "Здравствуйте!"
+                        sentAt: "2024-01-15T10:30:00Z"
+                        isRead: true
+                        readAt: "2024-01-15T10:35:00Z"
+                        sender:
+                          id: 1
+                          firstName: "Иван"
+                          lastName: "Иванов"
+                      - id: 201
+                        chatId: 10
+                        senderId: 2
+                        content: "Добрый день! Заезд с 14:00"
+                        sentAt: "2024-01-15T10:35:00Z"
+                        isRead: false
+                    total: 50
+                    page: 1
+                    pageSize: 20
+        '400':
+          description: Некорректные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Чат не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /messages/{id}:
+    patch:
+      tags:
+        - Communication Service
+      summary: Пометить сообщение как прочитанное
+      description: Обновление статуса прочтения сообщения
+      operationId: markMessageAsRead
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID сообщения
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Статус успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Доступ запрещен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Сообщение не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  parameters:
+    PaginationParams.page:
+      name: page
+      in: query
+      description: Номер страницы (начиная с 1)
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 1
+        minimum: 1
+      example: 1
+    PaginationParams.pageSize:
+      name: pageSize
+      in: query
+      description: Количество элементов на странице
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 10
+        minimum: 1
+        maximum: 100
+      example: 10
+
+  schemas:
+    # === Common ===
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Код ошибки HTTP
+          example: 400
+        message:
+          type: string
+          description: Сообщение об ошибке
+          example: "Некорректный запрос"
+        details:
+          type: array
+          description: Детали ошибки валидации
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Поле с ошибкой
+              error:
+                type: string
+                description: Описание ошибки
+        traceId:
+          type: string
+          description: ID трассировки для отладки
+          example: "abc123-def456"
+        retryAfter:
+          type: integer
+          description: Секунды до повторной попытки (для 503)
+          example: 60
+
+    AuthTokens:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+      properties:
+        accessToken:
+          type: string
+          description: JWT access токен
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: Refresh токен для обновления access токена
+          example: "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..."
+        expiresIn:
+          type: integer
+          description: Время жизни access токена в секундах
+          example: 3600
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          description: Пароль пользователя
+          example: "SecurePass123"
+
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Имя
+          example: "Иван"
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Фамилия
+          example: "Иванов"
+        email:
+          type: string
+          format: email
+          description: Email
+          example: "ivan@example.com"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Пароль (минимум 8 символов)
+          example: "SecurePass123"
+
+    # === User ===
+    UserResponse:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - role
+        - isVerified
+        - isActive
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        firstName:
+          type: string
+          example: "Иван"
+        lastName:
+          type: string
+          example: "Иванов"
+        middleName:
+          type: string
+          example: "Иванович"
+        email:
+          type: string
+          format: email
+          example: "ivan@example.com"
+        phone:
+          type: string
+          example: "+79991234567"
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - USER
+          example: "USER"
+        isVerified:
+          type: boolean
+          example: true
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middleName:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+
+    Favourite:
+      type: object
+      required:
+        - id
+        - userId
+        - propertyId
+        - addedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        userId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        addedAt:
+          type: string
+          format: date-time
+        property:
+          type: object
+          properties:
+            id:
+              type: integer
+            title:
+              type: string
+            pricePerDay:
+              type: number
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/Image'
+
+    # === Property ===
+    Property:
+      type: object
+      required:
+        - id
+        - ownerId
+        - addressId
+        - title
+        - description
+        - pricePerDay
+        - pricePerMonth
+        - areaSqM
+        - maxGuests
+        - bedrooms
+        - bathrooms
+        - isAvailable
+        - minRentDays
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+        typeId:
+          type: integer
+          format: int32
+        owner:
+          $ref: '#/components/schemas/UserResponse'
+        type:
+          $ref: '#/components/schemas/PropertyType'
+        addressId:
+          type: integer
+          format: int32
+        address:
+          $ref: '#/components/schemas/Address'
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+        pricePerMonth:
+          type: number
+          format: decimal
+          minimum: 0
+        areaSqM:
+          type: integer
+          format: int32
+          minimum: 1
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+        bedrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        bathrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        isAvailable:
+          type: boolean
+        minRentDays:
+          type: integer
+          format: int32
+          minimum: 1
+        maxRentDays:
+          type: integer
+          format: int32
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/Image'
+        facilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Facility'
+        rating:
+          type: object
+          properties:
+            average:
+              type: number
+              format: decimal
+            totalReviews:
+              type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PropertyCreateRequest:
+      type: object
+      required:
+        - addressId
+        - title
+        - description
+        - pricePerDay
+        - pricePerMonth
+        - areaSqM
+        - maxGuests
+        - bedrooms
+        - bathrooms
+        - minRentDays
+      properties:
+        typeId:
+          type: integer
+          format: int32
+        addressId:
+          type: integer
+          format: int32
+        title:
+          type: string
+          minLength: 5
+          maxLength: 255
+        description:
+          type: string
+          minLength: 20
+          maxLength: 5000
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+        pricePerMonth:
+          type: number
+          format: decimal
+          minimum: 0
+        areaSqM:
+          type: integer
+          format: int32
+          minimum: 1
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+        bedrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        bathrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        isAvailable:
+          type: boolean
+          default: true
+        minRentDays:
+          type: integer
+          format: int32
+          minimum: 1
+        maxRentDays:
+          type: integer
+          format: int32
+
+    PropertyUpdateRequest:
+      type: object
+      properties:
+        typeId:
+          type: integer
+          format: int32
+        addressId:
+          type: integer
+          format: int32
+        title:
+          type: string
+          minLength: 5
+          maxLength: 255
+        description:
+          type: string
+          minLength: 20
+          maxLength: 5000
+        pricePerDay:
+          type: number
+          format: decimal
+          minimum: 0
+        pricePerMonth:
+          type: number
+          format: decimal
+          minimum: 0
+        areaSqM:
+          type: integer
+          format: int32
+          minimum: 1
+        maxGuests:
+          type: integer
+          format: int32
+          minimum: 1
+        bedrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        bathrooms:
+          type: integer
+          format: int32
+          minimum: 0
+        isAvailable:
+          type: boolean
+        minRentDays:
+          type: integer
+          format: int32
+          minimum: 1
+        maxRentDays:
+          type: integer
+          format: int32
+
+    Address:
+      type: object
+      required:
+        - id
+        - country
+        - city
+        - houseNumber
+      properties:
+        id:
+          type: integer
+          format: int32
+        country:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        houseNumber:
+          type: string
+        apartment:
+          type: string
+        postalCode:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        fullAddress:
+          type: string
+
+    AddressCreateRequest:
+      type: object
+      required:
+        - country
+        - city
+        - houseNumber
+      properties:
+        country:
+          type: string
+          minLength: 2
+          maxLength: 100
+        city:
+          type: string
+          minLength: 2
+          maxLength: 100
+        district:
+          type: string
+          maxLength: 100
+        houseNumber:
+          type: string
+          minLength: 1
+          maxLength: 20
+        apartment:
+          type: string
+          maxLength: 20
+        postalCode:
+          type: string
+          maxLength: 20
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+
+    Facility:
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: integer
+          format: int32
+        type:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Image:
+      type: object
+      required:
+        - id
+        - propertyId
+        - imageUrl
+        - isMain
+      properties:
+        id:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        imageUrl:
+          type: string
+          format: uri
+        isMain:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    PropertyType:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        description:
+          type: string
+
+    # === Booking ===
+    Booking:
+      type: object
+      required:
+        - id
+        - propertyId
+        - occupierId
+        - startDate
+        - endDate
+        - totalPrice
+        - status
+        - guestsCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        occupierId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        totalPrice:
+          type: number
+          format: decimal
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        guestsCount:
+          type: integer
+          format: int32
+          minimum: 1
+        specialRequest:
+          type: string
+          maxLength: 1000
+        cancellationReason:
+          type: string
+          maxLength: 1000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        property:
+          $ref: '#/components/schemas/BookingPropertySummary'
+        occupier:
+          $ref: '#/components/schemas/UserResponse'
+
+    BookingPropertySummary:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          format: int32
+        title:
+          type: string
+        address:
+          $ref: '#/components/schemas/BookingPropertyAddressSummary'
+
+    BookingPropertyAddressSummary:
+      type: object
+      properties:
+        city:
+          type: string
+
+    BookingCreateRequest:
+      type: object
+      required:
+        - propertyId
+        - startDate
+        - endDate
+        - guestsCount
+      properties:
+        propertyId:
+          type: integer
+          format: int32
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        guestsCount:
+          type: integer
+          format: int32
+          minimum: 1
+        specialRequest:
+          type: string
+          maxLength: 1000
+
+    BookingStatus:
+      type: string
+      enum:
+        - PENDING
+        - CONFIRMED
+        - ACTIVE
+        - COMPLETED
+        - CANCELLED
+        - REJECTED
+      description: |
+        Статусы бронирования:
+        - **PENDING** - Ожидает подтверждения
+        - **CONFIRMED** - Подтверждено
+        - **ACTIVE** - Активно (гость заселился)
+        - **COMPLETED** - Завершено
+        - **CANCELLED** - Отменено
+        - **REJECTED** - Отклонено владельцем
+
+    # === Payment ===
+    Transaction:
+      type: object
+      required:
+        - id
+        - bookingId
+        - paymentMethod
+        - status
+        - transactionDate
+        - paymentId
+        - currency
+        - amount
+        - feeAmount
+      properties:
+        id:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        paymentMethod:
+          type: string
+          enum:
+            - CARD
+            - BANK_TRANSFER
+            - ELECTRONIC_WALLET
+            - CASH
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        transactionDate:
+          type: string
+          format: date-time
+        paymentId:
+          type: string
+          description: ID транзакции в платежном шлюзе
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: Код валюты ISO 4217
+        amount:
+          type: number
+          format: decimal
+          minimum: 0
+        feeAmount:
+          type: number
+          format: decimal
+          minimum: 0
+        refundedAmount:
+          type: number
+          format: decimal
+        booking:
+          $ref: '#/components/schemas/Booking'
+
+    TransactionCreateRequest:
+      type: object
+      required:
+        - bookingId
+        - paymentMethod
+        - currency
+        - amount
+      properties:
+        bookingId:
+          type: integer
+          format: int32
+        paymentMethod:
+          type: string
+          enum:
+            - CARD
+            - BANK_TRANSFER
+            - ELECTRONIC_WALLET
+            - CASH
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        amount:
+          type: number
+          format: decimal
+          minimum: 0.01
+
+    TransactionStatus:
+      type: string
+      enum:
+        - PENDING
+        - SUCCESS
+        - FAILED
+        - REFUNDED
+      description: |
+        Статусы транзакции:
+        - **PENDING** - В обработке
+        - **SUCCESS** - Успешно
+        - **FAILED** - Не удалось
+        - **REFUNDED** - Возвращено
+
+    # === Review ===
+    Review:
+      type: object
+      required:
+        - id
+        - bookingId
+        - reviewerId
+        - targetType
+        - rating
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        reviewerId:
+          type: integer
+          format: int32
+        targetType:
+          $ref: '#/components/schemas/ReviewTargetType'
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 2000
+        createdAt:
+          type: string
+          format: date-time
+        responseText:
+          type: string
+          maxLength: 2000
+        responseDate:
+          type: string
+          format: date-time
+        booking:
+          $ref: '#/components/schemas/Booking'
+        property:
+          $ref: '#/components/schemas/Property'
+        reviewer:
+          $ref: '#/components/schemas/UserResponse'
+
+    ReviewCreateRequest:
+      type: object
+      required:
+        - bookingId
+        - targetType
+        - rating
+      properties:
+        bookingId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        targetType:
+          $ref: '#/components/schemas/ReviewTargetType'
+        rating:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          minLength: 10
+          maxLength: 2000
+
+    ReviewTargetType:
+      type: string
+      enum:
+        - PROPERTY
+        - OWNER
+        - OCCUPIER
+      description: |
+        Тип цели отзыва:
+        - **PROPERTY** - Отзыв об объекте
+        - **OWNER** - Отзыв о владельце
+        - **OCCUPIER** - Отзыв о госте
+
+    # === Communication ===
+    Chat:
+      type: object
+      required:
+        - id
+        - ownerId
+        - occupierId
+        - propertyId
+        - createdAt
+      properties:
+        id:
+          type: integer
+          format: int32
+        ownerId:
+          type: integer
+          format: int32
+        occupierId:
+          type: integer
+          format: int32
+        propertyId:
+          type: integer
+          format: int32
+        bookingId:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        lastMessageAt:
+          type: string
+          format: date-time
+        owner:
+          $ref: '#/components/schemas/UserResponse'
+        occupier:
+          $ref: '#/components/schemas/UserResponse'
+        property:
+          $ref: '#/components/schemas/Property'
+        booking:
+          $ref: '#/components/schemas/Booking'
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        unreadCount:
+          type: integer
+          format: int32
+
+    Message:
+      type: object
+      required:
+        - id
+        - chatId
+        - senderId
+        - content
+        - sentAt
+        - isRead
+      properties:
+        id:
+          type: integer
+          format: int32
+        chatId:
+          type: integer
+          format: int32
+        senderId:
+          type: integer
+          format: int32
+        content:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        sentAt:
+          type: string
+          format: date-time
+        isRead:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+        chat:
+          $ref: '#/components/schemas/Chat'
+        sender:
+          $ref: '#/components/schemas/UserResponse'
+
+    # === Paginated Responses ===
+    PaginatedResponseFavourite:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Favourite'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+    PaginatedResponseProperty:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Property'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+    PaginatedResponseBooking:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+    PaginatedResponseTransaction:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+    PaginatedResponseReview:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+    PaginatedResponseChat:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chat'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+    PaginatedResponseMessage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        total:
+          type: integer
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT токен аутентификации.
+        
+        Получите токен через POST /auth/login
+        
+        Пример:
+        ```
+        Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        ```
+
+security:
+  - BearerAuth: []

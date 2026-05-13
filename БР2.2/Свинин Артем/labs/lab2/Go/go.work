@@ -1,0 +1,12 @@
+go 1.26.0
+
+use (
+	./pkg/shared
+	./services/auth
+	./services/booking
+	./services/communication
+	./services/payment
+	./services/property
+	./services/review
+	./services/user
+)
