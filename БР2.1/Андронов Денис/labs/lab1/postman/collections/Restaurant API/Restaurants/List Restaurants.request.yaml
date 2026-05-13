@@ -1,0 +1,24 @@
+$kind: http-request
+name: List Restaurants
+method: GET
+url: '{{baseUrl}}/restaurants'
+order: 1000
+queryParams:
+  - key: city_id
+    value: ''
+    disabled: true
+  - key: cuisine_id
+    value: ''
+    disabled: true
+  - key: price_category
+    value: ''
+    disabled: true
+  - key: name
+    value: ''
+    disabled: true
+  - key: price_sort
+    value: asc
+    disabled: true
+  - key: rating_sort
+    value: desc
+    disabled: true
