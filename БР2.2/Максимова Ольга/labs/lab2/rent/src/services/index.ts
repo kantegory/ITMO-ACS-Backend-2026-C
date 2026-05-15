@@ -1,0 +1,1 @@
+export { default as rentService } from './rent.service';
