@@ -1,0 +1,16 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "json": {
+        "class": "app.logger.JsonFormatter"
+        }
+    },
+    "handlers": {
+        "uvicorn": {
+        "level": "INFO",
+        "formatter": "json",
+        "class": "logging.StreamHandler"
+        }
+    }
+}
