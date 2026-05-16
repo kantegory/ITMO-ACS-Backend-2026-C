@@ -22,7 +22,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
 
           script: |
-            cd /home/ubuntu/ITMO-ACS-Backend-2026-C/БР2.2/Зарецкий Юрий/labs/lab2
+            cd "ITMO-ACS-Backend-2026-C/БР2.2/Зарецкий Юрий/labs/lab2"
 
             git fetch origin lab-4
             git reset --hard origin/lab-4
