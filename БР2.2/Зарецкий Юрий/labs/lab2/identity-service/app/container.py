@@ -68,4 +68,4 @@ class Container(DeclarativeContainer):
     )
 
     lifespan = Singleton(provides=Lifespan, container=__self__)
-    app = Singleton(provides=FastAPI, version=__version__, lifespan=lifespan)
+    app = Singleton(provides=FastAPI, version=__version__, lifespan=lifespan, root_path="/identity")
