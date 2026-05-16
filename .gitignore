@@ -4,6 +4,10 @@
 !БР2.2/Зарецкий Юрий/
 !БР2.2/Зарецкий Юрий/**
 
+!.github/
+!.github/workflows/
+!.github/workflows/deploy.yml
+
 .DS_Store
 .env
 
