@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Deploy on server
+        run: |
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=10 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} '
+              export COMPOSE_PARALLEL_LIMIT=1
+
+              cd /root/lab2_go
+
+              git remote set-url origin git@github.com:qroog/lab2_go.git
+
+              git pull origin main
+
+              python3 scripts/provision_server.py \
+                git@github.com:qroog/lab2_go.git \
+                --branch main \
+                --user root
+            '
