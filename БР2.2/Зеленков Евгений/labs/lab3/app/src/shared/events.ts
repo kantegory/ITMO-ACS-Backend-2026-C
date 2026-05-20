@@ -19,12 +19,6 @@ export interface EventPublisher {
   publish(event: DomainEvent): Promise<void>;
 }
 
-export class ConsoleEventPublisher implements EventPublisher {
-  async publish(event: DomainEvent): Promise<void> {
-    console.log(JSON.stringify({ event: event.eventType, eventId: event.eventId, payload: event.payload }));
-  }
-}
-
 export class RabbitMqEventPublisher implements EventPublisher {
   private connection?: ChannelModel;
   private channel?: ConfirmChannel;
@@ -80,6 +74,7 @@ export class RabbitMqEventPublisher implements EventPublisher {
   }
 }
 
+// Reserved as the persistence table for a future transactional outbox worker.
 @Entity('outbox_events')
 export class OutboxEvent {
   @PrimaryGeneratedColumn('uuid')

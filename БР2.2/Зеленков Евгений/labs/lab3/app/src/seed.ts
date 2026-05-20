@@ -107,6 +107,7 @@ async function seedReservation(restaurantId: string) {
 
 async function main() {
   try {
+    // Initialize every service database so TypeORM synchronize creates all lab schemas.
     await IdentityDataSource.initialize();
     await CatalogDataSource.initialize();
     await MenuDataSource.initialize();

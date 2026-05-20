@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
-import { errorHandler, HttpError, notFoundHandler } from './errors';
+import { errorHandler, notFoundHandler } from './errors';
 
 export function createServiceApp() {
   const app = express();
@@ -23,9 +23,4 @@ export function createServiceApp() {
 export function mountErrorHandlers(app: express.Express) {
   app.use(notFoundHandler);
   app.use(errorHandler);
-}
-
-export function assertFound<T>(value: T | null | undefined, code: string, message: string): T {
-  if (!value) throw new HttpError(404, code, message);
-  return value;
 }

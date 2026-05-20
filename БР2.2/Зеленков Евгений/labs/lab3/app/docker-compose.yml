@@ -1,29 +1,210 @@
+name: lab3-booking
+
+x-service-env: &service-env
+  NODE_ENV: development
+  JWT_SECRET: dev_secret
+  SERVICE_TOKEN: dev_service_token
+  DATABASE_SYNCHRONIZE: "true"
+  API_GATEWAY_PORT: "3105"
+  IDENTITY_PORT: "3111"
+  CATALOG_PORT: "3112"
+  MENU_PORT: "3113"
+  RESERVATION_PORT: "3114"
+  REVIEW_PORT: "3115"
+  IDENTITY_SERVICE_URL: http://identity-service:3111
+  CATALOG_SERVICE_URL: http://catalog-service:3112
+  MENU_SERVICE_URL: http://menu-service:3113
+  RESERVATION_SERVICE_URL: http://reservation-service:3114
+  REVIEW_SERVICE_URL: http://review-service:3115
+  RABBITMQ_URL: amqp://booking_user:booking_password@rabbitmq:5672
+  RABBITMQ_EXCHANGE: booking.events
+  IDENTITY_DATABASE_URL: postgres://booking_user:booking_password@postgres:5432/identity_db
+  CATALOG_DATABASE_URL: postgres://booking_user:booking_password@postgres:5432/restaurant_catalog_db
+  MENU_DATABASE_URL: postgres://booking_user:booking_password@postgres:5432/menu_db
+  RESERVATION_DATABASE_URL: postgres://booking_user:booking_password@postgres:5432/reservation_db
+  REVIEW_DATABASE_URL: postgres://booking_user:booking_password@postgres:5432/review_db
+
+x-service-healthcheck: &service-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+
 services:
   postgres:
     image: postgres:16
-    container_name: lab2-booking-postgres
+    container_name: lab3-booking-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: booking_user
       POSTGRES_PASSWORD: booking_password
       POSTGRES_DB: postgres
     ports:
-      - "5434:5432"
+      - "5435:5432"
     volumes:
-      - lab2_postgres_data:/var/lib/postgresql/data
+      - lab3_postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking_user -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: lab2-booking-rabbitmq
+    container_name: lab3-booking-rabbitmq
+    restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: booking_user
       RABBITMQ_DEFAULT_PASS: booking_password
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5673:5672"
+      - "15673:15672"
     volumes:
-      - lab2_rabbitmq_data:/var/lib/rabbitmq
+      - lab3_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: docker/identity.Dockerfile
+    container_name: lab3-identity-service
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+    expose:
+      - "3111"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3111/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+
+  catalog-service:
+    build:
+      context: .
+      dockerfile: docker/catalog.Dockerfile
+    container_name: lab3-catalog-service
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+    expose:
+      - "3112"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3112/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+
+  menu-service:
+    build:
+      context: .
+      dockerfile: docker/menu.Dockerfile
+    container_name: lab3-menu-service
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+    expose:
+      - "3113"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3113/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+
+  reservation-service:
+    build:
+      context: .
+      dockerfile: docker/reservation.Dockerfile
+    container_name: lab3-reservation-service
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+    expose:
+      - "3114"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3114/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+
+  review-service:
+    build:
+      context: .
+      dockerfile: docker/review.Dockerfile
+    container_name: lab3-review-service
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+    expose:
+      - "3115"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      reservation-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3115/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway.Dockerfile
+    container_name: lab3-api-gateway
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+    ports:
+      - "3105:3105"
+    depends_on:
+      identity-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      menu-service:
+        condition: service_healthy
+      reservation-service:
+        condition: service_healthy
+      review-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3105/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+
+  seed:
+    profiles:
+      - seed
+    build:
+      context: .
+      dockerfile: docker/seed.Dockerfile
+    container_name: lab3-seed
+    environment:
+      <<: *service-env
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
-  lab2_postgres_data:
-  lab2_rabbitmq_data:
+  lab3_postgres_data:
+  lab3_rabbitmq_data:

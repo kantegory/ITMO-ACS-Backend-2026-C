@@ -1,7 +1,7 @@
 {
-  "name": "booking-microservices-lab2",
+  "name": "booking-microservices-lab3",
   "version": "1.0.0",
-  "description": "Restaurant booking backend split into local microservices",
+  "description": "Containerized restaurant booking microservices",
   "main": "dist/services/api-gateway/server.js",
   "scripts": {
     "build": "tsc",
@@ -17,7 +17,8 @@
     "start:menu": "node dist/services/menu/server.js",
     "start:reservation": "node dist/services/reservation/server.js",
     "start:review": "node dist/services/review/server.js",
-    "seed": "ts-node-dev --transpile-only --exit-child src/seed.ts"
+    "seed": "node dist/seed.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "amqplib": "^2.0.1",
