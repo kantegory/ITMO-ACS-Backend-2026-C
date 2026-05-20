@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: lab2-booking-postgres
+    environment:
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: booking_password
+      POSTGRES_DB: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - lab2_postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: lab2-booking-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: booking_user
+      RABBITMQ_DEFAULT_PASS: booking_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - lab2_rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  lab2_postgres_data:
+  lab2_rabbitmq_data:
