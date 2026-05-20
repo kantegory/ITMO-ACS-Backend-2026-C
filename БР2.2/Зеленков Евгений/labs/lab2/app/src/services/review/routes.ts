@@ -4,7 +4,7 @@ import { adminRequired, authRequired, serviceTokenRequired } from '../../shared/
 import { config } from '../../shared/config';
 import { listDto } from '../../shared/dto';
 import { Role } from '../../shared/enums';
-import { ConsoleEventPublisher, DomainEvent, OutboxEvent } from '../../shared/events';
+import { DomainEvent, OutboxEvent, RabbitMqEventPublisher } from '../../shared/events';
 import { HttpError } from '../../shared/errors';
 import { serviceRequest } from '../../shared/http-client';
 import { optionalString, pagination, requiredBoolean, requiredNumber, requiredString } from '../../shared/validation';
@@ -13,7 +13,11 @@ import { PhotoReview, Review } from './entities';
 import { photoReviewDto, reviewDto } from './serializers';
 
 export const reviewRouter = Router();
-const publisher = new ConsoleEventPublisher();
+const publisher = new RabbitMqEventPublisher();
+
+export async function closeReviewPublisher() {
+  await publisher.close();
+}
 
 type ReservationEligibility = {
   eligible: boolean;
@@ -56,6 +60,7 @@ async function publishReviewVerified(review: Review) {
     publishedAt: null
   }));
   await publisher.publish(event);
+  await repo.update({ eventId: event.eventId }, { publishedAt: new Date() });
 }
 
 reviewRouter.get('/restaurants/:restaurantId/reviews', async (req, res, next) => {

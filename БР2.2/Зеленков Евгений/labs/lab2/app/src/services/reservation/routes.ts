@@ -5,7 +5,7 @@ import { adminRequired, authRequired, serviceTokenRequired } from '../../shared/
 import { config } from '../../shared/config';
 import { listDto } from '../../shared/dto';
 import { ReservationStatus, Role } from '../../shared/enums';
-import { ConsoleEventPublisher, DomainEvent, OutboxEvent } from '../../shared/events';
+import { DomainEvent, OutboxEvent, RabbitMqEventPublisher } from '../../shared/events';
 import { HttpError } from '../../shared/errors';
 import { serviceRequest } from '../../shared/http-client';
 import {
@@ -21,7 +21,11 @@ import { Reservation } from './entities';
 import { reservationDto } from './serializers';
 
 export const reservationRouter = Router();
-const publisher = new ConsoleEventPublisher();
+const publisher = new RabbitMqEventPublisher();
+
+export async function closeReservationPublisher() {
+  await publisher.close();
+}
 
 const activeStatuses = [ReservationStatus.Pending, ReservationStatus.Confirmed];
 
@@ -81,6 +85,7 @@ async function publishStatusChanged(reservation: Reservation, previousStatus: Re
     publishedAt: null
   }));
   await publisher.publish(event);
+  await repo.update({ eventId: event.eventId }, { publishedAt: new Date() });
 }
 
 reservationRouter.get('/reservations', authRequired, async (req, res, next) => {

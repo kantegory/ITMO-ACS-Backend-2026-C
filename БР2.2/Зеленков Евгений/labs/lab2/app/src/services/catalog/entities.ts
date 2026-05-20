@@ -99,4 +99,53 @@ export class RestaurantTable {
   updatedAt!: Date;
 }
 
-export const catalogEntities = [Restaurant, RestaurantCuisine, RestaurantTable];
+@Entity('restaurant_rating_aggregates')
+export class RestaurantRatingAggregate {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ name: 'restaurant_id', type: 'uuid', unique: true })
+  restaurantId!: string;
+
+  @ManyToOne(() => Restaurant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'restaurant_id' })
+  restaurant!: Restaurant;
+
+  @Column({ name: 'rating_sum', type: 'numeric', precision: 10, scale: 1, default: 0 })
+  ratingSum!: string;
+
+  @Column({ name: 'rating_count', default: 0 })
+  ratingCount!: number;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
+}
+
+@Entity('processed_messages')
+export class ProcessedMessage {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ name: 'event_id', unique: true })
+  eventId!: string;
+
+  @Column({ name: 'event_type' })
+  eventType!: string;
+
+  @Column({ name: 'business_key', type: 'text', nullable: true, unique: true })
+  businessKey!: string | null;
+
+  @CreateDateColumn({ name: 'processed_at' })
+  processedAt!: Date;
+}
+
+export const catalogEntities = [
+  Restaurant,
+  RestaurantCuisine,
+  RestaurantTable,
+  RestaurantRatingAggregate,
+  ProcessedMessage
+];

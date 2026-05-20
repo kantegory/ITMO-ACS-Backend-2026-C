@@ -113,9 +113,11 @@ menuRouter.post('/menus/:menuId/items', authRequired, adminRequired, async (req,
   }
 });
 
-menuRouter.get('/menu-items/:menuItemId', async (req, res, next) => {
+menuRouter.get('/menu-items/:menuItemId', optionalAuth, async (req, res, next) => {
   try {
-    const item = await MenuDataSource.getRepository(MenuItem).findOneBy({ id: req.params.menuItemId });
+    const where: FindOptionsWhere<MenuItem> = { id: req.params.menuItemId };
+    if (req.user?.role !== Role.Admin) where.isPublished = true;
+    const item = await MenuDataSource.getRepository(MenuItem).findOneBy(where);
     if (!item) throw new HttpError(404, 'menu_item_not_found', 'Menu item not found');
     res.json(menuItemDto(item, await photosFor(item.id)));
   } catch (error) {

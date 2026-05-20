@@ -1,10 +1,12 @@
 import { createServiceApp, mountErrorHandlers } from '../../shared/app';
 import { config } from '../../shared/config';
 import { CatalogDataSource } from './data-source';
+import { startCatalogRabbitConsumer } from './rabbit-consumer';
 import { catalogRouter } from './routes';
 
 async function bootstrap() {
   await CatalogDataSource.initialize();
+  await startCatalogRabbitConsumer();
   const app = createServiceApp();
   app.use('/api/v1', catalogRouter);
   mountErrorHandlers(app);

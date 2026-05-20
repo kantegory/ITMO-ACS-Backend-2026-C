@@ -8,6 +8,7 @@ import { MenuDataSource } from './services/menu/data-source';
 import { Menu, MenuItem } from './services/menu/entities';
 import { ReservationDataSource } from './services/reservation/data-source';
 import { Reservation } from './services/reservation/entities';
+import { ReviewDataSource } from './services/review/data-source';
 
 async function seedIdentity() {
   const repo = IdentityDataSource.getRepository(User);
@@ -110,6 +111,7 @@ async function main() {
     await CatalogDataSource.initialize();
     await MenuDataSource.initialize();
     await ReservationDataSource.initialize();
+    await ReviewDataSource.initialize();
 
     await seedIdentity();
     const restaurant = await seedCatalog();
@@ -118,6 +120,7 @@ async function main() {
 
     console.log('Seed completed');
   } finally {
+    if (ReviewDataSource.isInitialized) await ReviewDataSource.destroy();
     if (ReservationDataSource.isInitialized) await ReservationDataSource.destroy();
     if (MenuDataSource.isInitialized) await MenuDataSource.destroy();
     if (CatalogDataSource.isInitialized) await CatalogDataSource.destroy();

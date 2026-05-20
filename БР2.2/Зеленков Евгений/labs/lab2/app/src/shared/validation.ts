@@ -9,9 +9,10 @@ export function requiredString(value: unknown, field: string): string {
 }
 
 export function optionalString(value: unknown): string | null {
-  if (value === undefined || value === null || value === '') return null;
+  if (value === undefined || value === null) return null;
   if (typeof value !== 'string') throw new HttpError(422, 'validation_error', 'value must be a string');
-  return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
 }
 
 export function requiredNumber(value: unknown, field: string): number {

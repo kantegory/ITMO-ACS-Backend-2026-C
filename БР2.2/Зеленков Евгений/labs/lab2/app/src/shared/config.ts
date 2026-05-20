@@ -37,6 +37,10 @@ export const config = {
     reservation: stringEnv('RESERVATION_SERVICE_URL', 'http://localhost:3114'),
     review: stringEnv('REVIEW_SERVICE_URL', 'http://localhost:3115')
   },
+  rabbitmq: {
+    url: stringEnv('RABBITMQ_URL', 'amqp://booking_user:booking_password@localhost:5672'),
+    exchange: stringEnv('RABBITMQ_EXCHANGE', 'booking.events')
+  },
   databases: {
     identity: stringEnv('IDENTITY_DATABASE_URL', 'postgres://booking_user:booking_password@localhost:5434/identity_db'),
     catalog: stringEnv('CATALOG_DATABASE_URL', 'postgres://booking_user:booking_password@localhost:5434/restaurant_catalog_db'),
