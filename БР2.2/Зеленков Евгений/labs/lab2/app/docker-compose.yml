@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: lab2-booking-postgres
+    environment:
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: booking_password
+      POSTGRES_DB: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - lab2_postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  lab2_postgres_data:

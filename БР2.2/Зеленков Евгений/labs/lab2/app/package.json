@@ -1,0 +1,39 @@
+{
+  "name": "booking-microservices-lab2",
+  "version": "1.0.0",
+  "description": "Restaurant booking backend split into local microservices",
+  "main": "dist/services/api-gateway/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev:gateway": "ts-node-dev --respawn --transpile-only src/services/api-gateway/server.ts",
+    "dev:identity": "ts-node-dev --respawn --transpile-only src/services/identity/server.ts",
+    "dev:catalog": "ts-node-dev --respawn --transpile-only src/services/catalog/server.ts",
+    "dev:menu": "ts-node-dev --respawn --transpile-only src/services/menu/server.ts",
+    "dev:reservation": "ts-node-dev --respawn --transpile-only src/services/reservation/server.ts",
+    "dev:review": "ts-node-dev --respawn --transpile-only src/services/review/server.ts",
+    "start:gateway": "node dist/services/api-gateway/server.js",
+    "start:identity": "node dist/services/identity/server.js",
+    "start:catalog": "node dist/services/catalog/server.js",
+    "start:menu": "node dist/services/menu/server.js",
+    "start:reservation": "node dist/services/reservation/server.js",
+    "start:review": "node dist/services/review/server.js",
+    "seed": "ts-node-dev --transpile-only --exit-child src/seed.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.2"
+  }
+}
