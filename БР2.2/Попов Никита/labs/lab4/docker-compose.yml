@@ -64,8 +64,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_started
-    ports:
-      - "8081:8081"
+    expose:
+       - "8081"
 
   restaurant-service:
     build:
@@ -87,8 +87,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_started
-    ports:
-      - "8082:8082"
+    expose:
+       - "8082"
 
   bookings-service:
     build:
@@ -115,8 +115,8 @@ services:
         condition: service_started
       users-service:
         condition: service_started
-    ports:
-      - "8083:8083"
+    expose:
+       - "8083"
 
   reviews-service:
     build:
