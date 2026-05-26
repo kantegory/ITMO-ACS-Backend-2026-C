@@ -28,5 +28,13 @@ jobs:
             docker compose pull || true
             docker compose up -d --build
             docker compose ps
-            curl -fsS http://127.0.0.1:3000/ > /dev/null
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:3000/ > /dev/null; then
+                echo "Gateway is ready"
+                break
+              fi
+              echo "Waiting for gateway... ($i/30)"
+              sleep 2
+            done
+            curl -fsS http://127.0.0.1:3000/
             echo "Deploy OK"
