@@ -140,8 +140,23 @@ services:
         condition: service_started
       restaurant-service:
         condition: service_started
+    expose:
+       - "8084"
+  
+  nginx:
+    image: nginx:latest
+    container_name: api-gateway
     ports:
-      - "8084:8084"
+      - "80:80"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+    depends_on:
+      - users-service
+      - restaurant-service
+      - bookings-service
+      - reviews-service
 
 networks:
   default:
