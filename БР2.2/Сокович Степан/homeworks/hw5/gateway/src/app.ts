@@ -18,6 +18,7 @@ class App {
     app.get("/", (req: Request, res: Response) => {
       res.json({
         service: "API-шлюз аренды жилья (ЛР2)",
+        cicd: "проверка CI/CD успешно",
         services: {
           users: config.userServiceUrl,
           rent: config.rentServiceUrl,
