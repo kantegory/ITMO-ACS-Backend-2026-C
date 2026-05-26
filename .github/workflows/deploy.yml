@@ -1,0 +1,32 @@
+name: Deploy hw5
+
+on:
+  push:
+    branches:
+      - dev/hw-6/ci-cd          
+    paths:
+      - "БР2.2/Сокович Степан/homeworks/hw5/**"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch origin
+            git checkout dev/hw-6
+            git pull origin dev/hw-6
+            docker compose pull || true
+            docker compose up -d --build
+            docker compose ps
+            curl -fsS http://127.0.0.1:3000/ > /dev/null
+            echo "Deploy OK"
