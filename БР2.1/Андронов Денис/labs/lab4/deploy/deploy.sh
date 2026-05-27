@@ -10,19 +10,24 @@ COMPOSE_DIR="${PROJECT_ROOT}/restorator-microservices"
 
 cd "${COMPOSE_DIR}"
 
+COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
+
+echo "==> Stopping old containers..."
+"${COMPOSE[@]}" down --remove-orphans
+
 echo "==> Building and starting containers..."
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+"${COMPOSE[@]}" up -d --build
 
 echo "==> Waiting for API Gateway..."
 for _ in $(seq 1 30); do
   if curl -sf http://127.0.0.1:4000/health >/dev/null; then
     echo "API Gateway is healthy."
-    docker compose ps
+    "${COMPOSE[@]}" ps
     exit 0
   fi
   sleep 5
 done
 
 echo "ERROR: API Gateway did not become healthy in time."
-docker compose logs --tail=50 api-gateway
+"${COMPOSE[@]}" logs --tail=50 api-gateway
 exit 1
