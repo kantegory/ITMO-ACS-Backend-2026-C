@@ -1,0 +1,9 @@
+$kind: http-request
+name: Get Restaurant Reviews
+method: GET
+url: '{{baseUrl}}/reviews/restaurant/1'
+order: 2000
+queryParams:
+  - key: rating_sort
+    value: desc
+    disabled: true

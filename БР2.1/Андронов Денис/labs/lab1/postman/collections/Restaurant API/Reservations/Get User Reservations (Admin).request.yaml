@@ -1,0 +1,10 @@
+$kind: http-request
+name: 'Get User Reservations (Admin)'
+method: GET
+url: '{{baseUrl}}/reservations/user/1'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
