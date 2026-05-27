@@ -13,6 +13,11 @@ export function useSwagger(app: Express, options: RoutingControllersOptions): Ex
   const storage = getMetadataArgsStorage();
   const spec = routingControllersToSpec(storage, options, {
     info: { title: "Bookings Service API", version: "1.0.0" },
+    servers: [
+      {
+        url: "/bookings"
+      }
+    ],
     components: {
       schemas,
       securitySchemes: {

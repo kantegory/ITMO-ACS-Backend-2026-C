@@ -13,6 +13,7 @@ export function useSwagger(app: Express, options: RoutingControllersOptions): Ex
   const storage = getMetadataArgsStorage();
   const spec = routingControllersToSpec(storage, options, {
     info: { title: "Reviews Service API", version: "1.0.0" },
+    servers: [{ url: "/reviews" }],
     components: {
       schemas,
       securitySchemes: {
@@ -31,7 +32,7 @@ export const swaggerDocument = {
     title: "Reviews Service API",
     version: "1.0.0"
   },
-  servers: [{ url: "/" }],
+  servers: [{ url: "/reviews" }],
   paths: {
     "/api/v1/reviews": { post: { summary: "Create review" } },
     "/api/v1/reviews/{id}": {
