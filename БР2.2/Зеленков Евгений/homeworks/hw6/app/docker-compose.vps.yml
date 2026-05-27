@@ -177,6 +177,17 @@ services:
       <<: *service-healthcheck
       test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3105/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
 
+  seed:
+    build:
+      context: .
+      dockerfile: docker/seed.Dockerfile
+    container_name: hw6-seed
+    environment:
+      <<: *service-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   hw6_postgres_data:
   hw6_rabbitmq_data:

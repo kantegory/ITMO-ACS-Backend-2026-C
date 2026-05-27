@@ -1,0 +1,629 @@
+{
+  "info": {
+    "_postman_id": "9f0f19e2-034f-4e98-af4f-038dbd0494e2",
+    "name": "Booking API HW6 - deployment scenario",
+    "description": "End-to-end deployment smoke scenario for HW6. Runs through gateway and covers auth, catalog, menu, reservation, review, PostgreSQL and RabbitMQ publish path.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{rootUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('API is available', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Health status is ok', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.status).to.eql('ok');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Register new user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Test User\",\n  \"birthdate\": \"2001-05-06\",\n  \"phone\": \"{{generatedPhone}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/register"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = String(Date.now()).slice(-8);",
+              "pm.environment.set('generatedPhone', '+799' + suffix);",
+              "pm.environment.set('testPassword', 'user12345');",
+              "const reservedAt = new Date(Date.now() + 36 * 60 * 60 * 1000);",
+              "reservedAt.setMilliseconds(0);",
+              "pm.environment.set('reservedAt', reservedAt.toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('User is registered', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Registration returns bearer token and user without password', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.tokenType).to.eql('Bearer');",
+              "  pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+              "  pm.expect(json.user.phone).to.eql(pm.environment.get('generatedPhone'));",
+              "  pm.expect(json.user.passwordHash).to.be.undefined;",
+              "  pm.environment.set('userToken', json.accessToken);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Login as created user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"{{generatedPhone}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('User login succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('User token is saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+              "  pm.environment.set('userToken', json.accessToken);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Get current user profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{userToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/users/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Profile is available with bearer token', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Profile belongs to created user', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.phone).to.eql(pm.environment.get('generatedPhone'));",
+              "  pm.expect(json.role).to.eql('User');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Get restaurants",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants?limit=10&sort=rating_desc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Restaurant list is returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('First restaurant id is saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.items).to.be.an('array').that.is.not.empty;",
+              "  pm.expect(json.meta.total).to.be.above(0);",
+              "  pm.environment.set('restaurantId', json.items[0].id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Search and filter restaurants",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants?search=North&cuisine=European&sort=name_asc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Filtered list is returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Filtered restaurants match cuisine', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.items).to.be.an('array').that.is.not.empty;",
+              "  json.items.forEach(function (restaurant) {",
+              "    pm.expect(restaurant.cuisines).to.include('European');",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Get selected restaurant",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants/{{restaurantId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Restaurant card is returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Restaurant id matches saved id', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.eql(pm.environment.get('restaurantId'));",
+              "  pm.expect(json.name).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Get restaurant tables",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants/{{restaurantId}}/tables"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Tables are returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Active table id is saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.be.an('array').that.is.not.empty;",
+              "  pm.expect(json[0].restaurantId).to.eql(pm.environment.get('restaurantId'));",
+              "  pm.expect(json[0].isActive).to.eql(true);",
+              "  pm.environment.set('tableId', json[0].id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Get restaurant menus",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants/{{restaurantId}}/menus"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Published menus are returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Menu id is saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.be.an('array').that.is.not.empty;",
+              "  pm.expect(json[0].restaurantId).to.eql(pm.environment.get('restaurantId'));",
+              "  pm.expect(json[0].isPublished).to.eql(true);",
+              "  pm.environment.set('menuId', json[0].id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Get menu items",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/menus/{{menuId}}/items"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Published menu items are returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Menu item id is saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json).to.be.an('array').that.is.not.empty;",
+              "  pm.expect(json[0].menuId).to.eql(pm.environment.get('menuId'));",
+              "  pm.expect(json[0].isPublished).to.eql(true);",
+              "  pm.environment.set('menuItemId', json[0].id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Create reservation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{userToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"restaurantId\": \"{{restaurantId}}\",\n  \"tableId\": \"{{tableId}}\",\n  \"reservedAt\": \"{{reservedAt}}\",\n  \"guestCount\": 2,\n  \"comment\": \"Postman test reservation\"\n}"
+        },
+        "url": "{{baseUrl}}/reservations"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Reservation is created', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Reservation is pending and saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.restaurantId).to.eql(pm.environment.get('restaurantId'));",
+              "  pm.expect(json.tableId).to.eql(pm.environment.get('tableId'));",
+              "  pm.expect(json.status).to.eql('Pending');",
+              "  pm.environment.set('reservationId', json.id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Get my reservations",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{userToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations?status=Pending"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('User reservations are returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Created reservation is visible to user', function () {",
+              "  const json = pm.response.json();",
+              "  const reservationId = pm.environment.get('reservationId');",
+              "  pm.expect(json.items.some(function (item) { return item.id === reservationId; })).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Login as admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"+79990000001\",\n  \"password\": \"admin12345\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin login succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Admin token is saved', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.user.role).to.eql('Admin');",
+              "  pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+              "  pm.environment.set('adminToken', json.accessToken);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Confirm reservation as admin",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Confirmed\"\n}"
+        },
+        "url": "{{baseUrl}}/reservations/{{reservationId}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin can confirm reservation', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Reservation is confirmed', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.eql(pm.environment.get('reservationId'));",
+              "  pm.expect(json.status).to.eql('Confirmed');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Complete reservation as admin",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Completed\"\n}"
+        },
+        "url": "{{baseUrl}}/reservations/{{reservationId}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin can complete confirmed reservation', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Reservation is completed', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.eql(pm.environment.get('reservationId'));",
+              "  pm.expect(json.status).to.eql('Completed');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Create review",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{userToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reservationId\": \"{{reservationId}}\",\n  \"rating\": 5,\n  \"comment\": \"Postman scenario review\"\n}"
+        },
+        "url": "{{baseUrl}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Review is created after completed reservation', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Review is unverified before moderation', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.reservationId).to.eql(pm.environment.get('reservationId'));",
+              "  pm.expect(json.restaurantId).to.eql(pm.environment.get('restaurantId'));",
+              "  pm.expect(json.rating).to.eql(5);",
+              "  pm.expect(json.isVerified).to.eql(false);",
+              "  pm.environment.set('reviewId', json.id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Verify review as admin",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isVerified\": true\n}"
+        },
+        "url": "{{baseUrl}}/reviews/{{reviewId}}/verification"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin can verify review', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Review became verified', function () {",
+              "  const json = pm.response.json();",
+              "  pm.expect(json.id).to.eql(pm.environment.get('reviewId'));",
+              "  pm.expect(json.isVerified).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 Get public restaurant reviews",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants/{{restaurantId}}/reviews?limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Public reviews are returned', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Verified review is visible publicly', function () {",
+              "  const json = pm.response.json();",
+              "  const reviewId = pm.environment.get('reviewId');",
+              "  pm.expect(json.items.some(function (item) { return item.id === reviewId && item.isVerified === true; })).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

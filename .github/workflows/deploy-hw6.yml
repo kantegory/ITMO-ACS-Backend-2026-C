@@ -71,3 +71,10 @@ jobs:
 
       - name: Verify public endpoint
         run: curl -f https://bk.lab1.zelenkov-labs.ru/health
+
+      - name: Run Postman deployment scenario
+        run: |
+          npx --yes newman run "$APP_PATH/postman/booking-api.postman_collection.json" \
+            -e "$APP_PATH/postman/booking-api.postman_environment.json" \
+            --env-var rootUrl=https://bk.lab1.zelenkov-labs.ru \
+            --env-var baseUrl=https://bk.lab1.zelenkov-labs.ru/api/v1

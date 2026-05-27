@@ -54,7 +54,17 @@ curl -f http://127.0.0.1:3106/health
 curl -f https://bk.lab1.zelenkov-labs.ru/health
 ```
 
-Seed should stay manual, because running it on every deployment can duplicate or overwrite test data.
+6. Run the Postman deployment scenario with Newman:
+
+```bash
+npx --yes newman run postman/booking-api.postman_collection.json \
+  -e postman/booking-api.postman_environment.json \
+  --env-var rootUrl=https://bk.lab1.zelenkov-labs.ru \
+  --env-var baseUrl=https://bk.lab1.zelenkov-labs.ru/api/v1
+```
+
+The deployment wrapper runs the idempotent `seed` container before the Newman
+scenario, so the smoke test has the admin user and initial restaurant data.
 
 ## GitHub Secrets
 
