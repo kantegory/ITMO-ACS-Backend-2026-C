@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: ""
+
+localResources:
+  environments:
+    - ..\Restaurant API\postman\environments\New Environment.environment.yaml

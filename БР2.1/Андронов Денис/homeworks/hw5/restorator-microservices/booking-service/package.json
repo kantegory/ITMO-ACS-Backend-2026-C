@@ -1,0 +1,20 @@
+{
+  "name": "booking-service",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/index.ts"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "reflect-metadata": "^0.2.1",
+    "typeorm": "^0.3.17"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.4",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

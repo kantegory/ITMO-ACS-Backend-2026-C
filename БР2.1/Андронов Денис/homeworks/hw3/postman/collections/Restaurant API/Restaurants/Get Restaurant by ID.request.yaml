@@ -1,0 +1,28 @@
+$kind: http-request
+name: Get Restaurant by ID
+method: GET
+url: '{{baseUrl}}/restaurants/1'
+order: 2000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has restaurant object with required fields", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("object");
+        pm.expect(json).to.have.property("id");
+        pm.expect(json).to.have.property("name");
+      });
+
+      pm.test("Restaurant ID matches requested ID", function () {
+        const json = pm.response.json();
+        pm.expect(json.id).to.eql(1);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

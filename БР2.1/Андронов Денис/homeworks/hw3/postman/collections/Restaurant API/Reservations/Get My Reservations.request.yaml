@@ -1,0 +1,51 @@
+$kind: http-request
+name: Get My Reservations
+method: GET
+url: '{{baseUrl}}/reservations/my'
+order: 2000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+queryParams:
+  - key: from_date
+    value: ''
+    disabled: true
+  - key: to_date
+    value: ''
+    disabled: true
+  - key: restaurant_id
+    value: ''
+    disabled: true
+  - key: name
+    value: ''
+    disabled: true
+  - key: sort_by_date
+    value: asc
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response is an array", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("array");
+      });
+
+      pm.test("Each reservation has required fields", function () {
+        const json = pm.response.json();
+        json.forEach(function (reservation) {
+          pm.expect(reservation).to.have.property("id");
+          pm.expect(reservation).to.have.property("restaurant_id");
+          pm.expect(reservation).to.have.property("reservation_time");
+        });
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
