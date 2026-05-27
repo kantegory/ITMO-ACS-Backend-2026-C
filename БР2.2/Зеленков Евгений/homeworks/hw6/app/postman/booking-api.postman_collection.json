@@ -599,7 +599,47 @@
       ]
     },
     {
-      "name": "18 Get public restaurant reviews",
+      "name": "18 Wait for async restaurant rating update",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/restaurants/{{restaurantId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Restaurant card is returned for rating poll', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "const expectedRating = 5;",
+              "const currentRating = Number(json.rating);",
+              "const attempt = Number(pm.environment.get('ratingPollAttempt') || 0);",
+              "const maxAttempts = 8;",
+              "",
+              "if (currentRating !== expectedRating && attempt < maxAttempts) {",
+              "  const waitUntil = Date.now() + 750;",
+              "  while (Date.now() < waitUntil) {}",
+              "  pm.environment.set('ratingPollAttempt', String(attempt + 1));",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  pm.environment.unset('ratingPollAttempt');",
+              "  pm.test('RabbitMQ consumer recalculated restaurant rating after review verification', function () {",
+              "    pm.expect(json.id).to.eql(pm.environment.get('restaurantId'));",
+              "    pm.expect(currentRating).to.eql(expectedRating);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Get public restaurant reviews",
       "request": {
         "method": "GET",
         "header": [],
