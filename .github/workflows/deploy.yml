@@ -28,5 +28,7 @@ jobs:
             git checkout lab4
             git pull origin lab4
 
+            cd БР2.2/Попов\ Никита/labs/lab4
+
             docker compose up -d --build
           "
