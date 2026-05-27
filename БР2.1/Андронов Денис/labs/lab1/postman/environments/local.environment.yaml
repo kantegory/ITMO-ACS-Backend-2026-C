@@ -1,0 +1,6 @@
+name: Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:4000'
+  - key: token
+    value: ''

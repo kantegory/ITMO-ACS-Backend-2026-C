@@ -1,0 +1,47 @@
+$kind: http-request
+name: Create Reservation
+method: POST
+url: '{{baseUrl}}/reservations'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "restaurant_id": 1,
+      "reservation_time": "2026-06-01T18:00:00.000Z",
+      "guests_count": 2
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 201 Created", function () {
+        pm.response.to.have.status(201);
+      });
+
+      pm.test("Response has reservation object with required fields", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("object");
+        pm.expect(json).to.have.property("id");
+        pm.expect(json).to.have.property("restaurant_id");
+        pm.expect(json).to.have.property("reservation_time");
+        pm.expect(json).to.have.property("guests_count");
+      });
+
+      pm.test("Reservation data matches request body", function () {
+        const json = pm.response.json();
+        pm.expect(json.restaurant_id).to.eql(1);
+        pm.expect(json.guests_count).to.eql(2);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

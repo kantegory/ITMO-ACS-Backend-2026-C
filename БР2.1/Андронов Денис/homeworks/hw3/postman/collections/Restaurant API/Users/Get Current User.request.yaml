@@ -1,0 +1,28 @@
+$kind: http-request
+name: Get Current User
+method: GET
+url: '{{baseUrl}}/users/me'
+order: 1000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has user object with required fields", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("object");
+        pm.expect(json).to.have.property("id");
+        pm.expect(json).to.have.property("email");
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

@@ -1,0 +1,35 @@
+$kind: http-request
+name: 'Get User Reservations (Admin)'
+method: GET
+url: '{{baseUrl}}/reservations/user/1'
+order: 3000
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response is an array", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("array");
+      });
+
+      pm.test("Each reservation belongs to the requested user", function () {
+        const json = pm.response.json();
+        json.forEach(function (reservation) {
+          pm.expect(reservation).to.have.property("id");
+          pm.expect(reservation).to.have.property("restaurant_id");
+          pm.expect(reservation).to.have.property("reservation_time");
+        });
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
