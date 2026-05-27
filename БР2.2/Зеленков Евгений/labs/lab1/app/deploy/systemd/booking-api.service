@@ -1,0 +1,16 @@
+[Unit]
+Description=Booking API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/zelenkov-labs/booking-api
+EnvironmentFile=/opt/zelenkov-labs/booking-api/.env
+ExecStart=/opt/node-v22/bin/node dist/server.js
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
