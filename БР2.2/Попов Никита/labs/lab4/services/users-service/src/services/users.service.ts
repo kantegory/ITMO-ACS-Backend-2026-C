@@ -20,7 +20,7 @@ export class UsersService {
 
   async register(dto: RegisterDto) {
     const existing = await this.usersRepository.findByEmail(dto.email);
-    if (existing) return { error: [409, { code: "EMAIL_EXISTS", message: "Пользователь уже существует" }] as const };
+    if (existing) return { error: [409, { code: "EMAIL_EXISTS", message: "Пользователь уже существует!" }] as const };
     const user = await this.usersRepository.save({
       email: dto.email,
       password: await bcrypt.hash(dto.password, 10),
