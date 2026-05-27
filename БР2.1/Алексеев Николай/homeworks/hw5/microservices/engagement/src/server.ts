@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/data-source';
-import likeRoutes from './routes/like.routes';
+import likeRoutes from './routes/reaction.routes';
 import commentRoutes from './routes/comment.routes';
 import saveRoutes from './routes/save.routes';
 import { connectRabbitMQ } from './rabbitmq/connection';

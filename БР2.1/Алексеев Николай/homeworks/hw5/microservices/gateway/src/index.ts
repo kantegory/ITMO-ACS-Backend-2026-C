@@ -71,13 +71,8 @@ const engagementProxy = createProxyMiddleware({
   changeOrigin: true,
 });
 
-app.use('/api/recipes/:id/like', (req, res, next) => {
-  req.url = `/api/recipes/${req.params.id}/like`;
-  engagementProxy(req, res, next);
-});
-
-app.use('/api/recipes/:id/dislike', (req, res, next) => {
-  req.url = `/api/recipes/${req.params.id}/dislike`;
+app.use('/api/recipes/:id/react', (req, res, next) => {
+  req.url = `/api/recipes/${req.params.id}/react`;
   engagementProxy(req, res, next);
 });
 

@@ -1,7 +1,6 @@
 import { DataSource } from 'typeorm';
 import dotenv from 'dotenv';
-import { Like } from '../entities/Like';
-import { Dislike } from '../entities/Dislike';
+import { Reaction } from '../entities/Reaction';
 import { SavedRecipe } from '../entities/SavedRecipe';
 import { Comment } from '../entities/Comment';
 
@@ -16,5 +15,5 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'engagement_db',
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  entities: [Like, Dislike, SavedRecipe, Comment],
+  entities: [Reaction, SavedRecipe, Comment],
 });

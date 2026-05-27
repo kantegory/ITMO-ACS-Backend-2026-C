@@ -322,11 +322,14 @@ paths:
           description: Рецепт опубликован
 
   # ============ INTERACTIONS ============
-  /recipes/{id}/like:
+  /recipes/{id}/react:
     post:
       tags:
         - Interactions
-      summary: Поставить лайк
+      summary: Поставить реакцию (лайк или дизлайк)
+      description: |
+        Если у пользователя уже есть реакция противоположного типа — она заменяется.
+        Если пользователь уже поставил такую же реакцию — возвращается ошибка 409.
       security:
         - bearerAuth: []
       parameters:
@@ -335,14 +338,49 @@ paths:
           required: true
           schema:
             type: integer
+          description: ID рецепта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [like, dislike]
+                  example: like
+                  description: Тип реакции
       responses:
         '200':
-          description: Лайк поставлен
+          description: Реакция установлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likes:
+                    type: integer
+                    description: Общее количество лайков рецепта
+                  dislikes:
+                    type: integer
+                    description: Общее количество дизлайков рецепта
+        '400':
+          description: Неверный тип реакции
+        '401':
+          description: Не авторизован
+        '404':
+          description: Рецепт не найден
+        '409':
+          description: Уже поставлена такая же реакция
 
     delete:
       tags:
         - Interactions
-      summary: Убрать лайк
+      summary: Удалить реакцию (лайк или дизлайк)
+      description: Удаляет реакцию пользователя на рецепт, если она существует
       security:
         - bearerAuth: []
       parameters:
@@ -351,15 +389,31 @@ paths:
           required: true
           schema:
             type: integer
+          description: ID рецепта
       responses:
         '200':
-          description: Лайк убран
+          description: Реакция удалена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likes:
+                    type: integer
+                    description: Общее количество лайков рецепта
+                  dislikes:
+                    type: integer
+                    description: Общее количество дизлайков рецепта
+        '401':
+          description: Не авторизован
+        '404':
+          description: Реакция не найдена
 
   /recipes/{id}/save:
     post:
       tags:
         - Interactions
-      summary: Сохранить рецепт
+      summary: Сохранить рецепт в избранное
       security:
         - bearerAuth: []
       parameters:
@@ -371,6 +425,8 @@ paths:
       responses:
         '201':
           description: Рецепт сохранен
+        '409':
+          description: Уже сохранен
 
     delete:
       tags:
@@ -513,6 +569,22 @@ components:
           type: string
         photoUrl:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Reaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        recipeId:
+          type: integer
+        type:
+          type: string
+          enum: [like, dislike]
         createdAt:
           type: string
           format: date-time
