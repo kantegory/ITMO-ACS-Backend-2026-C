@@ -1,0 +1,73 @@
+name: Deploy HW6
+
+on:
+  push:
+    branches:
+      - hw6
+    paths:
+      - ".github/workflows/deploy-hw6.yml"
+      - "БР2.2/Зеленков Евгений/homeworks/hw6/app/**"
+
+  workflow_dispatch:
+
+env:
+  APP_PATH: "БР2.2/Зеленков Евгений/homeworks/hw6/app"
+  APP_DIR: "/opt/zelenkov-labs/booking-microservices-hw6"
+  VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+
+jobs:
+  deploy:
+    name: Check and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: "${{ env.APP_PATH }}/package-lock.json"
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_PATH }}
+        run: npm ci --no-audit --no-fund
+
+      - name: TypeScript check
+        working-directory: ${{ env.APP_PATH }}
+        run: npm run typecheck
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$VPS_PORT" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Prepare server directory
+        run: |
+          ssh -p "$VPS_PORT" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "mkdir -p '$APP_DIR'"
+
+      - name: Upload application
+        run: |
+          rsync -az --delete \
+            --exclude node_modules \
+            --exclude dist \
+            --exclude .env \
+            -e "ssh -p $VPS_PORT" \
+            "$APP_PATH/" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$APP_DIR/"
+
+      - name: Deploy on server
+        run: |
+          ssh -p "$VPS_PORT" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << EOF
+          set -e
+          sudo /usr/local/sbin/deploy-hw6-compose
+          EOF
+
+      - name: Verify public endpoint
+        run: curl -f https://bk.lab1.zelenkov-labs.ru/health
