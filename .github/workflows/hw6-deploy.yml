@@ -1,0 +1,43 @@
+# ДЗ6: автодеплой на удалённый сервер при push в ветку hw6.
+# Секреты и пути — см. БР2.1/Андронов Денис/homeworks/hw6/README.md
+
+name: HW6 deploy
+
+on:
+  push:
+    branches: [hw6]
+  workflow_dispatch:
+
+concurrency:
+  group: hw6-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Add SSH known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Pull and redeploy on server
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_REPO_DIR }}"
+            git fetch origin hw6
+            git checkout hw6
+            git pull --ff-only origin hw6
+            cd "${{ secrets.DEPLOY_APP_REL }}"
+            bash deploy/deploy.sh
