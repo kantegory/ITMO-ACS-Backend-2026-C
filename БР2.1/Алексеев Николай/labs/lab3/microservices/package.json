@@ -1,0 +1,16 @@
+{
+  "name": "recipe-microservices",
+  "version": "1.0.0",
+  "scripts": {
+    "dev:gateway": "cd gateway && npm run dev",
+    "dev:user": "cd user && npm run dev",
+    "dev:recipe": "cd recipe && npm run dev",
+    "dev:engagement": "cd engagement && npm run dev",
+    "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:user\" \"npm run dev:recipe\" \"npm run dev:engagement\"",
+    "install:all": "npm install && cd gateway && npm install && cd ../user && npm install && cd ../recipe && npm install && cd ../engagement && npm install",
+    "build:all": "cd gateway && npm run build && cd ../user && npm run build && cd ../recipe && npm run build && cd ../engagement && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
