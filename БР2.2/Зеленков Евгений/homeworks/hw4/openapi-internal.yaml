@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+  title: Booking Platform Internal API
+  version: 1.0.0
+  description: Internal REST contracts for microservice communication in the restaurant booking platform.
+servers:
+  - url: http://identity-service:8080
+    description: Identity service
+  - url: http://restaurant-catalog-service:8080
+    description: Restaurant catalog service
+  - url: http://reservation-service:8080
+    description: Reservation service
+security:
+  - ServiceToken: []
+paths:
+  /internal/v1/users/{userId}:
+    get:
+      tags: [Identity]
+      summary: Get minimal user data by id
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: User exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalUser'
+              examples:
+                user:
+                  value:
+                    id: 6d8f8e3a-f7e6-4ad1-89d3-c4c0bbd4575f
+                    role: User
+                    isVerified: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: user_not_found
+                message: User not found
+  /internal/v1/users/validate:
+    post:
+      tags: [Identity]
+      summary: Validate that a user exists and can perform service operation
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateUserRequest'
+            example:
+              userId: 6d8f8e3a-f7e6-4ad1-89d3-c4c0bbd4575f
+              requiredRoles: [User, Admin]
+      responses:
+        '200':
+          description: User is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateUserResponse'
+              example:
+                valid: true
+                user:
+                  id: 6d8f8e3a-f7e6-4ad1-89d3-c4c0bbd4575f
+                  role: User
+                  isVerified: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: User role is not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: forbidden
+                message: User role is not allowed
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: user_not_found
+                message: User not found
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+        '504':
+          $ref: '#/components/responses/DependencyTimeout'
+  /internal/v1/restaurants/{restaurantId}:
+    get:
+      tags: [RestaurantCatalog]
+      summary: Get restaurant for cross-service validation
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Restaurant exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalRestaurant'
+              example:
+                id: 6ef2e9a4-3c0b-4fd4-8e27-61ffb0fd96d4
+                name: Terra
+                isVerified: true
+                avgBill: 1800.00
+                rating: 4.6
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Restaurant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: restaurant_not_found
+                message: Restaurant not found
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+        '504':
+          $ref: '#/components/responses/DependencyTimeout'
+  /internal/v1/restaurants/{restaurantId}/tables/validate:
+    post:
+      tags: [RestaurantCatalog]
+      summary: Validate table ownership, activity and capacity
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateTableRequest'
+            example:
+              tableId: c8c6b9be-f02a-4dd6-9f6a-50efaef2a4cf
+              guestCount: 4
+      responses:
+        '200':
+          description: Table can be used for reservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateTableResponse'
+              example:
+                valid: true
+                table:
+                  id: c8c6b9be-f02a-4dd6-9f6a-50efaef2a4cf
+                  restaurantId: 6ef2e9a4-3c0b-4fd4-8e27-61ffb0fd96d4
+                  capacity: 4
+                  isActive: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Restaurant or table not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                restaurant:
+                  value:
+                    code: restaurant_not_found
+                    message: Restaurant not found
+                table:
+                  value:
+                    code: table_not_found
+                    message: Table not found
+        '409':
+          description: Table cannot be used for this reservation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                mismatch:
+                  value:
+                    code: table_restaurant_mismatch
+                    message: Table does not belong to restaurant
+                inactive:
+                  value:
+                    code: table_inactive
+                    message: Table is inactive
+                capacity:
+                  value:
+                    code: table_capacity_too_small
+                    message: Table capacity is too small
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /internal/v1/reservations/{reservationId}:
+    get:
+      tags: [Reservation]
+      summary: Get reservation for internal checks
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Reservation exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalReservation'
+              example:
+                id: 3f7ac73a-54d0-46e3-bc94-861390b16b47
+                userId: 6d8f8e3a-f7e6-4ad1-89d3-c4c0bbd4575f
+                restaurantId: 6ef2e9a4-3c0b-4fd4-8e27-61ffb0fd96d4
+                tableId: c8c6b9be-f02a-4dd6-9f6a-50efaef2a4cf
+                reservedAt: '2026-03-20T19:00:00Z'
+                reservedUntil: '2026-03-20T21:00:00Z'
+                status: Completed
+                guestCount: 4
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: reservation_not_found
+                message: Reservation not found
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+        '504':
+          $ref: '#/components/responses/DependencyTimeout'
+  /internal/v1/reservations/{reservationId}/validate-review-eligibility:
+    post:
+      tags: [Reservation]
+      summary: Validate that a reservation can be used to create a review
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateReviewEligibilityRequest'
+            example:
+              userId: 6d8f8e3a-f7e6-4ad1-89d3-c4c0bbd4575f
+      responses:
+        '200':
+          description: Review can be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateReviewEligibilityResponse'
+              example:
+                eligible: true
+                reservation:
+                  id: 3f7ac73a-54d0-46e3-bc94-861390b16b47
+                  userId: 6d8f8e3a-f7e6-4ad1-89d3-c4c0bbd4575f
+                  restaurantId: 6ef2e9a4-3c0b-4fd4-8e27-61ffb0fd96d4
+                  tableId: c8c6b9be-f02a-4dd6-9f6a-50efaef2a4cf
+                  reservedAt: '2026-03-20T19:00:00Z'
+                  reservedUntil: '2026-03-20T21:00:00Z'
+                  status: Completed
+                  guestCount: 4
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Reservation belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: forbidden
+                message: Reservation belongs to another user
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: reservation_not_found
+                message: Reservation not found
+        '409':
+          description: Reservation status does not allow review creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: reservation_not_completed
+                message: Reservation must be completed before review
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /internal/v1/restaurants/{restaurantId}/rating/recalculate:
+    post:
+      tags: [RestaurantCatalog]
+      summary: Recalculate restaurant rating after review moderation
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecalculateRatingRequest'
+            example:
+              sourceEventId: ed9b2331-b33b-4576-986f-bc8073c342c7
+              rating: 4.5
+      responses:
+        '200':
+          description: Rating recalculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecalculateRatingResponse'
+              example:
+                restaurantId: 6ef2e9a4-3c0b-4fd4-8e27-61ffb0fd96d4
+                rating: 4.6
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Restaurant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: restaurant_not_found
+                message: Restaurant not found
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+        '504':
+          $ref: '#/components/responses/DependencyTimeout'
+components:
+  securitySchemes:
+    ServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-token
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Correlation id for distributed tracing.
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RestaurantId:
+      name: restaurantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Unauthorized:
+      description: Missing or invalid service token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: unauthorized
+            message: Missing or invalid service token
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: validation_error
+            message: Request validation failed
+            fields:
+              - name: userId
+                message: userId must be a valid UUID
+    DependencyUnavailable:
+      description: Required downstream service is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: dependency_unavailable
+            message: Required downstream service is unavailable
+    DependencyTimeout:
+      description: Required downstream service did not respond in time
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: dependency_timeout
+            message: Required downstream service did not respond in time
+    FailedDependency:
+      description: Composite operation cannot continue because a previous required step has failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: failed_dependency
+            message: Previous required operation failed
+  schemas:
+    Role:
+      type: string
+      enum: [User, Admin]
+    ReservationStatus:
+      type: string
+      enum: [Pending, Confirmed, Cancelled, Completed]
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        fields:
+          type: array
+          items:
+            type: object
+            required: [name, message]
+            properties:
+              name:
+                type: string
+              message:
+                type: string
+    InternalUser:
+      type: object
+      required: [id, role, isVerified]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/Role'
+        isVerified:
+          type: boolean
+    ValidateUserRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        requiredRoles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+    ValidateUserResponse:
+      type: object
+      required: [valid, user]
+      properties:
+        valid:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/InternalUser'
+    InternalRestaurant:
+      type: object
+      required: [id, name, isVerified, avgBill, rating]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isVerified:
+          type: boolean
+        avgBill:
+          type: number
+          format: double
+        rating:
+          type: number
+          format: double
+    InternalTable:
+      type: object
+      required: [id, restaurantId, capacity, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        capacity:
+          type: integer
+          minimum: 1
+        isActive:
+          type: boolean
+    ValidateTableRequest:
+      type: object
+      required: [tableId, guestCount]
+      properties:
+        tableId:
+          type: string
+          format: uuid
+        guestCount:
+          type: integer
+          minimum: 1
+    ValidateTableResponse:
+      type: object
+      required: [valid, table]
+      properties:
+        valid:
+          type: boolean
+        table:
+          $ref: '#/components/schemas/InternalTable'
+    InternalReservation:
+      type: object
+      required: [id, userId, restaurantId, tableId, reservedAt, reservedUntil, status, guestCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        tableId:
+          type: string
+          format: uuid
+        reservedAt:
+          type: string
+          format: date-time
+        reservedUntil:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        guestCount:
+          type: integer
+          minimum: 1
+    ValidateReviewEligibilityRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+    ValidateReviewEligibilityResponse:
+      type: object
+      required: [eligible, reservation]
+      properties:
+        eligible:
+          type: boolean
+        reservation:
+          $ref: '#/components/schemas/InternalReservation'
+    RecalculateRatingRequest:
+      type: object
+      required: [sourceEventId, rating]
+      properties:
+        sourceEventId:
+          type: string
+          format: uuid
+        rating:
+          type: number
+          format: double
+          minimum: 1
+          maximum: 5
+    RecalculateRatingResponse:
+      type: object
+      required: [restaurantId, rating]
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        rating:
+          type: number
+          format: double
