@@ -1,0 +1,13 @@
+# Production overrides: expose only API Gateway on localhost for nginx.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  rabbitmq:
+    ports: !override []
+
+  postgres:
+    ports: !override []
+
+  api-gateway:
+    ports:
+      - "127.0.0.1:4000:4000"
