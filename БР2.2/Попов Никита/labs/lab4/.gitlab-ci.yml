@@ -1,0 +1,27 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  image: alpine:latest
+
+  before_script:
+    - apk add --no-cache openssh-client git
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+
+  script:
+    - |
+      ssh $SERVER_USER@$SERVER_HOST "
+        cd $DEPLOY_PATH
+
+        git checkout lab4
+        git pull origin lab4
+
+        docker compose up -d --build
+      "
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "lab4"'
