@@ -1,0 +1,515 @@
+openapi: 3.1.0
+info:
+  title: RestOratorAPI
+  version: 0.0.0
+tags: []
+paths:
+  /auth/login:
+    post:
+      operationId: Auth_login
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/register:
+    post:
+      operationId: Auth_register
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+  /reservations:
+    post:
+      operationId: Reservations_createReservation
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reservation'
+      security:
+        - http: []
+  /reservations/my:
+    get:
+      operationId: Reservations_getMyReservations
+      description: "Get current user's reservations with optional filters: date range, restaurant id, restaurant name"
+      parameters:
+        - name: from_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          explode: false
+        - name: to_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          explode: false
+        - name: restaurant_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          explode: false
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: sort_by_date
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+      security:
+        - http: []
+  /reservations/user/{userId}:
+    get:
+      operationId: Reservations_getUserReservations
+      description: admin only endpoint - requires ADMIN role
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+      security:
+        - http: []
+  /restaurants:
+    get:
+      operationId: Restaurants_listRestaurants
+      parameters:
+        - name: city_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          explode: false
+        - name: cuisine_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          explode: false
+        - name: price_category
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: price_sort
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+          explode: false
+        - name: rating_sort
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Restaurant'
+  /restaurants/{id}:
+    get:
+      operationId: Restaurants_getRestaurant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+  /reviews:
+    post:
+      operationId: Reviews_createReview
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+      security:
+        - http: []
+  /reviews/restaurant/{restaurantId}:
+    get:
+      operationId: Reviews_getRestaurantReviews
+      parameters:
+        - name: restaurantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: rating_sort
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+  /users/me:
+    get:
+      operationId: Users_getCurrentUser
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+        - http: []
+  /users/{id}:
+    get:
+      operationId: Users_getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      required:
+        - access_token
+        - user
+      properties:
+        access_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    City:
+      type: object
+      required:
+        - id
+        - external_id
+        - name
+        - region_id
+      properties:
+        id:
+          type: integer
+          format: int64
+        external_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        region_id:
+          type: integer
+          format: int64
+    Cuisine:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    Region:
+      type: object
+      required:
+        - id
+        - external_id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        external_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    RegisterRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+        - password
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+    Reservation:
+      type: object
+      required:
+        - id
+        - user_id
+        - restaurant_id
+        - reservation_time
+        - guests_count
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        restaurant_id:
+          type: integer
+          format: int64
+        reservation_time:
+          type: string
+          format: date-time
+        guests_count:
+          type: integer
+          format: int32
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+    ReservationStatus:
+      type: string
+      enum:
+        - DECLINED
+        - CONFIRMED
+        - IN_PROGRESS
+        - PASSED
+    Restaurant:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - city_id
+        - address
+        - price_category
+        - phone
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        city_id:
+          type: integer
+          format: int64
+        address:
+          type: string
+        price_category:
+          type: string
+        phone:
+          type: string
+        average_rating:
+          type: number
+          format: double
+        created_at:
+          type: string
+          format: date-time
+    RestaurantPhoto:
+      type: object
+      required:
+        - id
+        - restaurant_id
+        - image_url
+      properties:
+        id:
+          type: integer
+          format: int64
+        restaurant_id:
+          type: integer
+          format: int64
+        image_url:
+          type: string
+    Review:
+      type: object
+      required:
+        - id
+        - user_id
+        - restaurant_id
+        - rating
+        - comment
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        restaurant_id:
+          type: integer
+          format: int64
+        rating:
+          type: integer
+          format: int32
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    SortOrder:
+      type: string
+      enum:
+        - asc
+        - desc
+    User:
+      type: object
+      required:
+        - id
+        - role
+        - first_name
+        - last_name
+        - email
+        - is_verified
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        role:
+          $ref: '#/components/schemas/UserRole'
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        email:
+          type: string
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UserRole:
+      type: string
+      enum:
+        - ADMIN
+        - STAFF
+        - USER
+  securitySchemes:
+    http:
+      type: http
+      scheme: bearer

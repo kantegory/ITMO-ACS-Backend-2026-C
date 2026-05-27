@@ -1,0 +1,34 @@
+$kind: http-request
+name: Get Restaurant Reviews
+method: GET
+url: '{{baseUrl}}/reviews/restaurant/1'
+order: 2000
+queryParams:
+  - key: rating_sort
+    value: desc
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response is an array", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("array");
+      });
+
+      pm.test("Each review has required fields", function () {
+        const json = pm.response.json();
+        json.forEach(function (review) {
+          pm.expect(review).to.have.property("id");
+          pm.expect(review).to.have.property("rating");
+          pm.expect(review).to.have.property("comment");
+        });
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

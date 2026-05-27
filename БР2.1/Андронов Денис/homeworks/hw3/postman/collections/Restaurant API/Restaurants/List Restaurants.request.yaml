@@ -1,0 +1,48 @@
+$kind: http-request
+name: List Restaurants
+method: GET
+url: '{{baseUrl}}/restaurants'
+order: 1000
+queryParams:
+  - key: city_id
+    value: ''
+    disabled: true
+  - key: cuisine_id
+    value: ''
+    disabled: true
+  - key: price_category
+    value: ''
+    disabled: true
+  - key: name
+    value: ''
+    disabled: true
+  - key: price_sort
+    value: asc
+    disabled: true
+  - key: rating_sort
+    value: desc
+    disabled: true
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status is 200 OK", function () {
+        pm.response.to.have.status(200);
+      });
+
+      pm.test("Response is an array", function () {
+        const json = pm.response.json();
+        pm.expect(json).to.be.an("array");
+      });
+
+      pm.test("Each restaurant has required fields", function () {
+        const json = pm.response.json();
+        json.forEach(function (restaurant) {
+          pm.expect(restaurant).to.have.property("id");
+          pm.expect(restaurant).to.have.property("name");
+        });
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
