@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Recipe API
-  description: API для сайта рецептов (микросервисная архитектура) АВТОДЕПЛОЙ
+  description: API для сайта рецептов (микросервисная архитектура) АВТОДЕПЛОЙ Проверка 2
   version: 1.0.0
   contact:
     name: Support
