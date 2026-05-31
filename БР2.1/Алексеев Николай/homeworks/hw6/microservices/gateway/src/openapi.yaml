@@ -1,0 +1,650 @@
+openapi: 3.0.0
+info:
+  title: Recipe API
+  description: API для сайта рецептов (микросервисная архитектура) АВТОДЕПЛОЙ Проверка 3
+  version: 1.0.0
+  contact:
+    name: Support
+    email: support@recipe-api.com
+
+servers:
+  - url: /api
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Аутентификация и регистрация
+  - name: Users
+    description: Управление пользователями и подписками
+  - name: Recipes
+    description: Управление рецептами
+  - name: Interactions
+    description: Лайки, дизлайки, сохранения
+  - name: Comments
+    description: Комментарии к рецептам
+  - name: Search
+    description: Поиск рецептов
+
+paths:
+  # ============ AUTH ============
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - email
+                - password
+                - confPassword
+                - firstName
+                - lastName
+              properties:
+                login:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  example: john_doe
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: "123456"
+                confPassword:
+                  type: string
+                  example: "123456"
+                firstName:
+                  type: string
+                  example: John
+                lastName:
+                  type: string
+                  example: Doe
+      responses:
+        '201':
+          description: Успешная регистрация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  accessToken:
+                    type: string
+        '401':
+          description: Пароли не совпадают
+        '409':
+          description: Пользователь уже существует
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Вход в систему
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                  example: john_doe
+                password:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  accessToken:
+                    type: string
+        '401':
+          description: Неверные учетные данные
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Выход из системы
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Успешный выход
+
+  # ============ USERS ============
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Получить профиль текущего пользователя
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/me/subscriptions:
+    get:
+      tags:
+        - Users
+      summary: Получить подписки текущего пользователя
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Список подписок
+
+  /users/{authorId}/subscribe:
+    post:
+      tags:
+        - Users
+      summary: Подписаться на автора
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Успешная подписка
+        '409':
+          description: Уже подписан
+
+  /users/{authorId}/subscribe:
+    delete:
+      tags:
+        - Users
+      summary: Отписаться от автора
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Успешная отписка
+
+  # ============ RECIPES ============
+  /recipes:
+    get:
+      tags:
+        - Recipes
+      summary: Получить список рецептов
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: typeId
+          in: query
+          schema:
+            type: integer
+        - name: cuisineId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список рецептов
+
+    post:
+      tags:
+        - Recipes
+      summary: Создать новый рецепт
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecipeRequest'
+      responses:
+        '201':
+          description: Рецепт создан
+
+  /recipes/{id}:
+    get:
+      tags:
+        - Recipes
+      summary: Получить рецепт по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Рецепт
+        '404':
+          description: Рецепт не найден
+
+    patch:
+      tags:
+        - Recipes
+      summary: Обновить рецепт
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Рецепт обновлен
+
+    delete:
+      tags:
+        - Recipes
+      summary: Удалить рецепт
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Рецепт удален
+
+  /recipes/{id}/publish:
+    post:
+      tags:
+        - Recipes
+      summary: Опубликовать рецепт
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Рецепт опубликован
+
+  # ============ INTERACTIONS ============
+  /recipes/{id}/react:
+    post:
+      tags:
+        - Interactions
+      summary: Поставить реакцию (лайк или дизлайк)
+      description: |
+        Если у пользователя уже есть реакция противоположного типа — она заменяется.
+        Если пользователь уже поставил такую же реакцию — возвращается ошибка 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID рецепта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [like, dislike]
+                  example: like
+                  description: Тип реакции
+      responses:
+        '200':
+          description: Реакция установлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likes:
+                    type: integer
+                    description: Общее количество лайков рецепта
+                  dislikes:
+                    type: integer
+                    description: Общее количество дизлайков рецепта
+        '400':
+          description: Неверный тип реакции
+        '401':
+          description: Не авторизован
+        '404':
+          description: Рецепт не найден
+        '409':
+          description: Уже поставлена такая же реакция
+
+    delete:
+      tags:
+        - Interactions
+      summary: Удалить реакцию (лайк или дизлайк)
+      description: Удаляет реакцию пользователя на рецепт, если она существует
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID рецепта
+      responses:
+        '200':
+          description: Реакция удалена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  likes:
+                    type: integer
+                    description: Общее количество лайков рецепта
+                  dislikes:
+                    type: integer
+                    description: Общее количество дизлайков рецепта
+        '401':
+          description: Не авторизован
+        '404':
+          description: Реакция не найдена
+
+  /recipes/{id}/save:
+    post:
+      tags:
+        - Interactions
+      summary: Сохранить рецепт в избранное
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Рецепт сохранен
+        '409':
+          description: Уже сохранен
+
+    delete:
+      tags:
+        - Interactions
+      summary: Удалить из сохраненных
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Рецепт удален из сохраненных
+
+  # ============ COMMENTS ============
+  /recipes/{id}/comments:
+    get:
+      tags:
+        - Comments
+      summary: Получить комментарии рецепта
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Список комментариев
+
+    post:
+      tags:
+        - Comments
+      summary: Добавить комментарий
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  example: Отличный рецепт!
+      responses:
+        '201':
+          description: Комментарий добавлен
+
+  /comments/{id}:
+    delete:
+      tags:
+        - Comments
+      summary: Удалить комментарий
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Комментарий удален
+
+  # ============ SEARCH ============
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Поиск рецептов
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Поисковый запрос
+        - name: typeId
+          in: query
+          schema:
+            type: integer
+        - name: cuisineId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Результаты поиска
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+        photoUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Reaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        recipeId:
+          type: integer
+        type:
+          type: string
+          enum: [like, dislike]
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateRecipeRequest:
+      type: object
+      required:
+        - typeId
+        - cuisineId
+        - title
+        - description
+        - imageUrl
+        - cookTime
+        - peopleAmount
+        - steps
+        - ingredients
+      properties:
+        typeId:
+          type: integer
+        cuisineId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+        videoUrl:
+          type: string
+        cookTime:
+          type: integer
+        peopleAmount:
+          type: integer
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              imageUrl:
+                type: string
+              stepNumber:
+                type: integer
+        ingredients:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              amount:
+                type: integer
+              unit:
+                type: string
+        isPublished:
+          type: boolean
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

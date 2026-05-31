@@ -1,0 +1,31 @@
+name: Deploy to Yandex Cloud
+
+on:
+  push:
+    branches:
+      - feature/hw6
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd "/home/nikolai/ITMO-ACS-Backend-2026-C"
+            git pull origin feature/hw6
+            cd "/home/nikolai/ITMO-ACS-Backend-2026-C/БР2.1/Алексеев Николай/homeworks/hw6/microservices"
+            docker compose down
+            docker compose up -d --build
+          EOF

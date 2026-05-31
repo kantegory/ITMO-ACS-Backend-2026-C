@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const express_validator_1 = require("express-validator");
+const save_controller_1 = require("../controllers/save.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+const saveController = new save_controller_1.SaveController();
+router.post('/:id/save', auth_middleware_1.authMiddleware, [(0, express_validator_1.param)('id').isInt().toInt()], saveController.save);
+router.delete('/:id/save', auth_middleware_1.authMiddleware, [(0, express_validator_1.param)('id').isInt().toInt()], saveController.unsave);
+router.get('/me/saved', auth_middleware_1.authMiddleware, saveController.getSavedRecipes);
+exports.default = router;
