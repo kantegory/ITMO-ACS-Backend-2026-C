@@ -25,7 +25,7 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd "/home/nikolai/ITMO-ACS-Backend-2026-C"
             git pull origin feature/hw6
-            cd "/home/nikolai/ITMO-ACS-Backend-2026-C/БР2.1/Алексеев Николай/labs/lab3/microservices"
+            cd "/home/nikolai/ITMO-ACS-Backend-2026-C/БР2.1/Алексеев Николай/homeworks/hw6/microservices"
             docker compose down
             docker compose up -d --build
           EOF
