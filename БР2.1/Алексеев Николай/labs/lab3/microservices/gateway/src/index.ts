@@ -4,6 +4,15 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import cors from 'cors';
 import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const USER_AUTH_SERVICE_URL = process.env.USER_AUTH_SERVICE_URL || 'http://user:8001';
+
+const RECIPE_SERVICE_URL = process.env.RECIPE_SERVICE_URL || 'http://recipe:8002';
+
+const ENGAGEMENT_SERVICE_URL = process.env.ENGAGEMENT_SERVICE_URL || 'http://engagement:8003';
 
 const app = express();
 const PORT = 8000;
@@ -22,6 +31,13 @@ try {
   };
 }
 
+app.use((req, res, next) => {
+  console.log(
+    `[GATEWAY] ${req.method} ${req.originalUrl}`
+  );
+  next();
+});
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   explorer: true,
   swaggerOptions: {
@@ -39,9 +55,9 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     gateway: 'running',
     services: {
-      userAuth: 'http://localhost:8001',
-      recipe: 'http://localhost:8002',
-      engagement: 'http://localhost:8003'
+      userAuth: USER_AUTH_SERVICE_URL,
+      recipe: RECIPE_SERVICE_URL,
+      engagement: ENGAGEMENT_SERVICE_URL
     }
   });
 });
@@ -51,7 +67,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', createProxyMiddleware({
-  target: 'http://localhost:8001',
+  target: USER_AUTH_SERVICE_URL,
   changeOrigin: true,
   pathRewrite: {
     '^/': '/api/auth/',
@@ -59,7 +75,7 @@ app.use('/api/auth', createProxyMiddleware({
 }));
 
 app.use('/api/users', createProxyMiddleware({
-  target: 'http://localhost:8001',
+  target: USER_AUTH_SERVICE_URL,
   changeOrigin: true,
   pathRewrite: {
     '^/': '/api/users/',
@@ -67,7 +83,7 @@ app.use('/api/users', createProxyMiddleware({
 }));
 
 const engagementProxy = createProxyMiddleware({
-  target: 'http://localhost:8003',
+  target: ENGAGEMENT_SERVICE_URL,
   changeOrigin: true,
 });
 
@@ -92,7 +108,7 @@ app.use('/api/comments/:id', (req, res, next) => {
 });
 
 app.use('/api/recipes', createProxyMiddleware({
-  target: 'http://localhost:8002',
+  target: RECIPE_SERVICE_URL,
   changeOrigin: true,
   pathRewrite: {
     '^/': '/api/recipes/',
@@ -100,7 +116,7 @@ app.use('/api/recipes', createProxyMiddleware({
 }));
 
 app.use('/api/search', createProxyMiddleware({
-  target: 'http://localhost:8002',
+  target: RECIPE_SERVICE_URL,
   changeOrigin: true,
   pathRewrite: {
     '^/': '/api/search/',

@@ -32,23 +32,66 @@ export const EVENT_TYPES = {
 };
 
 export async function connectRabbitMQ(): Promise<amqp.Channel> {
-  if (channel) return channel;
-  
-  try {
-    const connection = await amqp.connect(RABBITMQ_URL);
-    const ch = await connection.createChannel();
-
-    await ch.assertExchange(EXCHANGES.USER, 'topic', { durable: true });
-    await ch.assertExchange(EXCHANGES.RECIPE, 'topic', { durable: true });
-    await ch.assertExchange(EXCHANGES.ENGAGEMENT, 'topic', { durable: true });
-    
-    channel = ch;
-    console.log('RabbitMQ connected');
+  if (channel) {
     return channel;
-  } catch (error) {
-    console.error('RabbitMQ connection failed:', error);
-    throw error;
   }
+
+  const maxRetries = 10;
+  const retryDelay = 5000;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(
+        `Connecting to RabbitMQ (attempt ${attempt}/${maxRetries})...`
+      );
+
+      const connection = await amqp.connect(RABBITMQ_URL);
+
+      connection.on('error', (err) => {
+        console.error('RabbitMQ connection error:', err);
+      });
+
+      connection.on('close', () => {
+        console.error('RabbitMQ connection closed');
+        channel = null;
+      });
+
+      const ch = await connection.createChannel();
+
+      await ch.assertExchange(EXCHANGES.USER, 'topic', {
+        durable: true,
+      });
+
+      await ch.assertExchange(EXCHANGES.RECIPE, 'topic', {
+        durable: true,
+      });
+
+      await ch.assertExchange(EXCHANGES.ENGAGEMENT, 'topic', {
+        durable: true,
+      });
+
+      channel = ch;
+
+      console.log('RabbitMQ connected');
+
+      return channel;
+    } catch (error) {
+      console.error(
+        `RabbitMQ connection failed (attempt ${attempt}/${maxRetries})`,
+        error
+      );
+
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelay)
+      );
+    }
+  }
+
+  throw new Error('RabbitMQ connection failed');
 }
 
 export async function publishEvent(exchange: string, routingKey: string, data: any) {
