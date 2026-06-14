@@ -1,0 +1,39 @@
+$kind: http-request
+name: saveRecipe
+url: "{{baseUrl}}/api/recipes/{{recipeId}}/save"
+method: POST
+headers:
+  Authorization: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 201\", function () {\r
+
+      \    pm.response.to.have.status(201);\r
+
+      });\r
+
+      \r
+
+      // Проверка сохранения\r
+
+      pm.test(\"Recipe saved successfully\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('userId');\r
+
+      \    pm.expect(response).to.have.property('recipeId');\r
+
+      \    pm.expect(response.userId).to.equal(parseInt(pm.environment.get(\"us\
+      erId\")));\r
+
+      \    pm.expect(response.recipeId).to.equal(parseInt(pm.environment.get(\"\
+      recipeId\")));\r
+
+      });"
+    language: text/javascript
+order: 13000

@@ -1,0 +1,29 @@
+$kind: http-request
+name: undislikeRecipe
+url: "{{baseUrl}}/api/recipes/{{recipeId}}/dislike"
+method: DELETE
+headers:
+  Authorization: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка счетчиков\r
+
+      pm.test(\"Dislikes count decreased\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response.likes).to.be.at.least(0);\r
+
+      });"
+    language: text/javascript
+order: 10000

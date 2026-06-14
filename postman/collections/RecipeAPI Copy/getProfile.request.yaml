@@ -1,0 +1,40 @@
+$kind: http-request
+name: getProfile
+url: "{{baseUrl}}/api/users/me"
+method: GET
+headers:
+  Authorization: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка профиля\r
+
+      pm.test(\"Profile data is correct\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('login');\r
+
+      \    pm.expect(response).to.have.property('email');\r
+
+      \    pm.expect(response.id).to.equal(parseInt(pm.environment.get(\"userId\
+      \")));\r
+
+      });\r
+
+      \r
+
+      console.log(\"✅ User profile:\", pm.response.json().login);"
+    language: text/javascript
+order: 15000

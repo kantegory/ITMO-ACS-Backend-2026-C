@@ -1,0 +1,64 @@
+$kind: http-request
+name: register
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \    \"login\": \"kolya2\",\r
+
+    \    \"email\": \"sobaka44882@gmail.com\",\r
+
+    \    \"password\": \"kolya123\",\r
+
+    \    \"confPassword\": \"kolya123\",\r
+
+    \    \"firstName\": \"Kolya\",\r
+
+    \    \"lastName\": \"Alexeev\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 201\", function () {\r
+
+      \    pm.response.to.have.status(201);\r
+
+      });\r
+
+      \r
+
+      // Проверка структуры ответа\r
+
+      pm.test(\"Response has user and token\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('user');\r
+
+      \    pm.expect(response).to.have.property('accessToken');\r
+
+      \    pm.expect(response.user).to.have.property('id');\r
+
+      \    pm.expect(response.user).to.have.property('login');\r
+
+      });\r
+
+      \r
+
+      // Сохраняем данные для следующих запросов\r
+
+      const response = pm.response.json();\r
+
+      pm.environment.set(\"userId\", response.user.id);\r
+
+      pm.environment.set(\"userLogin\", response.user.login);\r
+
+      pm.environment.set(\"token\", response.accessToken);"
+    language: text/javascript
+order: 2000

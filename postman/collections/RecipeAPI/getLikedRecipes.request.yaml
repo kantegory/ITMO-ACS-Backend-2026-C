@@ -1,0 +1,30 @@
+$kind: http-request
+name: getLikedRecipes
+url: "{{baseUrl}}/api/users/me/liked-recipes?page=1&limit=10"
+method: GET
+headers:
+  Authorization: " Bearer {{token}}"
+queryParams:
+  page: "1"
+  limit: "10"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      pm.test(\"Liked recipes structure is correct\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('items');\r
+
+      \    pm.expect(response.items).to.be.an('array');\r
+
+      });"
+    language: text/javascript
+order: 28000

@@ -1,0 +1,7 @@
+$kind: http-request
+name: unsaveRecipe
+url: "{{baseUrl}}/api/recipes/{{recipeId}}/save"
+method: DELETE
+headers:
+  Authorization: " Bearer {{token}}"
+order: 18000

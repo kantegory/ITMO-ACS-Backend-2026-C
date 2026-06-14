@@ -1,0 +1,193 @@
+$kind: http-request
+name: addRecipe
+url: "{{baseUrl}}/api/recipes"
+method: POST
+headers:
+  Content-Type: " application/json"
+  Authorization: " Bearer {{token}}"
+body:
+  type: json
+  content: "{\r
+
+    \  \"typeId\": {{typeId}},\r
+
+    \  \"cuisineId\": {{cuisineId}},\r
+
+    \  \"title\": \"Борщ классический\",\r
+
+    \  \"desc\": \"Наваристый украинский борщ с пампушками. Готовится 2 часа,
+    получается очень вкусно!\",\r
+
+    \  \"imageUrl\": \"https://example.com/borsh.jpg\",\r
+
+    \  \"videoUrl\": \"https://youtube.com/watch?v=borsh\",\r
+
+    \  \"cookTime\": 120,\r
+
+    \  \"peopleAmount\": 4,\r
+
+    \  \"steps\": [\r
+
+    \    {\r
+
+    \      \"text\": \"Сварить мясной бульон на кости. Варить 1.5 часа, снимая
+    пену.\",\r
+
+    \      \"number\": 1\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"text\": \"Нарезать свеклу соломкой, обжарить с томатной пастой и
+    добавить в бульон.\",\r
+
+    \      \"number\": 2\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"text\": \"Нарезать картофель кубиками, добавить в бульон за 20
+    минут до готовности.\",\r
+
+    \      \"number\": 3\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"text\": \"Заправить борщ зажаркой из лука и моркови, добавить
+    специи.\",\r
+
+    \      \"number\": 4\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"text\": \"Подавать со сметаной и зеленью.\",\r
+
+    \      \"number\": 5\r
+
+    \    }\r
+
+    \  ],\r
+
+    \  \"ingredients\": [\r
+
+    \    {\r
+
+    \      \"name\": \"Говядина на кости\",\r
+
+    \      \"amount\": 500,\r
+
+    \      \"unit\": \"GRAM\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"name\": \"Свекла\",\r
+
+    \      \"amount\": 2,\r
+
+    \      \"unit\": \"PIECE\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"name\": \"Картофель\",\r
+
+    \      \"amount\": 4,\r
+
+    \      \"unit\": \"PIECE\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"name\": \"Морковь\",\r
+
+    \      \"amount\": 1,\r
+
+    \      \"unit\": \"PIECE\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"name\": \"Лук репчатый\",\r
+
+    \      \"amount\": 1,\r
+
+    \      \"unit\": \"PIECE\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"name\": \"Томатная паста\",\r
+
+    \      \"amount\": 2,\r
+
+    \      \"unit\": \"TBSPOON\"\r
+
+    \    },\r
+
+    \    {\r
+
+    \      \"name\": \"Сметана\",\r
+
+    \      \"amount\": 100,\r
+
+    \      \"unit\": \"GRAM\"\r
+
+    \    }\r
+
+    \  ],\r
+
+    \  \"isPublished\": true\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 201\", function () {\r
+
+      \    pm.response.to.have.status(201);\r
+
+      });\r
+
+      \r
+
+      // Проверка ответа\r
+
+      pm.test(\"Recipe created successfully\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('title', 'Борщ классический');\r
+
+      \    pm.expect(response).to.have.property('authorId',
+      parseInt(pm.environment.get(\"userId\")));\r
+
+      \    pm.expect(response.steps).to.be.an('array');\r
+
+      \    pm.expect(response.ingredients).to.be.an('array');\r
+
+      });\r
+
+      \r
+
+      // Сохраняем ID рецепта\r
+
+      const response = pm.response.json();\r
+
+      pm.environment.set(\"recipeId\", response.id);"
+    language: text/javascript
+order: 3000

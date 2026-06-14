@@ -1,0 +1,30 @@
+$kind: http-request
+name: getUserById
+url: "{{baseUrl}}/api/users/{{otherUserId}}"
+method: GET
+headers:
+  - key: Authorization
+    value: " Bearer {{token}}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      pm.test(\"User data is correct\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('id');\r
+
+      \    pm.expect(response).to.have.property('login');\r
+
+      \    pm.expect(response).to.have.property('email');\r
+
+      });\r\n"
+    language: text/javascript
+order: 25000

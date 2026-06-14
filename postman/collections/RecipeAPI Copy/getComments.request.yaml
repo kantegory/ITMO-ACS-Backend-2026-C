@@ -1,0 +1,51 @@
+$kind: http-request
+name: getComments
+url: "{{baseUrl}}/api/recipes/{{recipeId}}/comments?page=1&limit=20"
+method: GET
+queryParams:
+  page: "1"
+  limit: "20"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка структуры\r
+
+      pm.test(\"Comments have pagination\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('items');\r
+
+      \    pm.expect(response).to.have.property('total');\r
+
+      \    pm.expect(response.items).to.be.an('array');\r
+
+      });\r
+
+      \r
+
+      // Проверяем, что наш комментарий есть в списке\r
+
+      const response = pm.response.json();\r
+
+      const ourComment = response.items.find(c => c.id ===
+      parseInt(pm.environment.get(\"commentId\")));\r
+
+      pm.test(\"Our comment appears in list\", function () {\r
+
+      \    pm.expect(ourComment).to.exist;\r
+
+      \    pm.expect(ourComment.text).to.include(\"48\");\r
+
+      });"
+    language: text/javascript
+order: 12000

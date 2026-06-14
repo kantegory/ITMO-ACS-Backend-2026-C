@@ -1,0 +1,55 @@
+$kind: http-request
+name: getRecipes
+url: "{{baseUrl}}/api/recipes?page=1&limit=10"
+method: GET
+queryParams:
+  - key: page
+    value: "1"
+  - key: limit
+    value: "10"
+scripts:
+  - type: afterResponse
+    code: "// Проверка статуса\r
+
+      pm.test(\"Status code is 200\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      // Проверка структуры ответа\r
+
+      pm.test(\"Response has pagination structure\", function () {\r
+
+      \    const response = pm.response.json();\r
+
+      \    pm.expect(response).to.have.property('items');\r
+
+      \    pm.expect(response).to.have.property('total');\r
+
+      \    pm.expect(response).to.have.property('page');\r
+
+      \    pm.expect(response).to.have.property('limit');\r
+
+      \    pm.expect(response.items).to.be.an('array');\r
+
+      });\r
+
+      \r
+
+      // Проверяем, что созданный рецепт есть в списке\r
+
+      const response = pm.response.json();\r
+
+      const createdRecipe = response.items.find(r => r.recipeId ===
+      parseInt(pm.environment.get(\"recipeId\")));\r
+
+      pm.test(\"Created recipe appears in list\", function () {\r
+
+      \    pm.expect(createdRecipe).to.exist;\r
+
+      });"
+    language: text/javascript
+order: 4000
