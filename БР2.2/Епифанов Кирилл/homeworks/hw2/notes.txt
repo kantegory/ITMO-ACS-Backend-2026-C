@@ -1,0 +1,3 @@
+[x] formdata for photos
+[x] /bookings/id/reviews get user id from token pull from author
+    [x] everywhere where applicable
