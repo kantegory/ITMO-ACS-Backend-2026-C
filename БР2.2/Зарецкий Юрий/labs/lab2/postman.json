@@ -1,0 +1,1069 @@
+{
+	"info": {
+		"_postman_id": "1c6d828f-de28-46b5-92a5-1ef70cfb235f",
+		"name": "Аренда помещений",
+		"description": "Комплексный сценарий: регистрация -> вход -> список объявлений -> фильтрация -> просмотр случайного объявления -> старт переписки",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26810996"
+	},
+	"item": [
+		{
+			"name": "1. Регистрация владельца",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Ответ содержит tokens', () => {",
+							"    pm.expect(body).to.have.property('tokens');",
+							"    pm.expect(body.tokens.access_token).to.be.a('string').and.not.empty;",
+							"});",
+							"pm.test('Ответ содержит refresh_token', () => {",
+							"    pm.expect(body.tokens.refresh_token).to.be.a('string').and.not.empty;",
+							"});",
+							"pm.test('Данные пользователя корректны', () => {",
+							"    pm.expect(body.user).to.have.property('id');",
+							"    pm.expect(body.user.full_name).to.eql('Владелец Иванов');",
+							"    pm.expect(body.user.email).to.eql('owner@test.ru');",
+							"});",
+							"pm.test('Пароль НЕ возвращается', () => {",
+							"    pm.expect(body.user).to.not.have.property('password');",
+							"});",
+							"pm.collectionVariables.set('ownerToken', body.tokens.access_token);",
+							"pm.collectionVariables.set('ownerId', body.user.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"owner@test.ru\",\n  \"password\": \"pass1234\",\n  \"full_name\": \"Владелец Иванов\"\n}"
+				},
+				"url": {
+					"raw": "{{identityBaseUrl}}/auth/register",
+					"host": [
+						"{{identityBaseUrl}}"
+					],
+					"path": [
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Создание города (Москва)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Город создан', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"    pm.expect(body.name).to.eql('Москва');",
+							"});",
+							"pm.collectionVariables.set('cityMoscowId', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Москва\"\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/cities",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"cities"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Создание города (Санкт-Петербург)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Город создан', () => {",
+							"    pm.expect(body.name).to.eql('Санкт-Петербург');",
+							"});",
+							"pm.collectionVariables.set('citySpbId', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Санкт-Петербург\"\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/cities",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"cities"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Создание удобства (Wi-Fi)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Удобство создано', () => {",
+							"    pm.expect(body.name).to.eql('Wi-Fi');",
+							"    pm.expect(body.icon).to.eql('wifi');",
+							"});",
+							"pm.collectionVariables.set('comfortWifiId', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Wi-Fi\",\n  \"icon\": \"wifi\"\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/comforts",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"comforts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5. Создание удобства (Кондиционер)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Удобство создано', () => {",
+							"    pm.expect(body.name).to.eql('Кондиционер');",
+							"});",
+							"pm.collectionVariables.set('comfortAcId', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Кондиционер\",\n  \"icon\": \"ac\"\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/comforts",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"comforts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6. Создание удобства (Парковка)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Удобство создано', () => {",
+							"    pm.expect(body.name).to.eql('Парковка');",
+							"});",
+							"pm.collectionVariables.set('comfortParkingId', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Парковка\",\n  \"icon\": \"parking\"\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/comforts",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"comforts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "7. Создание объявления — Студия в Москве",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Объявление создано', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"    pm.expect(body.title).to.eql('Уютная студия в центре Москвы');",
+							"    pm.expect(body.type).to.eql('flat');",
+							"    pm.expect(body.price_per_day).to.eql(3500);",
+							"    pm.expect(body.rooms_count).to.eql(1);",
+							"    pm.expect(body.area).to.eql(35);",
+							"    pm.expect(body.max_guests).to.eql(2);",
+							"});",
+							"pm.test('Привязаны удобства', () => {",
+							"    pm.expect(body.comforts).to.be.an('array').with.lengthOf(2);",
+							"    const names = body.comforts.map(c => c.name);",
+							"    pm.expect(names).to.include('Wi-Fi');",
+							"    pm.expect(names).to.include('Кондиционер');",
+							"});",
+							"pm.collectionVariables.set('property1Id', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"Уютная студия в центре Москвы\",\n  \"description\": \"Светлая студия рядом с метро Арбатская\",\n  \"type\": \"flat\",\n  \"price_per_day\": 3500,\n  \"address\": \"ул. Арбат, 10\",\n  \"rooms_count\": 1,\n  \"area\": 35,\n  \"max_guests\": 2,\n  \"city_id\": {{cityMoscowId}},\n  \"comfort_ids\": [{{comfortWifiId}}, {{comfortAcId}}]\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "8. Создание объявления — Квартира на Невском",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Объявление создано', () => {",
+							"    pm.expect(body.title).to.eql('Просторная квартира на Невском');",
+							"    pm.expect(body.price_per_day).to.eql(7000);",
+							"    pm.expect(body.comforts).to.have.lengthOf(3);",
+							"});",
+							"pm.collectionVariables.set('property2Id', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"Просторная квартира на Невском\",\n  \"description\": \"3-комн. квартира с видом на Неву\",\n  \"type\": \"flat\",\n  \"price_per_day\": 7000,\n  \"address\": \"Невский пр., 50\",\n  \"rooms_count\": 3,\n  \"area\": 85,\n  \"max_guests\": 6,\n  \"city_id\": {{citySpbId}},\n  \"comfort_ids\": [{{comfortWifiId}}, {{comfortAcId}}, {{comfortParkingId}}]\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "9. Создание объявления — Комната",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Комната создана с типом room', () => {",
+							"    pm.expect(body.type).to.eql('room');",
+							"    pm.expect(body.price_per_day).to.eql(1500);",
+							"});",
+							"pm.collectionVariables.set('property3Id', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"Комната в коммуналке\",\n  \"description\": \"Недорогая комната в центре Москвы\",\n  \"type\": \"room\",\n  \"price_per_day\": 1500,\n  \"address\": \"ул. Тверская, 5\",\n  \"rooms_count\": 1,\n  \"area\": 18,\n  \"max_guests\": 1,\n  \"city_id\": {{cityMoscowId}},\n  \"comfort_ids\": [{{comfortWifiId}}]\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "10. Создание объявления — Дом",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Дом создан с типом house', () => {",
+							"    pm.expect(body.type).to.eql('house');",
+							"    pm.expect(body.max_guests).to.eql(10);",
+							"    pm.expect(body.rooms_count).to.eql(5);",
+							"});",
+							"pm.collectionVariables.set('property4Id', body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"Загородный дом в Подмосковье\",\n  \"description\": \"Двухэтажный дом с баней и участком\",\n  \"type\": \"house\",\n  \"price_per_day\": 12000,\n  \"address\": \"пос. Лесной, ул. Сосновая, 7\",\n  \"rooms_count\": 5,\n  \"area\": 150,\n  \"max_guests\": 10,\n  \"city_id\": {{cityMoscowId}},\n  \"comfort_ids\": [{{comfortParkingId}}]\n}"
+				},
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "11. Регистрация арендатора",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Арендатор зарегистрирован', () => {",
+							"    pm.expect(body.user.full_name).to.eql('Арендатор Петров');",
+							"    pm.expect(body.user.email).to.eql('tenant@test.ru');",
+							"});",
+							"pm.test('Пароль НЕ возвращается', () => {",
+							"    pm.expect(body.user).to.not.have.property('password');",
+							"});",
+							"pm.collectionVariables.set('tenantId', body.user.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"tenant@test.ru\",\n  \"password\": \"tenant123\",\n  \"full_name\": \"Арендатор Петров\"\n}"
+				},
+				"url": {
+					"raw": "{{identityBaseUrl}}/auth/register",
+					"host": [
+						"{{identityBaseUrl}}"
+					],
+					"path": [
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "12. Вход арендатора (логин)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 200', () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.test('Получен access_token', () => {",
+							"    pm.expect(body.tokens.access_token).to.be.a('string').and.not.empty;",
+							"});",
+							"pm.test('Получен refresh_token', () => {",
+							"    pm.expect(body.tokens.refresh_token).to.be.a('string').and.not.empty;",
+							"});",
+							"pm.test('Возвращён правильный пользователь', () => {",
+							"    pm.expect(body.user.email).to.eql('tenant@test.ru');",
+							"});",
+							"pm.collectionVariables.set('tenantToken', body.tokens.access_token);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"tenant@test.ru\",\n  \"password\": \"tenant123\"\n}"
+				},
+				"url": {
+					"raw": "{{identityBaseUrl}}/auth/login",
+					"host": [
+						"{{identityBaseUrl}}"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "13. Список всех объявлений",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Статус 200', () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.test('Возвращён массив data', () => {",
+							"    pm.expect(body).to.have.property('data');",
+							"    pm.expect(body.data).to.be.an('array');",
+							"});",
+							"pm.test('Всего 4 объявления', () => {",
+							"    pm.expect(body.pagination.total).to.eql(4);",
+							"});",
+							"pm.test('Есть пагинация', () => {",
+							"    pm.expect(body.pagination).to.have.property('page');",
+							"    pm.expect(body.pagination).to.have.property('limit');",
+							"    pm.expect(body.pagination).to.have.property('total');",
+							"    pm.expect(body.pagination).to.have.property('total_pages');",
+							"});",
+							"pm.test('У каждого объявления есть город', () => {",
+							"    body.data.forEach(p => {",
+							"        pm.expect(p).to.have.property('city');",
+							"        pm.expect(p.city).to.have.property('name');",
+							"    });",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "14. Фильтрация: flat + Москва + до 5000 руб",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Статус 200', () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.test('Найдено ровно 1 объявление', () => {",
+							"    pm.expect(body.pagination.total).to.eql(1);",
+							"    pm.expect(body.data).to.have.lengthOf(1);",
+							"});",
+							"pm.test('Это студия в Москве за 3500', () => {",
+							"    const p = body.data[0];",
+							"    pm.expect(p.title).to.eql('Уютная студия в центре Москвы');",
+							"    pm.expect(p.type).to.eql('flat');",
+							"    pm.expect(p.price_per_day).to.be.at.most(5000);",
+							"});",
+							"pm.test('Все результаты соответствуют фильтру', () => {",
+							"    body.data.forEach(p => {",
+							"        pm.expect(p.type).to.eql('flat');",
+							"        pm.expect(p.price_per_day).to.be.at.most(5000);",
+							"    });",
+							"});",
+							"const randomIndex = Math.floor(Math.random() * body.data.length);",
+							"const chosen = body.data[randomIndex];",
+							"pm.collectionVariables.set('chosenPropertyId', chosen.id);",
+							"console.log('Выбрано: [' + chosen.id + '] ' + chosen.title);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties?type=flat&city_id={{cityMoscowId}}&price_max=5000",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "flat"
+						},
+						{
+							"key": "city_id",
+							"value": "{{cityMoscowId}}"
+						},
+						{
+							"key": "price_max",
+							"value": "5000"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "15. Просмотр выбранного объявления",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Статус 200', () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.test('Полная карточка объявления', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"    pm.expect(body).to.have.property('title');",
+							"    pm.expect(body).to.have.property('description');",
+							"    pm.expect(body).to.have.property('type');",
+							"    pm.expect(body).to.have.property('price_per_day');",
+							"    pm.expect(body).to.have.property('address');",
+							"    pm.expect(body).to.have.property('rooms_count');",
+							"    pm.expect(body).to.have.property('area');",
+							"    pm.expect(body).to.have.property('max_guests');",
+							"});",
+							"pm.test('Есть город', () => {",
+							"    pm.expect(body.city).to.be.an('object');",
+							"    pm.expect(body.city).to.have.property('name');",
+							"});",
+							"pm.test('Есть владелец (owner_id)', () => {",
+							"    pm.expect(body).to.have.property('owner_id');",
+							"    pm.expect(body.owner_id).to.be.a('number');",
+							"});",
+							"pm.test('Есть удобства', () => {",
+							"    pm.expect(body.comforts).to.be.an('array');",
+							"    pm.expect(body.comforts.length).to.be.greaterThan(0);",
+							"});",
+							"pm.collectionVariables.set('propertyOwnerId', body.owner_id);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{propertyBaseUrl}}/properties/{{chosenPropertyId}}",
+					"host": [
+						"{{propertyBaseUrl}}"
+					],
+					"path": [
+						"properties",
+						"{{chosenPropertyId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "16. Старт переписки по объявлению",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Беседа создана', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"});",
+							"pm.collectionVariables.set('conversationId', body.id);",
+							"console.log('Беседа ID: ' + body.id);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"user_id\": {{propertyOwnerId}},\n  \"property_id\": {{chosenPropertyId}}\n}"
+				},
+				"url": {
+					"raw": "{{engagementBaseUrl}}/conversations",
+					"host": [
+						"{{engagementBaseUrl}}"
+					],
+					"path": [
+						"conversations"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "16a. Первое сообщение арендатора",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Сообщение создано', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"    pm.expect(body.text).to.include('арендовать');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"text\": \"Здравствуйте! Хотел бы арендовать вашу квартиру на неделю. Свободна ли она с 15 по 22 января?\"\n}"
+				},
+				"url": {
+					"raw": "{{engagementBaseUrl}}/conversations/{{conversationId}}/messages",
+					"host": [
+						"{{engagementBaseUrl}}"
+					],
+					"path": [
+						"conversations",
+						"{{conversationId}}",
+						"messages"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "17. Ответ владельца в переписке",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Статус 201', () => pm.response.to.have.status(201));",
+							"const body = pm.response.json();",
+							"pm.test('Сообщение создано', () => {",
+							"    pm.expect(body).to.have.property('id');",
+							"    pm.expect(body).to.have.property('text');",
+							"    pm.expect(body.text).to.include('Бронируйте');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{ownerToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"text\": \"Добрый день! Да, в эти даты квартира свободна. Стоимость 3500 руб/день. Бронируйте!\"\n}"
+				},
+				"url": {
+					"raw": "{{engagementBaseUrl}}/conversations/{{conversationId}}/messages",
+					"host": [
+						"{{engagementBaseUrl}}"
+					],
+					"path": [
+						"conversations",
+						"{{conversationId}}",
+						"messages"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "18. Просмотр всей переписки",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Статус 200', () => pm.response.to.have.status(200));",
+							"const body = pm.response.json();",
+							"pm.test('Массив сообщений', () => {",
+							"    pm.expect(body).to.have.property('data');",
+							"    pm.expect(body.data).to.be.an('array');",
+							"});",
+							"pm.test('В переписке 2 сообщения', () => {",
+							"    pm.expect(body.data).to.have.lengthOf(2);",
+							"});",
+							"const tenantId = Number(pm.collectionVariables.get('tenantId'));",
+							"const ownerId = Number(pm.collectionVariables.get('ownerId'));",
+							"pm.test('Первое — от арендатора', () => {",
+							"    const msg = body.data[0];",
+							"    pm.expect(msg.sender_id).to.eql(tenantId);",
+							"    pm.expect(msg.text).to.include('арендовать');",
+							"});",
+							"pm.test('Второе — от владельца', () => {",
+							"    const msg = body.data[1];",
+							"    pm.expect(msg.sender_id).to.eql(ownerId);",
+							"    pm.expect(msg.text).to.include('Бронируйте');",
+							"});",
+							"console.log('=== E2E СЦЕНАРИЙ ПРОЙДЕН УСПЕШНО ===');"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{tenantToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{engagementBaseUrl}}/conversations/{{conversationId}}/messages",
+					"host": [
+						"{{engagementBaseUrl}}"
+					],
+					"path": [
+						"conversations",
+						"{{conversationId}}",
+						"messages"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "identityBaseUrl",
+			"value": "http://localhost:8001/api"
+		},
+		{
+			"key": "propertyBaseUrl",
+			"value": "http://localhost:8002/api"
+		},
+		{
+			"key": "engagementBaseUrl",
+			"value": "http://localhost:8003/api"
+		},
+		{
+			"key": "ownerToken",
+			"value": ""
+		},
+		{
+			"key": "cityMoscowId",
+			"value": ""
+		},
+		{
+			"key": "citySpbId",
+			"value": ""
+		},
+		{
+			"key": "comfortWifiId",
+			"value": ""
+		},
+		{
+			"key": "comfortAcId",
+			"value": ""
+		},
+		{
+			"key": "comfortParkingId",
+			"value": ""
+		},
+		{
+			"key": "property1Id",
+			"value": ""
+		},
+		{
+			"key": "property2Id",
+			"value": ""
+		},
+		{
+			"key": "property3Id",
+			"value": ""
+		},
+		{
+			"key": "property4Id",
+			"value": ""
+		},
+		{
+			"key": "ownerId",
+			"value": ""
+		},
+		{
+			"key": "tenantId",
+			"value": ""
+		},
+		{
+			"key": "tenantToken",
+			"value": ""
+		},
+		{
+			"key": "chosenPropertyId",
+			"value": ""
+		},
+		{
+			"key": "propertyOwnerId",
+			"value": ""
+		},
+		{
+			"key": "conversationId",
+			"value": ""
+		}
+	]
+}
