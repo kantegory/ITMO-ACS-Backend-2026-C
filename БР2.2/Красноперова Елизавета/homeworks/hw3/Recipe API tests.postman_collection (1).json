@@ -1,0 +1,1125 @@
+{
+  "info": {
+    "_postman_id": "e1d2c941-a7e8-4a65-8320-6e5db713a908",
+    "name": "Recipe API tests",
+    "description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54727738",
+    "_collection_link": "https://go.postman.co/collection/54727738-e1d2c941-a7e8-4a65-8320-6e5db713a908?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "AuthorRegister",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 201 — Автор создан\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит токен\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"token\");",
+              "    pm.expect(jsonData.token).to.be.a(\"string\").and.not.empty;",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"tokenAuthor\", jsonData.token);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"username\": \"chef_anna\", \"email\": \"anna@example.com\", \"password\": \"1236456\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AuthorLogin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Вход выполнен\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит токен и пользователя\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"token\");",
+              "    pm.expect(jsonData).to.have.property(\"user\");",
+              "    pm.expect(jsonData.user).to.have.property(\"username\", \"chef_anna\");",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"tokenAuthor\", jsonData.token);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"anna@example.com\", \"password\": \"1236456\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CreateRecipe",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 201 — Рецепт создан\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит recipe_id\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"recipe_id\");",
+              "    pm.expect(jsonData.recipe_id).to.be.a(\"number\");",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"recipeId\", jsonData.recipe_id);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenAuthor}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"title\": \"Паста Карбонара\",\n    \"description\": \"Классический итальянский рецепт пасты карбонара с беконом и сливочным соусом\",\n    \"cooking_time_min\": 30,\n    \"difficulty\": \"medium\",\n    \"dish_type\": \"Паста\",\n    \"steps\": [\n        {\n            \"step_number\": 1,\n            \"instruction_text\": \"Сварите спагетти в подсоленной воде до состояния аль денте\"\n        },\n        {\n            \"step_number\": 2,\n            \"instruction_text\": \"Обжарьте бекон до хрустящей корочки\"\n        },\n        {\n            \"step_number\": 3,\n            \"instruction_text\": \"Смешайте яйца, сливки и тёртый пармезан\"\n        },\n        {\n            \"step_number\": 4,\n            \"instruction_text\": \"Соедините горячие спагетти с беконом и яичной смесью, быстро перемешивая\"\n        }\n    ],\n    \"ingredients\": [\n        { \"ingredient_id\": 1, \"quantity\": \"200 г\" },\n        { \"ingredient_id\": 2, \"quantity\": \"100 г\" },\n        { \"ingredient_id\": 3, \"quantity\": \"2 шт\" },\n        { \"ingredient_id\": 4, \"quantity\": \"100 мл\" }\n    ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/recipes",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ReaderRegister",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 201 — Читатель создан\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"tokenReader\", jsonData.token);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"username\": \"foodlover\", \"email\": \"lover@example.com\", \"password\": \"5678\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ReaderLogin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Вход читателя выполнен\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"tokenReader\", jsonData.token);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"email\": \"lover@example.com\", \"password\": \"5678\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SearchRecipe",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Поиск выполнен\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит массив рецептов\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"items\");",
+              "    pm.expect(jsonData.items).to.be.an(\"array\");",
+              "    pm.expect(jsonData).to.have.property(\"total\");",
+              "    pm.expect(jsonData).to.have.property(\"page\");",
+              "    pm.expect(jsonData).to.have.property(\"limit\");",
+              "});",
+              "",
+              "pm.test(\"Найден созданный рецепт\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var titles = jsonData.items.map(function(item) { return item.title; });",
+              "    pm.expect(titles).to.include(\"Паста Карбонара\");",
+              "});",
+              "",
+              "pm.test(\"Фильтрация по сложности работает\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    jsonData.items.forEach(function(item) {",
+              "        pm.expect(item.difficulty).to.equal(\"medium\");",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes?dish_type=Паста&difficulty=medium&min_time=20&max_time=60&sort_by=published_at",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes"
+          ],
+          "query": [
+            {
+              "key": "dish_type",
+              "value": "Паста"
+            },
+            {
+              "key": "difficulty",
+              "value": "medium"
+            },
+            {
+              "key": "min_time",
+              "value": "20"
+            },
+            {
+              "key": "max_time",
+              "value": "60"
+            },
+            {
+              "key": "sort_by",
+              "value": "published_at"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "RecipePage",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Рецепт найден\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Содержит все необходимые поля\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"title\", \"Паста Карбонара\");",
+              "    pm.expect(jsonData).to.have.property(\"description\");",
+              "    pm.expect(jsonData).to.have.property(\"cooking_time_min\");",
+              "    pm.expect(jsonData).to.have.property(\"difficulty\");",
+              "    pm.expect(jsonData).to.have.property(\"dish_type\");",
+              "    pm.expect(jsonData).to.have.property(\"steps\");",
+              "    pm.expect(jsonData).to.have.property(\"ingredients\");",
+              "    pm.expect(jsonData).to.have.property(\"author\");",
+              "    pm.expect(jsonData).to.have.property(\"likes_count\");",
+              "    pm.expect(jsonData).to.have.property(\"comments_count\");",
+              "    pm.expect(jsonData).to.have.property(\"is_liked_by_me\");",
+              "    pm.expect(jsonData).to.have.property(\"is_saved_by_me\");",
+              "});",
+              "",
+              "pm.test(\"Шаги отсортированы по step_number\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.steps).to.be.an(\"array\").that.is.not.empty;",
+              "    for (var i = 1; i < jsonData.steps.length; i++) {",
+              "        pm.expect(jsonData.steps[i].step_number).to.be.above(jsonData.steps[i-1].step_number);",
+              "    }",
+              "});",
+              "",
+              "pm.test(\"Ингредиенты содержат название и количество\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.ingredients).to.be.an(\"array\").that.is.not.empty;",
+              "    jsonData.ingredients.forEach(function(ing) {",
+              "        pm.expect(ing).to.have.property(\"name\");",
+              "        pm.expect(ing).to.have.property(\"quantity\");",
+              "    });",
+              "});",
+              "",
+              "pm.test(\"Автор указан верно\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.author).to.have.property(\"username\", \"chef_anna\");",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "LikeRecipe",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Лайк поставлен\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит сообщение и количество лайков\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"message\");",
+              "    pm.expect(jsonData).to.have.property(\"likes_count\");",
+              "    pm.expect(jsonData.likes_count).to.be.a(\"number\").and.to.be.at.least(1);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/like",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "like"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SaveRecipe",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Рецепт сохранён\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит сообщение о сохранении\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"message\");",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/save",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "save"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "AddComment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 201 — Комментарий создан\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит comment_id\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"comment_id\");",
+              "    pm.expect(jsonData.comment_id).to.be.a(\"number\");",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.collectionVariables.set(\"commentId\", jsonData.comment_id);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"content\": \"Отличный рецепт!\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Subscription",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Подписка оформлена\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит сообщение о подписке\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"message\");",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/1/subscribe",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "1",
+            "subscribe"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SavedRecipes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Список сохранённых получен\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Сохранённый рецепт есть в списке\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.items).to.be.an(\"array\").that.is.not.empty;",
+              "    var titles = jsonData.items.map(function(item) { return item.title; });",
+              "    pm.expect(titles).to.include(\"Паста Карбонара\");",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/me/saved",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "me",
+            "saved"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Subscriptions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Список подписок получен\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Автор есть среди подписок\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var usernames = jsonData.items.map(function(item) { return item.username; });",
+              "    pm.expect(usernames).to.include(\"chef_anna\");",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/me/subscriptions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "me",
+            "subscriptions"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CommentReply",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 201 — Ответ на комментарий создан\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Ответ содержит parent_comment_id\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"comment_id\");",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenAuthor}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"content\": \"Спасибо! Буду рада, если поделитесь результатом.\", \"parent_comment_id\": {{commentId}} }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CheckComments",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Комментарии получены\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Есть оба комментария (основной и ответ)\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.items).to.be.an(\"array\").with.lengthOf.at.least(2);",
+              "});",
+              "",
+              "pm.test(\"Один из комментариев имеет parent_comment_id\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    var hasReply = jsonData.items.some(function(item) {",
+              "        return item.parent_comment_id !== null;",
+              "    });",
+              "    pm.expect(hasReply).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/comments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "comments"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "EditComment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Комментарий обновлён\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"content\": \"Отличный рецепт! Уже готовлю).\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/comments/{{commentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "comments",
+            "{{commentId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "DeleteLike",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Лайк убран\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Количество лайков уменьшилось\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property(\"likes_count\");",
+              "    pm.expect(jsonData.likes_count).to.equal(0);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/like",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "like"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "DeleteRecipe",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Удалён из сохранённых\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/save",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "save"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Unsubscribe",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Статус 200 — Отписка выполнена\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/1/subscribe",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "1",
+            "subscribe"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CheckError409",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// На второй раз ожидаем 409",
+              "pm.test(\"Статус 200 или 409\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tokenReader}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/recipes/{{recipeId}}/like",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "recipes",
+            "{{recipeId}}",
+            "like"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "tokenAuthor",
+      "value": ""
+    },
+    {
+      "key": "rokenReader",
+      "value": ""
+    },
+    {
+      "key": "recipeId",
+      "value": ""
+    },
+    {
+      "key": "commentId",
+      "value": ""
+    },
+    {
+      "key": "tokenReader",
+      "value": ""
+    }
+  ]
+}
