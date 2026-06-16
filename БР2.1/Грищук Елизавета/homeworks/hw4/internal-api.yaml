@@ -1,0 +1,138 @@
+openapi: 3.0.0
+info:
+  title: Restaurant Booking — Internal API (межсервисное взаимодействие)
+  version: 1.0.0
+  description: >
+    Внутренние эндпоинты для взаимодействия между микросервисами.
+    Не доступны клиенту напрямую — только через межсервисные запросы.
+
+servers:
+  - url: http://auth-service:3001/internal
+    description: auth-service
+  - url: http://restaurant-service:3002/internal
+    description: restaurant-service
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+    UserInternal:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+
+    TableInternal:
+      type: object
+      properties:
+        id:
+          type: integer
+        restaurantId:
+          type: integer
+        capacity:
+          type: integer
+
+    RestaurantInternal:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        categoryId:
+          type: integer
+
+paths:
+
+  # ─── auth-service internal ───────────────────────────────────────
+
+  /users/{id}:
+    get:
+      tags: [auth-service internal]
+      summary: Получить пользователя по id
+      description: >
+        Используется booking-service и review-service для проверки
+        существования пользователя перед созданием бронирования или отзыва.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInternal'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ─── restaurant-service internal ─────────────────────────────────
+
+  /tables/{id}:
+    get:
+      tags: [restaurant-service internal]
+      summary: Получить столик по id
+      description: >
+        Используется booking-service для проверки существования столика
+        и его вместимости перед созданием бронирования.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Столик найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableInternal'
+        '404':
+          description: Столик не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /restaurants/{id}:
+    get:
+      tags: [restaurant-service internal]
+      summary: Получить ресторан по id
+      description: >
+        Используется review-service для проверки существования ресторана
+        перед созданием отзыва.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ресторан найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantInternal'
+        '404':
+          description: Ресторан не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
