@@ -1,0 +1,501 @@
+openapi: 3.0.0
+info:
+  title: Restaurant Booking API
+  version: 1.0.0
+  description: API для приложения бронирования столиков в ресторанах
+
+servers:
+  - url: http://localhost:3000/api
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        priceRange:
+          type: integer
+        description:
+          type: string
+        photoUrl:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+
+    Table:
+      type: object
+      properties:
+        id:
+          type: integer
+        restaurantId:
+          type: integer
+        capacity:
+          type: integer
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        tableId:
+          type: integer
+        bookingTime:
+          type: string
+          format: date-time
+        guestsCount:
+          type: integer
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        restaurantId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email уже занят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Невалидный формат email или слабый пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Авторизация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: JWT-токен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Неверный пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Получить профиль текущего пользователя
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Токен истёк
+
+    patch:
+      tags: [Users]
+      summary: Обновить профиль текущего пользователя
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Обновлённый профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Токен истёк
+        '409':
+          description: Email уже занят
+        '422':
+          description: Невалидный email
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: Список категорий кухни
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /restaurants:
+    get:
+      tags: [Restaurants]
+      summary: Список ресторанов с фильтрацией
+      parameters:
+        - in: query
+          name: category_id
+          schema:
+            type: integer
+        - in: query
+          name: address
+          schema:
+            type: string
+        - in: query
+          name: price_range
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список ресторанов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Restaurant'
+        '400':
+          description: Невалидные параметры
+
+  /restaurants/{id}:
+    get:
+      tags: [Restaurants]
+      summary: Детальная информация о ресторане
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о ресторане
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '404':
+          description: Ресторан не найден
+
+  /restaurants/{id}/tables:
+    get:
+      tags: [Restaurants]
+      summary: Список столиков ресторана
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список столиков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+        '404':
+          description: Ресторан не найден
+
+  /restaurants/{id}/reviews:
+    get:
+      tags: [Reviews]
+      summary: Отзывы о ресторане
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список отзывов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        '404':
+          description: Ресторан не найден
+
+    post:
+      tags: [Reviews]
+      summary: Создать отзыв о ресторане
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Отзыв создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Не авторизован
+        '403':
+          description: Токен истёк
+        '404':
+          description: Ресторан не найден
+        '409':
+          description: Отзыв уже оставлен
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: История бронирований пользователя
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Список бронирований
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Токен истёк
+
+    post:
+      tags: [Bookings]
+      summary: Создать бронирование
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [table_id, booking_time, guests_count]
+              properties:
+                table_id:
+                  type: integer
+                booking_time:
+                  type: string
+                  format: date-time
+                guests_count:
+                  type: integer
+      responses:
+        '201':
+          description: Бронирование создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Некорректные данные
+        '401':
+          description: Не авторизован
+        '403':
+          description: Токен истёк
+        '404':
+          description: Столик не найден
+        '409':
+          description: Столик уже занят
+        '422':
+          description: guests_count превышает вместимость столика
+
+  /bookings/{id}:
+    get:
+      tags: [Bookings]
+      summary: Информация о конкретном бронировании
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Бронирование
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Чужое бронирование или токен истёк
+        '404':
+          description: Бронирование не найдено
+
+  /bookings/{id}/cancel:
+    patch:
+      tags: [Bookings]
+      summary: Отменить бронирование
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Бронирование отменено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          description: Не авторизован
+        '403':
+          description: Чужое бронирование или токен истёк
+        '404':
+          description: Бронирование не найдено
+        '409':
+          description: Уже отменено
