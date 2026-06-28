@@ -1,0 +1,180 @@
+services:
+  auth-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: liza
+      POSTGRES_DB: auth_db
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  restaurant-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: liza
+      POSTGRES_DB: restaurant_db
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  booking-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: liza
+      POSTGRES_DB: booking_db
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  review-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: liza
+      POSTGRES_DB: review_db
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: liza
+      DB_DATABASE: auth_db
+      JWT_SECRET: supersecretkey
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+
+  restaurant-service:
+    build: ./restaurant-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      DB_HOST: restaurant-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: liza
+      DB_DATABASE: restaurant_db
+    depends_on:
+      restaurant-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+
+  booking-service:
+    build: ./booking-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      DB_HOST: booking-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: liza
+      DB_DATABASE: booking_db
+      JWT_SECRET: supersecretkey
+      AUTH_SERVICE_URL: http://auth-service:3001
+      RESTAURANT_SERVICE_URL: http://restaurant-service:3002
+      AMQP_URL: amqps://ywdhnagh:66mbQWd2EJ1MzYty2i9fesajbmKfwb7H@hawk.rmq.cloudamqp.com/ywdhnagh
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+    networks:
+      - microservices-network
+
+  review-service:
+    build: ./review-service
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      DB_HOST: review-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: liza
+      DB_DATABASE: review_db
+      JWT_SECRET: supersecretkey
+      AUTH_SERVICE_URL: http://auth-service:3001
+      RESTAURANT_SERVICE_URL: http://restaurant-service:3002
+      AMQP_URL: amqps://ywdhnagh:66mbQWd2EJ1MzYty2i9fesajbmKfwb7H@hawk.rmq.cloudamqp.com/ywdhnagh
+    depends_on:
+      review-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+    networks:
+      - microservices-network
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      AUTH_SERVICE_URL: http://auth-service:3001
+      RESTAURANT_SERVICE_URL: http://restaurant-service:3002
+      BOOKING_SERVICE_URL: http://booking-service:3003
+      REVIEW_SERVICE_URL: http://review-service:3004
+    depends_on:
+      auth-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
+      review-service:
+        condition: service_started
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
