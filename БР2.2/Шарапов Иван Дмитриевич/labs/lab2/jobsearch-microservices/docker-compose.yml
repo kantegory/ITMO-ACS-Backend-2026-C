@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [jobsearch]
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [jobsearch]
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: auth_db
+      JWT_SECRET: super_secret_change_me
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [jobsearch]
+
+  vacancy-service:
+    build: ./vacancy-service
+    environment:
+      PORT: 3002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: vacancy_db
+      JWT_SECRET: super_secret_change_me
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [jobsearch]
+
+  application-service:
+    build: ./application-service
+    environment:
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: application_db
+      JWT_SECRET: super_secret_change_me
+      VACANCY_SERVICE_URL: http://vacancy-service:3002
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [jobsearch]
+
+  notification-service:
+    build: ./notification-service
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks: [jobsearch]
+
+  gateway:
+    build: ./gateway
+    environment:
+      PORT: 3000
+      AUTH_SERVICE_URL: http://auth-service:3001
+      VACANCY_SERVICE_URL: http://vacancy-service:3002
+      APPLICATION_SERVICE_URL: http://application-service:3003
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - vacancy-service
+      - application-service
+    networks: [jobsearch]
+
+volumes:
+  pgdata:
+
+networks:
+  jobsearch:
+    driver: bridge
