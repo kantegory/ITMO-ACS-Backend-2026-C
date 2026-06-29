@@ -1,0 +1,65 @@
+erDiagram
+    USERS ||--o| RESUMES : "имеет (соискатель)"
+    USERS ||--o{ COMPANIES : "владеет (работодатель)"
+    USERS ||--o{ APPLICATIONS : "отправляет"
+    COMPANIES ||--o{ VACANCIES : "публикует"
+    VACANCIES ||--o{ APPLICATIONS : "получает"
+    RESUMES ||--o{ APPLICATIONS : "прикрепляется к"
+
+    USERS {
+        int id PK
+        string email UK
+        string password_hash
+        string first_name
+        string last_name
+        enum role "applicant | employer"
+        timestamp created_at
+    }
+
+    RESUMES {
+        int id PK
+        int user_id FK "UK, соискатель"
+        string title
+        text summary
+        int experience_years
+        string_array skills
+        int desired_salary
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    COMPANIES {
+        int id PK
+        int owner_id FK "работодатель"
+        string name
+        text description
+        string website
+        string location
+        timestamp created_at
+    }
+
+    VACANCIES {
+        int id PK
+        int company_id FK
+        string title
+        text description
+        text requirements
+        string industry
+        int salary_from
+        int salary_to
+        enum experience_level "junior|middle|senior|lead"
+        enum employment_type "full_time|part_time|remote|internship"
+        string location
+        bool is_active
+        timestamp created_at
+    }
+
+    APPLICATIONS {
+        int id PK
+        int vacancy_id FK
+        int resume_id FK
+        int applicant_id FK
+        text cover_letter
+        enum status "pending|viewed|accepted|rejected"
+        timestamp created_at
+    }
