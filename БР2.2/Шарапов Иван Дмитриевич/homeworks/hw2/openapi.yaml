@@ -1,0 +1,469 @@
+openapi: 3.0.3
+info:
+  title: JobSearch API
+  description: >
+    REST API платформы поиска работы. Поддерживает регистрацию/вход,
+    личный кабинет соискателя (резюме), кабинет работодателя (компании и вакансии),
+    поиск вакансий с фильтрацией и отклики на вакансии.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Локальная разработка
+tags:
+  - name: Auth
+  - name: Resume
+  - name: Companies
+  - name: Vacancies
+  - name: Applications
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Пользователь создан
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Успешный вход
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Текущий пользователь
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Профиль
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /resume:
+    get:
+      tags: [Resume]
+      summary: Моё резюме
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Резюме
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Resume" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Resume]
+      summary: Создать/обновить моё резюме
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResumeInput" }
+      responses:
+        "201":
+          description: Сохранено
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Resume" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      tags: [Resume]
+      summary: Удалить моё резюме
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Удалено }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /companies:
+    get:
+      tags: [Companies]
+      summary: Мои компании (работодатель)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Список компаний
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Company" }
+    post:
+      tags: [Companies]
+      summary: Создать компанию
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyInput" }
+      responses:
+        "201":
+          description: Создана
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /companies/{id}:
+    put:
+      tags: [Companies]
+      summary: Обновить компанию
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IdParam" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyInput" }
+      responses:
+        "200":
+          description: Обновлена
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Companies]
+      summary: Удалить компанию
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IdParam" }]
+      responses:
+        "204": { description: Удалена }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /vacancies:
+    get:
+      tags: [Vacancies]
+      summary: Поиск вакансий с фильтрацией
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Текстовый поиск }
+        - { name: industry, in: query, schema: { type: string } }
+        - { name: experienceLevel, in: query, schema: { type: string, enum: [junior, middle, senior, lead] } }
+        - { name: employmentType, in: query, schema: { type: string, enum: [full_time, part_time, remote, internship] } }
+        - { name: salaryMin, in: query, schema: { type: integer } }
+        - { name: location, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        "200":
+          description: Результаты поиска
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VacancyPage" }
+    post:
+      tags: [Vacancies]
+      summary: Создать вакансию (работодатель)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VacancyInput" }
+      responses:
+        "201":
+          description: Создана
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vacancy" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /vacancies/{id}:
+    get:
+      tags: [Vacancies]
+      summary: Страница вакансии
+      parameters: [{ $ref: "#/components/parameters/IdParam" }]
+      responses:
+        "200":
+          description: Вакансия
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vacancy" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Vacancies]
+      summary: Обновить вакансию
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IdParam" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VacancyInput" }
+      responses:
+        "200":
+          description: Обновлена
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Vacancy" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Vacancies]
+      summary: Удалить вакансию
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IdParam" }]
+      responses:
+        "204": { description: Удалена }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /vacancies/{vacancyId}/apply:
+    post:
+      tags: [Applications]
+      summary: Откликнуться на вакансию (соискатель)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: vacancyId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coverLetter: { type: string }
+      responses:
+        "201":
+          description: Отклик создан
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /vacancies/{vacancyId}/applications:
+    get:
+      tags: [Applications]
+      summary: Отклики на вакансию (работодатель)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: vacancyId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Список откликов
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Application" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /applications/my:
+    get:
+      tags: [Applications]
+      summary: История моих откликов (соискатель)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Список откликов
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Application" }
+
+  /applications/{id}/status:
+    patch:
+      tags: [Applications]
+      summary: Изменить статус отклика (работодатель)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IdParam" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [pending, viewed, accepted, rejected] }
+      responses:
+        "200":
+          description: Обновлено
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Доступ запрещён
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Конфликт
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string, enum: [applicant, employer], default: applicant }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: "#/components/schemas/User" }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { type: string, enum: [applicant, employer] }
+        createdAt: { type: string, format: date-time }
+    ResumeInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        summary: { type: string }
+        experienceYears: { type: integer }
+        skills: { type: array, items: { type: string } }
+        desiredSalary: { type: integer }
+    Resume:
+      allOf:
+        - $ref: "#/components/schemas/ResumeInput"
+        - type: object
+          properties:
+            id: { type: integer }
+            userId: { type: integer }
+            createdAt: { type: string, format: date-time }
+    CompanyInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        website: { type: string }
+        location: { type: string }
+    Company:
+      allOf:
+        - $ref: "#/components/schemas/CompanyInput"
+        - type: object
+          properties:
+            id: { type: integer }
+            ownerId: { type: integer }
+            createdAt: { type: string, format: date-time }
+    VacancyInput:
+      type: object
+      required: [companyId, title, description, industry]
+      properties:
+        companyId: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        requirements: { type: string }
+        industry: { type: string }
+        salaryFrom: { type: integer }
+        salaryTo: { type: integer }
+        experienceLevel: { type: string, enum: [junior, middle, senior, lead] }
+        employmentType: { type: string, enum: [full_time, part_time, remote, internship] }
+        location: { type: string }
+    Vacancy:
+      allOf:
+        - $ref: "#/components/schemas/VacancyInput"
+        - type: object
+          properties:
+            id: { type: integer }
+            isActive: { type: boolean }
+            createdAt: { type: string, format: date-time }
+            company: { $ref: "#/components/schemas/Company" }
+    VacancyPage:
+      type: object
+      properties:
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Vacancy" }
+    Application:
+      type: object
+      properties:
+        id: { type: integer }
+        vacancyId: { type: integer }
+        resumeId: { type: integer }
+        applicantId: { type: integer }
+        coverLetter: { type: string }
+        status: { type: string, enum: [pending, viewed, accepted, rejected] }
+        createdAt: { type: string, format: date-time }
