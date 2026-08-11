@@ -1,0 +1,8 @@
+CREATE DATABASE users_db; 
+CREATE DATABASE estates_db; 
+CREATE DATABASE deals_db; 
+CREATE DATABASE messages_db; 
+GRANT ALL PRIVILEGES ON DATABASE users_db TO postgres; 
+GRANT ALL PRIVILEGES ON DATABASE estates_db TO postgres; 
+GRANT ALL PRIVILEGES ON DATABASE deals_db TO postgres; 
+GRANT ALL PRIVILEGES ON DATABASE messages_db TO postgres; 
