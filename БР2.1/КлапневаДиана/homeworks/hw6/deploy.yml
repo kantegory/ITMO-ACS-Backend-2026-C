@@ -1,0 +1,62 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  
+
+jobs:
+  deploy:
+    name: Deploy to Yandex Cloud
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+
+      - name: Build all services
+        run: |
+          for service in user-service estate-service deal-service messaging-service api-gateway; do
+            echo "Building $service..."
+            cd $service
+            npm install
+            npm run build
+            cd ..
+          done
+
+
+      - name: Deploy to server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
+          REMOTE_USER: ${{ secrets.SERVER_USER }}
+          SOURCE: "./"
+          TARGET: ${{ secrets.SERVER_PATH }}
+          EXCLUDE: "/node_modules/, /.git/, .env"
+
+
+      - name: Restart services
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.SERVER_PATH }}
+            pm2 restart user-service || pm2 start npm --name "user-service" -- run start -- --port 3001
+            pm2 restart estate-service || pm2 start npm --name "estate-service" -- run start -- --port 3002
+            pm2 restart deal-service || pm2 start npm --name "deal-service" -- run start -- --port 3003
+            pm2 restart messaging-service || pm2 start npm --name "messaging-service" -- run start -- --port 3004
+            pm2 restart api-gateway || pm2 start npm --name "api-gateway" -- run start -- --port 3000
+            pm2 save
+            echo "All services restarted"
