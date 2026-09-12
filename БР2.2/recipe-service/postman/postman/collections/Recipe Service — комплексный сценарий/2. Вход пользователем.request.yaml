@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{testEmail}}",
+      "password": "{{testPassword}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Токен получен и сохранён', () => {
+          const json = pm.response.json();
+          pm.expect(json.token).to.be.a('string').and.to.have.lengthOf.above(10);
+          pm.collectionVariables.set('userToken', json.token);
+      });
+    language: text/javascript
+order: 2000

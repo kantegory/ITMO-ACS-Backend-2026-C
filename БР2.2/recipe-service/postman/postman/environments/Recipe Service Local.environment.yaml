@@ -1,0 +1,8 @@
+name: Recipe Service Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:3000/api'
+  - key: adminEmail
+    value: admin@recipes.local
+  - key: adminPassword
+    value: admin12345

@@ -1,0 +1,13 @@
+services:
+  gateway:
+    ports: !override
+      - "127.0.0.1:3000:3000"
+
+  auth-service:
+    ports: !override []
+
+  recipe-service:
+    ports: !override []
+
+  social-service:
+    ports: !override []

@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{baseUrl}}/comments/recipe/{{recipeId}}"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "text": "Отличный рецепт, обязательно приготовлю!"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Комментарий создан от текущего пользователя', () => {
+          const json = pm.response.json();
+          pm.expect(json.text).to.eql('Отличный рецепт, обязательно приготовлю!');
+          pm.expect(json.user.username).to.eql(pm.collectionVariables.get('testUsername'));
+          pm.collectionVariables.set('commentId', json.id);
+      });
+    language: text/javascript
+order: 11000

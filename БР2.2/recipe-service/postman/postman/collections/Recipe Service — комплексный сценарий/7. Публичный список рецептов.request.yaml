@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/recipes"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Наш рецепт присутствует в публичном списке', () => {
+          const json = pm.response.json();
+          const recipeId = Number(pm.collectionVariables.get('recipeId'));
+          const found = json.items.find((r) => r.id === recipeId);
+          pm.expect(found, 'рецепт не найден в /recipes').to.not.be.undefined;
+          pm.expect(found.status).to.eql('published');
+      });
+    language: text/javascript
+order: 7000

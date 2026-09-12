@@ -1,0 +1,91 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      AUTH_SERVICE_URL: http://auth-service:3001
+      RECIPE_SERVICE_URL: http://recipe-service:3002
+      SOCIAL_SERVICE_URL: http://social-service:3003
+    depends_on:
+      - auth-service
+      - recipe-service
+      - social-service
+    networks:
+      - recipe-net
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      DB_PATH: /app/data/auth.sqlite
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    volumes:
+      - auth-data:/app/data
+    networks:
+      - recipe-net
+
+  recipe-service:
+    build:
+      context: ./services/recipe-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      DB_PATH: /app/data/recipe.sqlite
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      SOCIAL_SERVICE_URL: http://social-service:3003
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    volumes:
+      - recipe-data:/app/data
+    depends_on:
+      - auth-service
+    networks:
+      - recipe-net
+
+  social-service:
+    build:
+      context: ./services/social-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      DB_PATH: /app/data/social.sqlite
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      RECIPE_SERVICE_URL: http://recipe-service:3002
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    volumes:
+      - social-data:/app/data
+    depends_on:
+      - auth-service
+    networks:
+      - recipe-net
+
+# Общая сеть — внутри неё контейнеры видят друг друга по имени сервиса
+# (auth-service, recipe-service, social-service), а не по localhost.
+# Docker Compose создаёт её автоматически, секция ниже — просто явное имя
+# вместо сгенерированного по умолчанию.
+networks:
+  recipe-net:
+    driver: bridge
+
+# Именованные тома — данные (sqlite-файлы) переживут остановку и пересоздание
+# контейнеров. Без них каждый `docker-compose up` начинал бы с пустой БД.
+volumes:
+  auth-data:
+  recipe-data:
+  social-data:

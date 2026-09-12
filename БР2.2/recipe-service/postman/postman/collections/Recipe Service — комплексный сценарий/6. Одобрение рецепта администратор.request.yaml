@@ -1,0 +1,19 @@
+$kind: http-request
+name: 6. Одобрение рецепта администратором
+url: "{{baseUrl}}/admin/recipes/{{recipeId}}/approve"
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    token: "{{adminToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Статус рецепта сменился на published', () => {
+          const json = pm.response.json();
+          pm.expect(json.status).to.eql('published');
+      });
+    language: text/javascript
+order: 6000

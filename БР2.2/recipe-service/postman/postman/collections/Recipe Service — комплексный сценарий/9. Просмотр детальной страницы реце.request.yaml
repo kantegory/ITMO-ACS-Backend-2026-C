@@ -1,0 +1,17 @@
+$kind: http-request
+name: 9. Просмотр детальной страницы рецепта
+url: "{{baseUrl}}/recipes/{{recipeId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Вернулся тот же рецепт со всеми полями', () => {
+          const json = pm.response.json();
+          pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('recipeId')));
+          pm.expect(json).to.have.property('ingredients').that.is.an('array').with.lengthOf.above(0);
+          pm.expect(json).to.have.property('steps').that.is.an('array').with.lengthOf.above(0);
+      });
+    language: text/javascript
+order: 9000

@@ -1,0 +1,20 @@
+$kind: http-request
+name: "15. Личный кабинет: избранные рецепты"
+url: "{{baseUrl}}/users/me/favorites"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Рецепт виден в избранном', () => {
+          const json = pm.response.json();
+          const recipeId = Number(pm.collectionVariables.get('recipeId'));
+          pm.expect(json.some((r) => r.id === recipeId)).to.be.true;
+      });
+    language: text/javascript
+order: 15000

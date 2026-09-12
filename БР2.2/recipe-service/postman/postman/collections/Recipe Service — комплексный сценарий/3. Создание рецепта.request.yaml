@@ -1,0 +1,58 @@
+$kind: http-request
+url: "{{baseUrl}}/recipes"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Омлет с сыром (Postman-тест)",
+      "shortDescription": "Быстрый завтрак за 10 минут",
+      "fullDescription": "Простой омлет с сыром на сковороде для проверки сценария.",
+      "difficulty": "easy",
+      "cookingTime": 10,
+      "categoryId": 1,
+      "tagIds": [
+        1
+      ],
+      "ingredients": [
+        {
+          "name": "Яйца",
+          "quantity": "3",
+          "unit": "шт"
+        },
+        {
+          "name": "Сыр",
+          "quantity": "50",
+          "unit": "г"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "description": "Взбить яйца"
+        },
+        {
+          "order": 2,
+          "description": "Вылить на сковороду и жарить 5 минут"
+        }
+      ]
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Рецепт создан со статусом draft', () => {
+          const json = pm.response.json();
+          pm.expect(json.status).to.eql('draft');
+          pm.expect(json.author.username).to.eql(pm.collectionVariables.get('testUsername'));
+          pm.collectionVariables.set('recipeId', json.id);
+      });
+    language: text/javascript
+order: 3000

@@ -1,0 +1,8 @@
+name: Recipe Service Server
+values:
+  - key: baseUrl
+    value: 'http://144.31.255.48/api'
+  - key: adminEmail
+    value: admin@recipes.local
+  - key: adminPassword
+    value: admin12345

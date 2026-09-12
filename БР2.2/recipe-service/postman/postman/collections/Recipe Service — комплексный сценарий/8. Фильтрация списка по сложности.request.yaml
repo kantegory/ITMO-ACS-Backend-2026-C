@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/recipes?difficulty=easy"
+method: GET
+queryParams:
+  difficulty: easy
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Все рецепты в ответе имеют difficulty=easy', () => {
+          const json = pm.response.json();
+          pm.expect(json.items.length).to.be.above(0);
+          json.items.forEach((r) => pm.expect(r.difficulty).to.eql('easy'));
+      });
+    language: text/javascript
+order: 8000

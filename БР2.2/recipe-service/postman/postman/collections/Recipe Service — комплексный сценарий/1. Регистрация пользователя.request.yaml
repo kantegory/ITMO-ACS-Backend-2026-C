@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "{{testUsername}}",
+      "email": "{{testEmail}}",
+      "password": "{{testPassword}}",
+      "firstName": "Тест",
+      "lastName": "Тестов"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const rand = Date.now();
+      pm.collectionVariables.set('testUsername', 'user' + rand);
+      pm.collectionVariables.set('testEmail', 'user' + rand + '@example.com');
+      pm.collectionVariables.set('testPassword', 'Password123');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Пользователь создан с ролью user', () => {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property('id');
+          pm.expect(json.username).to.eql(pm.collectionVariables.get('testUsername'));
+          pm.expect(json.role).to.eql('user');
+      });
+    language: text/javascript
+order: 1000

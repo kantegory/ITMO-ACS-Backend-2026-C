@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/recipes/{{recipeId}}/submit"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{userToken}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Статус 200', () => pm.response.to.have.status(200));
+
+      pm.test('Статус рецепта сменился на pending', () => {
+          const json = pm.response.json();
+          pm.expect(json.status).to.eql('pending');
+      });
+    language: text/javascript
+order: 4000

@@ -1,0 +1,264 @@
+openapi: 3.1.0
+info:
+  title: Recipe Service — Internal APIs
+  version: 1.0.0
+  description: >
+    Служебные эндпоинты для межсервисного взаимодействия (ДЗ4, этап 5).
+    Не предназначены для внешних клиентов — доступны только внутри приватной
+    сети между сервисами (в проде — за счёт сетевой изоляции docker-compose,
+    этап 8). Каждый запрос дополнительно защищён общим внутренним ключом.
+tags:
+  - name: Auth internal
+    description: Предоставляет Recipe Service и Social Service
+  - name: Recipe internal
+    description: Предоставляет Social Service
+  - name: Social internal
+    description: Предоставляет Recipe Service
+
+security:
+  - InternalApiKey: []
+
+paths:
+  /internal/users/{id}:
+    get:
+      tags: [Auth internal]
+      summary: Публичные данные одного пользователя
+      description: Вызывается Recipe Service (автор рецепта) и Social Service (автор комментария).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicUser' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/users:
+    get:
+      tags: [Auth internal]
+      summary: Публичные данные нескольких пользователей одним запросом
+      description: >
+        Батч-версия для списков (например, GET /recipes отдаёт 10 рецептов —
+        не делать 10 отдельных вызовов). Пользователи, которых не существует,
+        просто отсутствуют в ответе (без ошибки).
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: { type: string }
+          description: Список id через запятую, например "1,2,3"
+      responses:
+        '200':
+          description: Найденные пользователи (может быть короче списка ids)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PublicUser' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/recipes/{id}:
+    get:
+      tags: [Recipe internal]
+      summary: Полные данные одного рецепта
+      description: >
+        Используется Social Service для (а) проверки, что рецепт существует,
+        прежде чем разрешить лайк/комментарий/избранное, и (б) получения
+        полной карточки рецепта.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Рецепт найден
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InternalRecipe' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/recipes:
+    get:
+      tags: [Recipe internal]
+      summary: Полные данные нескольких рецептов одним запросом
+      description: Используется Social Service для GET /users/me/favorites — превращает список recipeId в список полных карточек рецептов.
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema: { type: string }
+          description: Список id через запятую
+      responses:
+        '200':
+          description: Найденные рецепты (может быть короче списка ids)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/InternalRecipe' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/likes/count/{recipeId}:
+    get:
+      tags: [Social internal]
+      summary: Количество лайков одного рецепта
+      description: Используется Recipe Service в GET /recipes/{id} (поле likesCount).
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Количество лайков
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recipeId, count]
+                properties:
+                  recipeId: { type: integer }
+                  count: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/likes/counts:
+    get:
+      tags: [Social internal]
+      summary: Количество лайков нескольких рецептов одним запросом
+      description: Используется Recipe Service в GET /recipes (список) — без батча пришлось бы делать по запросу на каждый рецепт списка.
+      parameters:
+        - name: recipeIds
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Список счётчиков (рецепты без единого лайка тоже включены, count=0)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [recipeId, count]
+                  properties:
+                    recipeId: { type: integer }
+                    count: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/interactions:
+    get:
+      tags: [Social internal]
+      summary: Лайкнул ли и добавил ли в избранное конкретный пользователь конкретный рецепт
+      description: Используется Recipe Service в GET /recipes/{id} для полей isLiked/isFavorite — только когда запрос авторизован.
+      parameters:
+        - name: recipeId
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: userId
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Статус взаимодействия
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [isLiked, isFavorite]
+                properties:
+                  isLiked: { type: boolean }
+                  isFavorite: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/recipes/{recipeId}/interactions:
+    delete:
+      tags: [Social internal]
+      summary: Удалить все лайки/избранное/комментарии, связанные с рецептом
+      description: >
+        Вызывается Recipe Service внутри DELETE /recipes/{id} — так как
+        comments/likes/favorites физически лежат в social_db, Recipe Service
+        не может удалить их напрямую и просит об этом Social Service.
+        Идемпотентна: повторный вызов для уже очищенного рецепта — тоже 204.
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Связанные записи удалены (или их не было)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    InternalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+      description: Общий секрет, известный только сервисам (задаётся через переменную окружения), не выдаётся клиентам.
+
+  responses:
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Неверный или отсутствующий X-Internal-Api-Key
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+
+    PublicUser:
+      type: object
+      required: [id, username, role]
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatar: { type: string }
+        role: { type: string, enum: [user, admin] }
+
+    InternalRecipe:
+      type: object
+      description: То же представление, что отдаёт публичный GET /recipes/{id} — переиспользуется как есть.
+      required: [id, title, status, authorId, likesCount]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        shortDescription: { type: string }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        cookingTime: { type: integer }
+        image: { type: string }
+        status: { type: string, enum: [draft, pending, published, rejected] }
+        authorId: { type: integer }
+        author: { $ref: '#/components/schemas/PublicUser' }
+        likesCount: { type: integer }
