@@ -1,0 +1,2733 @@
+openapi: 3.0.3
+
+info:
+  title: API бронирования столиков в ресторанах
+  version: 1.0.0
+  description: |-
+    REST API приложения для бронирования столиков в ресторанах (ДЗ2, курс «Бэкенд-разработка», ИТМО).
+
+    **Авторизация.** После входа (`POST /auth/login`) клиент получает JWT-токен и передаёт его в заголовке `Authorization: Bearer <токен>`. Эндпоинты без замка в Swagger доступны без токена.
+
+    **Роли.** `USER` – обычный пользователь; `RESTAURANT_ADMIN` – администратор своих ресторанов; `ADMIN` – администратор системы.
+
+    **Пагинация.** Списки принимают параметры `page` и `limit` и возвращают объект `{items, meta}`.
+
+    **Ошибки.** Все ошибки возвращаются в едином формате `{statusCode, message, errors?}`. Коды: 400 – ошибка валидации, 401 – нет авторизации, 403 – нет прав, 404 – не найдено, 409 – конфликт данных.
+
+servers:
+- url: http://localhost:3000/api/v1
+  description: Локальный сервер разработки
+
+tags:
+- name: Авторизация
+  description: Регистрация и вход
+- name: Пользователи
+  description: Личный кабинет пользователя
+- name: Справочники
+  description: Справочники городов и кухонь
+- name: Рестораны
+  description: Поиск ресторанов и страница ресторана
+- name: Фотографии
+  description: Фотографии ресторана
+- name: Меню
+  description: Меню ресторана
+- name: Отзывы
+  description: Отзывы о ресторанах
+- name: Столики
+  description: Столики ресторана
+- name: Слоты
+  description: Временные слоты ресторана
+- name: Свободные столики
+  description: Поиск свободных столиков
+- name: Администраторы ресторана
+  description: Назначение администраторов ресторана
+- name: Бронирования
+  description: Бронирование столиков и история бронирований
+
+
+paths:
+  /auth/register:
+    post:
+      tags:
+      - Авторизация
+      summary: Регистрация
+      description: Создаёт пользователя с ролью USER и сразу возвращает токен. Пароль на сервере сохраняется только
+        в виде хэша. Если email уже занят, возвращается 409.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      security: []
+
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags:
+      - Авторизация
+      summary: Вход
+      description: 'Проверяет email и пароль и возвращает JWT-токен. Токен передаётся в заголовке Authorization:
+        Bearer <токен>.'
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      security: []
+
+      responses:
+        '200':
+          description: Вход выполнен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      tags:
+      - Пользователи
+      summary: 'Личный кабинет: свой профиль'
+      operationId: getMe
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Профиль текущего пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags:
+      - Пользователи
+      summary: Изменить свой профиль
+      description: Меняются только имя, фамилия и телефон.
+      operationId: updateMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Профиль обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me/bookings:
+    get:
+      tags:
+      - Пользователи
+      summary: История бронирований пользователя
+      description: Возвращает все брони текущего пользователя вместе с данными ресторана, столика и слота.
+      operationId: getMyBookings
+      parameters:
+      - name: status
+        in: query
+        description: Фильтр по статусу брони
+        schema:
+          $ref: '#/components/schemas/BookingStatus'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Страница с бронированиями, от новых к старым
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /cities:
+    get:
+      tags:
+      - Справочники
+      summary: Список городов
+      description: 'Доступ: без авторизации. Используется для фильтров поиска ресторанов.'
+      operationId: listCities
+      security: []
+
+      responses:
+        '200':
+          description: Список
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+
+    post:
+      tags:
+      - Справочники
+      summary: Добавить город
+      description: 'Доступ: ADMIN. Название должно быть уникальным.'
+      operationId: createCity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /cities/{cityId}:
+    parameters:
+    - $ref: '#/components/parameters/CityId'
+
+    delete:
+      tags:
+      - Справочники
+      summary: Удалить город
+      description: 'Доступ: ADMIN. Если есть рестораны, связанные с этой записью, вернётся 409 (ON DELETE RESTRICT).'
+      operationId: deleteCity
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /cuisines:
+    get:
+      tags:
+      - Справочники
+      summary: Список кухонь
+      description: 'Доступ: без авторизации. Используется для фильтров поиска ресторанов.'
+      operationId: listCuisines
+      security: []
+
+      responses:
+        '200':
+          description: Список
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cuisine'
+
+    post:
+      tags:
+      - Справочники
+      summary: Добавить кухню
+      description: 'Доступ: ADMIN. Название должно быть уникальным.'
+      operationId: createCuisine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CuisineCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cuisine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /cuisines/{cuisineId}:
+    parameters:
+    - $ref: '#/components/parameters/CuisineId'
+
+    delete:
+      tags:
+      - Справочники
+      summary: Удалить кухню
+      description: 'Доступ: ADMIN. Если есть рестораны, связанные с этой записью, вернётся 409 (ON DELETE RESTRICT).'
+      operationId: deleteCuisine
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants:
+    get:
+      tags:
+      - Рестораны
+      summary: Поиск ресторанов с фильтрацией
+      description: 'Доступ: без авторизации. Возвращает только активные рестораны (is_active = true). Фильтры можно
+        комбинировать.'
+      operationId: listRestaurants
+      parameters:
+      - name: q
+        in: query
+        description: Поиск по названию ресторана
+        schema:
+          type: string
+      - name: city_id
+        in: query
+        description: Фильтр по городу
+        schema:
+          type: integer
+      - name: district
+        in: query
+        description: Фильтр по району
+        schema:
+          type: string
+      - name: cuisine_id
+        in: query
+        description: Фильтр по кухне
+        schema:
+          type: integer
+      - name: min_price
+        in: query
+        description: Минимальный средний чек, руб.
+        schema:
+          type: number
+          minimum: 0
+      - name: max_price
+        in: query
+        description: Максимальный средний чек, руб.
+        schema:
+          type: number
+          minimum: 0
+      - name: min_rating
+        in: query
+        description: Минимальный рейтинг
+        schema:
+          type: number
+          minimum: 0
+          maximum: 5
+      - name: sort
+        in: query
+        description: Сортировка
+        schema:
+          type: string
+          enum:
+          - rating_desc
+          - price_asc
+          - price_desc
+          - name_asc
+          default: rating_desc
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      security: []
+
+      responses:
+        '200':
+          description: Страница со списком ресторанов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+      - Рестораны
+      summary: Создать ресторан
+      description: 'Доступ: ADMIN. Если указанный город или кухня не найдены, вернётся 404.'
+      operationId: createRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Ресторан создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Рестораны
+      summary: Страница ресторана
+      description: 'Доступ: без авторизации. Меню и отзывы запрашиваются отдельно.'
+      operationId: getRestaurant
+      security: []
+
+      responses:
+        '200':
+          description: Ресторан с городом, кухней и фотографиями
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags:
+      - Рестораны
+      summary: Изменить ресторан
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: updateRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Ресторан обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Restaurant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+      - Рестораны
+      summary: Удалить ресторан
+      description: 'Доступ: ADMIN. Если у ресторана есть бронирования или отзывы, вернётся 409: вместо удаления
+        скройте ресторан (is_active = false).'
+      operationId: deleteRestaurant
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Ресторан удалён
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants/{restaurantId}/photos:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Фотографии
+      summary: Фотографии ресторана
+      description: 'Доступ: без авторизации.'
+      operationId: listRestaurantPhotos
+      security: []
+
+      responses:
+        '200':
+          description: Фотографии, отсортированные по sort_order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestaurantPhoto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+      - Фотографии
+      summary: Добавить фотографию
+      description: 'Доступ: ADMIN или администратор этого ресторана. Если is_main = true, прежнее главное фото перестаёт
+        быть главным.'
+      operationId: addRestaurantPhoto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantPhotoCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Фотография добавлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantPhoto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/photos/{photoId}:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+    - $ref: '#/components/parameters/PhotoId'
+
+    delete:
+      tags:
+      - Фотографии
+      summary: Удалить фотографию
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: deleteRestaurantPhoto
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Фотография удалена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/menu:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Меню
+      summary: Меню ресторана
+      description: 'Доступ: без авторизации.'
+      operationId: listMenuItems
+      parameters:
+      - name: category
+        in: query
+        description: Фильтр по категории блюда
+        schema:
+          $ref: '#/components/schemas/MenuCategory'
+      security: []
+
+      responses:
+        '200':
+          description: Позиции меню
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+      - Меню
+      summary: Добавить позицию меню
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: createMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Позиция добавлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/menu/{menuItemId}:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+    - $ref: '#/components/parameters/MenuItemId'
+
+    patch:
+      tags:
+      - Меню
+      summary: Изменить позицию меню
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: updateMenuItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Позиция обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+      - Меню
+      summary: Удалить позицию меню
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: deleteMenuItem
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Позиция удалена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/reviews:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Отзывы
+      summary: Отзывы о ресторане
+      description: 'Доступ: без авторизации.'
+      operationId: listReviews
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      security: []
+
+      responses:
+        '200':
+          description: Страница с отзывами, от новых к старым
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+      - Отзывы
+      summary: Оставить отзыв
+      description: 'Доступ: любой авторизованный пользователь. Один пользователь может оставить один отзыв на ресторан,
+        повторный отзыв вернёт 409. После создания рейтинг ресторана пересчитывается.'
+      operationId: createReview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Отзыв создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /reviews/{reviewId}:
+    parameters:
+    - $ref: '#/components/parameters/ReviewId'
+
+    patch:
+      tags:
+      - Отзывы
+      summary: Изменить свой отзыв
+      description: 'Доступ: автор отзыва. После изменения рейтинг ресторана пересчитывается.'
+      operationId: updateReview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Отзыв обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+      - Отзывы
+      summary: Удалить отзыв
+      description: 'Доступ: автор отзыва или ADMIN. После удаления рейтинг ресторана пересчитывается.'
+      operationId: deleteReview
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Отзыв удалён
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/tables:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Столики
+      summary: Столики ресторана
+      description: 'Доступ: без авторизации.'
+      operationId: listTables
+      security: []
+
+      responses:
+        '200':
+          description: Столики ресторана
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestaurantTable'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+      - Столики
+      summary: Добавить столик
+      description: 'Доступ: ADMIN или администратор этого ресторана. Номер столика должен быть уникальным в пределах
+        ресторана.'
+      operationId: createTable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantTableCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Столик создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantTable'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants/{restaurantId}/tables/{tableId}:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+    - $ref: '#/components/parameters/TableId'
+
+    patch:
+      tags:
+      - Столики
+      summary: Изменить столик
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: updateTable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantTableUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Столик обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantTable'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags:
+      - Столики
+      summary: Удалить столик
+      description: 'Доступ: ADMIN или администратор этого ресторана. Если на столик есть бронирования, вернётся
+        409: вместо удаления отключите столик (is_active = false).'
+      operationId: deleteTable
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Столик удалён
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants/{restaurantId}/time-slots:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Слоты
+      summary: Временные слоты ресторана
+      description: 'Доступ: без авторизации.'
+      operationId: listTimeSlots
+      security: []
+
+      responses:
+        '200':
+          description: Слоты ресторана
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimeSlot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+      - Слоты
+      summary: Добавить слот
+      description: 'Доступ: ADMIN или администратор этого ресторана. Начало должно быть раньше конца; слоты одного
+        ресторана не должны пересекаться и не должны иметь одинаковое начало.'
+      operationId: createTimeSlot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeSlotCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Слот создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeSlot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants/{restaurantId}/time-slots/{timeSlotId}:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+    - $ref: '#/components/parameters/TimeSlotId'
+
+    patch:
+      tags:
+      - Слоты
+      summary: Изменить слот
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: updateTimeSlot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeSlotUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Слот обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeSlot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags:
+      - Слоты
+      summary: Удалить слот
+      description: 'Доступ: ADMIN или администратор этого ресторана. Если на слот есть бронирования, вернётся 409:
+        вместо удаления отключите слот (is_active = false).'
+      operationId: deleteTimeSlot
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Слот удалён
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants/{restaurantId}/availability:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Свободные столики
+      summary: Свободные столики на дату и слот
+      description: 'Доступ: без авторизации. Возвращает активные столики ресторана нужной вместимости, на которые
+        нет активной брони (PENDING или CONFIRMED) на выбранные дату и слот.'
+      operationId: getAvailability
+      parameters:
+      - name: date
+        in: query
+        description: Дата бронирования (не в прошлом)
+        required: true
+        schema:
+          type: string
+          format: date
+          example: '2026-10-05'
+      - name: time_slot_id
+        in: query
+        description: Идентификатор слота этого ресторана
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      - name: guests_count
+        in: query
+        description: Число гостей
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      security: []
+
+      responses:
+        '200':
+          description: Свободные столики
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Availability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /restaurants/{restaurantId}/admins:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - Администраторы ресторана
+      summary: Администраторы ресторана
+      description: 'Доступ: ADMIN или администратор этого ресторана.'
+      operationId: listRestaurantAdmins
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Список администраторов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestaurantAdmin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+      - Администраторы ресторана
+      summary: Назначить администратора ресторана
+      description: 'Доступ: ADMIN. У ресторана может быть несколько администраторов. Пользователю с ролью USER присваивается
+        роль RESTAURANT_ADMIN. Повторное назначение вернёт 409.'
+      operationId: addRestaurantAdmin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantAdminCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Администратор назначен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantAdmin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /restaurants/{restaurantId}/admins/{userId}:
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+    - $ref: '#/components/parameters/UserId'
+
+    delete:
+      tags:
+      - Администраторы ресторана
+      summary: Снять администратора ресторана
+      description: 'Доступ: ADMIN.'
+      operationId: removeRestaurantAdmin
+      security:
+      - bearerAuth: []
+
+      responses:
+        '204':
+          description: Администратор снят
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings:
+    post:
+      tags:
+      - Бронирования
+      summary: Забронировать столик
+      description: 'Доступ: любой авторизованный пользователь. Проверяется, что столик и слот активны и принадлежат
+        одному ресторану, guests_count не больше вместимости столика, дата не в прошлом. Если столик на этот слот
+        и дату уже занят (PENDING или CONFIRMED), вернётся 409.'
+      operationId: createBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '201':
+          description: Бронь создана в статусе PENDING
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    get:
+      tags:
+      - Бронирования
+      summary: Брони ресторана
+      description: 'Доступ: ADMIN (все брони) или администратор ресторана (только брони своих ресторанов). Используется
+        для подтверждения и отмены броней.'
+      operationId: listBookings
+      parameters:
+      - name: restaurant_id
+        in: query
+        description: Фильтр по ресторану
+        schema:
+          type: integer
+      - name: date
+        in: query
+        description: Фильтр по дате бронирования
+        schema:
+          type: string
+          format: date
+      - name: status
+        in: query
+        description: Фильтр по статусу
+        schema:
+          $ref: '#/components/schemas/BookingStatus'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Страница с бронированиями
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bookings/{bookingId}:
+    parameters:
+    - $ref: '#/components/parameters/BookingId'
+
+    get:
+      tags:
+      - Бронирования
+      summary: Информация о брони
+      description: 'Доступ: владелец брони, администратор ресторана или ADMIN.'
+      operationId: getBooking
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Бронь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{bookingId}/status:
+    parameters:
+    - $ref: '#/components/parameters/BookingId'
+
+    patch:
+      tags:
+      - Бронирования
+      summary: Изменить статус брони
+      description: Пользователь может только отменить свою бронь (CANCELLED). Администратор ресторана и ADMIN могут
+        подтвердить (CONFIRMED), отменить (CANCELLED) или отметить завершённой (COMPLETED). Недопустимый переход
+        (например, из CANCELLED в CONFIRMED) вернёт 409.
+      operationId: updateBookingStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingStatusUpdate'
+      security:
+      - bearerAuth: []
+
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT-токен, полученный при входе
+
+
+  parameters:
+    RestaurantId:
+      name: restaurantId
+      in: path
+      required: true
+      description: Идентификатор ресторана
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    CityId:
+      name: cityId
+      in: path
+      required: true
+      description: Идентификатор города
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    CuisineId:
+      name: cuisineId
+      in: path
+      required: true
+      description: Идентификатор кухни
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    PhotoId:
+      name: photoId
+      in: path
+      required: true
+      description: Идентификатор фотографии
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    MenuItemId:
+      name: menuItemId
+      in: path
+      required: true
+      description: Идентификатор позиции меню
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      description: Идентификатор отзыва
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    TableId:
+      name: tableId
+      in: path
+      required: true
+      description: Идентификатор столика
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    TimeSlotId:
+      name: timeSlotId
+      in: path
+      required: true
+      description: Идентификатор слота
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Идентификатор пользователя
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    BookingId:
+      name: bookingId
+      in: path
+      required: true
+      description: Идентификатор брони
+      schema:
+        type: integer
+        minimum: 1
+        example: 1
+
+    Page:
+      name: page
+      in: query
+      description: Номер страницы
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Записей на странице (не более 100)
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+
+  responses:
+    BadRequest:
+      description: 'Ошибка валидации: неверный формат или недопустимые значения данных'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 400
+            message: Ошибка валидации
+            errors:
+            - field: email
+              message: Некорректный формат email
+
+    Unauthorized:
+      description: Не передан токен или он недействителен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 401
+            message: Требуется авторизация
+
+    Forbidden:
+      description: Недостаточно прав для этого действия
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 403
+            message: Доступ запрещён
+
+    NotFound:
+      description: Объект не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 404
+            message: Объект не найден
+
+    Conflict:
+      description: Конфликт с текущим состоянием данных (дубликат, занятый слот, связанные записи)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 409
+            message: Конфликт данных
+
+
+  schemas:
+    Role:
+      type: string
+      description: Роль пользователя
+      enum:
+      - ADMIN
+      - RESTAURANT_ADMIN
+      - USER
+      example: USER
+
+    BookingStatus:
+      type: string
+      description: Статус бронирования
+      enum:
+      - PENDING
+      - CONFIRMED
+      - CANCELLED
+      - COMPLETED
+      example: PENDING
+
+    MenuCategory:
+      type: string
+      description: Категория блюда
+      enum:
+      - APPETIZER
+      - MAIN_COURSE
+      - DESSERT
+      - DRINK
+      example: MAIN_COURSE
+
+    Error:
+      type: object
+      required:
+      - statusCode
+      - message
+      properties:
+        statusCode:
+          type: integer
+          description: HTTP-код ошибки
+          example: 400
+        message:
+          type: string
+          description: Описание ошибки
+          example: Ошибка валидации
+        errors:
+          type: array
+          description: Список ошибок по полям (только для ошибок валидации)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Поле, в котором найдена ошибка
+                example: email
+              message:
+                type: string
+                description: Что не так с полем
+                example: Некорректный формат email
+
+    PageMeta:
+      type: object
+      required:
+      - total
+      - page
+      - limit
+      - total_pages
+      properties:
+        total:
+          type: integer
+          description: Всего записей
+          example: 42
+        page:
+          type: integer
+          description: Текущая страница
+          example: 1
+        limit:
+          type: integer
+          description: Записей на странице
+          example: 20
+        total_pages:
+          type: integer
+          description: Всего страниц
+          example: 3
+
+    User:
+      type: object
+      description: Пользователь. Поле password_hash в ответах API никогда не возвращается.
+      required:
+      - id
+      - role
+      - email
+      - first_name
+      - last_name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор пользователя
+          readOnly: true
+          example: 1
+        role:
+          $ref: '#/components/schemas/Role'
+        email:
+          type: string
+          description: Email (уникальный)
+          format: email
+          example: anna@example.com
+        first_name:
+          type: string
+          description: Имя
+          example: Анна
+        last_name:
+          type: string
+          description: Фамилия
+          example: Иванова
+        phone:
+          type: string
+          description: Телефон
+          nullable: true
+          example: '+79001234567'
+        created_at:
+          type: string
+          description: Дата регистрации
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+        updated_at:
+          type: string
+          description: Дата последнего изменения
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+
+    UserShort:
+      type: object
+      required:
+      - id
+      - first_name
+      - last_name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор пользователя
+          readOnly: true
+          example: 1
+        first_name:
+          type: string
+          description: Имя
+          example: Анна
+        last_name:
+          type: string
+          description: Фамилия
+          example: Иванова
+
+    RegisterRequest:
+      type: object
+      required:
+      - email
+      - password
+      - first_name
+      - last_name
+      properties:
+        email:
+          type: string
+          description: Email
+          format: email
+          example: anna@example.com
+        password:
+          type: string
+          description: Пароль (на сервере сохраняется только его хэш)
+          minLength: 8
+          maxLength: 72
+          example: Str0ngPass!
+        first_name:
+          type: string
+          description: Имя
+          minLength: 1
+          maxLength: 100
+          example: Анна
+        last_name:
+          type: string
+          description: Фамилия
+          minLength: 1
+          maxLength: 100
+          example: Иванова
+        phone:
+          type: string
+          description: Телефон
+          example: '+79001234567'
+
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          description: Email
+          format: email
+          example: anna@example.com
+        password:
+          type: string
+          description: Пароль
+          example: Str0ngPass!
+
+    AuthResponse:
+      type: object
+      required:
+      - access_token
+      - token_type
+      - user
+      properties:
+        access_token:
+          type: string
+          description: JWT-токен доступа
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          description: Тип токена
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Время жизни токена в секундах
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserUpdate:
+      type: object
+      description: Изменяемые поля профиля. Достаточно передать только те, что меняются.
+      properties:
+        first_name:
+          type: string
+          description: Имя
+          minLength: 1
+          maxLength: 100
+          example: Анна
+        last_name:
+          type: string
+          description: Фамилия
+          minLength: 1
+          maxLength: 100
+          example: Иванова
+        phone:
+          type: string
+          description: Телефон
+          nullable: true
+          example: '+79001234567'
+      minProperties: 1
+
+    City:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор города
+          readOnly: true
+          example: 1
+        name:
+          type: string
+          description: Название города
+          example: Санкт-Петербург
+
+    CityCreate:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: Название города
+          minLength: 1
+          example: Санкт-Петербург
+
+    Cuisine:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор кухни
+          readOnly: true
+          example: 1
+        name:
+          type: string
+          description: Название кухни
+          example: Итальянская
+
+    CuisineCreate:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          description: Название кухни
+          minLength: 1
+          example: Итальянская
+
+    Restaurant:
+      type: object
+      required:
+      - id
+      - name
+      - city_id
+      - cuisine_id
+      - average_check
+      - opening_time
+      - closing_time
+      - rating
+      - is_active
+      properties:
+        id:
+          type: integer
+          description: Идентификатор ресторана
+          readOnly: true
+          example: 1
+        name:
+          type: string
+          description: Название ресторана
+          minLength: 1
+          maxLength: 255
+          example: Траттория Порто
+        description:
+          type: string
+          description: Описание
+          nullable: true
+          example: Уютный ресторан итальянской кухни
+        city_id:
+          type: integer
+          description: Идентификатор города
+          example: 1
+        cuisine_id:
+          type: integer
+          description: Идентификатор кухни
+          example: 2
+        district:
+          type: string
+          description: Район
+          nullable: true
+          example: Центральный
+        address:
+          type: string
+          description: Адрес
+          nullable: true
+          example: Невский проспект, 10
+        latitude:
+          type: number
+          description: Широта
+          minimum: -90
+          maximum: 90
+          nullable: true
+          example: 59.9343
+        longitude:
+          type: number
+          description: Долгота
+          minimum: -180
+          maximum: 180
+          nullable: true
+          example: 30.3351
+        phone:
+          type: string
+          description: Телефон ресторана
+          nullable: true
+          example: '+78121234567'
+        average_check:
+          type: number
+          description: Средний чек на гостя, руб. (вводит администратор)
+          minimum: 0
+          example: 1800
+        opening_time:
+          type: string
+          description: Время открытия (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '10:00'
+        closing_time:
+          type: string
+          description: Время закрытия (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '23:00'
+        rating:
+          type: number
+          description: Средняя оценка по отзывам (от 0 до 5), пересчитывается сервером
+          minimum: 0
+          maximum: 5
+          readOnly: true
+          example: 4.6
+        is_active:
+          type: boolean
+          description: Ресторан отображается в поиске
+          example: true
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+        updated_at:
+          type: string
+          description: Дата последнего изменения
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+
+    RestaurantShort:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор ресторана
+          readOnly: true
+          example: 1
+        name:
+          type: string
+          description: Название ресторана
+          example: Траттория Порто
+        address:
+          type: string
+          description: Адрес
+          nullable: true
+          example: Невский проспект, 10
+
+    RestaurantDetails:
+      description: 'Страница ресторана: данные ресторана вместе с городом, кухней и фотографиями.'
+      allOf:
+      - $ref: '#/components/schemas/Restaurant'
+      - type: object
+        properties:
+          city:
+            $ref: '#/components/schemas/City'
+          cuisine:
+            $ref: '#/components/schemas/Cuisine'
+          photos:
+            type: array
+            description: Фотографии, отсортированные по sort_order
+            items:
+              $ref: '#/components/schemas/RestaurantPhoto'
+
+    RestaurantCreate:
+      type: object
+      required:
+      - name
+      - city_id
+      - cuisine_id
+      - address
+      - average_check
+      - opening_time
+      - closing_time
+      properties:
+        name:
+          type: string
+          description: Название ресторана
+          minLength: 1
+          maxLength: 255
+          example: Траттория Порто
+        description:
+          type: string
+          description: Описание
+          nullable: true
+          example: Уютный ресторан итальянской кухни
+        city_id:
+          type: integer
+          description: Идентификатор города
+          example: 1
+        cuisine_id:
+          type: integer
+          description: Идентификатор кухни
+          example: 2
+        district:
+          type: string
+          description: Район
+          nullable: true
+          example: Центральный
+        address:
+          type: string
+          description: Адрес
+          nullable: true
+          example: Невский проспект, 10
+        latitude:
+          type: number
+          description: Широта
+          minimum: -90
+          maximum: 90
+          nullable: true
+          example: 59.9343
+        longitude:
+          type: number
+          description: Долгота
+          minimum: -180
+          maximum: 180
+          nullable: true
+          example: 30.3351
+        phone:
+          type: string
+          description: Телефон ресторана
+          nullable: true
+          example: '+78121234567'
+        average_check:
+          type: number
+          description: Средний чек на гостя, руб. (вводит администратор)
+          minimum: 0
+          example: 1800
+        opening_time:
+          type: string
+          description: Время открытия (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '10:00'
+        closing_time:
+          type: string
+          description: Время закрытия (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '23:00'
+
+    RestaurantUpdate:
+      type: object
+      description: 'Изменяемые поля ресторана. Вместо удаления ресторан можно скрыть: is_active = false.'
+      properties:
+        name:
+          type: string
+          description: Название ресторана
+          minLength: 1
+          maxLength: 255
+          example: Траттория Порто
+        description:
+          type: string
+          description: Описание
+          nullable: true
+          example: Уютный ресторан итальянской кухни
+        city_id:
+          type: integer
+          description: Идентификатор города
+          example: 1
+        cuisine_id:
+          type: integer
+          description: Идентификатор кухни
+          example: 2
+        district:
+          type: string
+          description: Район
+          nullable: true
+          example: Центральный
+        address:
+          type: string
+          description: Адрес
+          nullable: true
+          example: Невский проспект, 10
+        latitude:
+          type: number
+          description: Широта
+          minimum: -90
+          maximum: 90
+          nullable: true
+          example: 59.9343
+        longitude:
+          type: number
+          description: Долгота
+          minimum: -180
+          maximum: 180
+          nullable: true
+          example: 30.3351
+        phone:
+          type: string
+          description: Телефон ресторана
+          nullable: true
+          example: '+78121234567'
+        average_check:
+          type: number
+          description: Средний чек на гостя, руб. (вводит администратор)
+          minimum: 0
+          example: 1800
+        opening_time:
+          type: string
+          description: Время открытия (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '10:00'
+        closing_time:
+          type: string
+          description: Время закрытия (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '23:00'
+        is_active:
+          type: boolean
+          description: Показывать ресторан в поиске
+          example: true
+      minProperties: 1
+
+    RestaurantPage:
+      type: object
+      required:
+      - items
+      - meta
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Restaurant'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+
+    RestaurantPhoto:
+      type: object
+      required:
+      - id
+      - restaurant_id
+      - url
+      - is_main
+      - sort_order
+      properties:
+        id:
+          type: integer
+          description: Идентификатор фото
+          readOnly: true
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 1
+        url:
+          type: string
+          description: Ссылка на изображение
+          format: uri
+          example: https://example.com/photos/porto-1.jpg
+        is_main:
+          type: boolean
+          description: Главное фото (на ресторан не более одного)
+          example: true
+        sort_order:
+          type: integer
+          description: Порядок отображения
+          example: 0
+        created_at:
+          type: string
+          description: Дата добавления
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+
+    RestaurantPhotoCreate:
+      type: object
+      required:
+      - url
+      properties:
+        url:
+          type: string
+          description: Ссылка на изображение
+          format: uri
+          example: https://example.com/photos/porto-1.jpg
+        is_main:
+          type: boolean
+          description: Главное фото
+          default: false
+          example: false
+        sort_order:
+          type: integer
+          description: Порядок отображения
+          default: 0
+          example: 0
+
+    MenuItem:
+      type: object
+      required:
+      - id
+      - restaurant_id
+      - category
+      - name
+      - price
+      - is_available
+      properties:
+        id:
+          type: integer
+          description: Идентификатор позиции меню
+          readOnly: true
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 1
+        category:
+          $ref: '#/components/schemas/MenuCategory'
+        name:
+          type: string
+          description: Название блюда
+          minLength: 1
+          maxLength: 255
+          example: Паста карбонара
+        description:
+          type: string
+          description: Описание блюда
+          nullable: true
+          example: Спагетти, бекон, желток, пекорино
+        price:
+          type: number
+          description: Цена, руб.
+          minimum: 0
+          example: 690
+        photo_url:
+          type: string
+          description: Ссылка на фото блюда
+          format: uri
+          nullable: true
+          example: https://example.com/menu/carbonara.jpg
+        is_available:
+          type: boolean
+          description: Блюдо доступно для заказа
+          example: true
+
+    MenuItemCreate:
+      type: object
+      required:
+      - category
+      - name
+      - price
+      properties:
+        category:
+          $ref: '#/components/schemas/MenuCategory'
+        name:
+          type: string
+          description: Название блюда
+          minLength: 1
+          maxLength: 255
+          example: Паста карбонара
+        description:
+          type: string
+          description: Описание блюда
+          nullable: true
+          example: Спагетти, бекон, желток, пекорино
+        price:
+          type: number
+          description: Цена, руб.
+          minimum: 0
+          example: 690
+        photo_url:
+          type: string
+          description: Ссылка на фото блюда
+          format: uri
+          nullable: true
+          example: https://example.com/menu/carbonara.jpg
+        is_available:
+          type: boolean
+          description: Блюдо доступно для заказа
+          example: true
+
+    MenuItemUpdate:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/MenuCategory'
+        name:
+          type: string
+          description: Название блюда
+          minLength: 1
+          maxLength: 255
+          example: Паста карбонара
+        description:
+          type: string
+          description: Описание блюда
+          nullable: true
+          example: Спагетти, бекон, желток, пекорино
+        price:
+          type: number
+          description: Цена, руб.
+          minimum: 0
+          example: 690
+        photo_url:
+          type: string
+          description: Ссылка на фото блюда
+          format: uri
+          nullable: true
+          example: https://example.com/menu/carbonara.jpg
+        is_available:
+          type: boolean
+          description: Блюдо доступно для заказа
+          example: true
+      minProperties: 1
+
+    Review:
+      type: object
+      required:
+      - id
+      - restaurant_id
+      - user_id
+      - rating
+      properties:
+        id:
+          type: integer
+          description: Идентификатор отзыва
+          readOnly: true
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 1
+        user_id:
+          type: integer
+          description: Идентификатор автора
+          example: 5
+        user:
+          $ref: '#/components/schemas/UserShort'
+        rating:
+          type: integer
+          description: Оценка от 1 до 5
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          description: Текст отзыва
+          nullable: true
+          example: Отличная паста, быстрое обслуживание
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+        updated_at:
+          type: string
+          description: Дата последнего изменения
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+
+    ReviewCreate:
+      type: object
+      description: Один пользователь может оставить один отзыв на ресторан.
+      required:
+      - rating
+      properties:
+        rating:
+          type: integer
+          description: Оценка от 1 до 5
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          description: Текст отзыва
+          example: Отличная паста, быстрое обслуживание
+
+    ReviewUpdate:
+      type: object
+      properties:
+        rating:
+          type: integer
+          description: Оценка от 1 до 5
+          minimum: 1
+          maximum: 5
+          example: 4
+        comment:
+          type: string
+          description: Текст отзыва
+          example: Обновлённый отзыв
+      minProperties: 1
+
+    ReviewPage:
+      type: object
+      required:
+      - items
+      - meta
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+
+    RestaurantTable:
+      type: object
+      required:
+      - id
+      - restaurant_id
+      - number
+      - capacity
+      - is_active
+      properties:
+        id:
+          type: integer
+          description: Идентификатор столика
+          readOnly: true
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 1
+        number:
+          type: string
+          description: Номер или название столика (уникально в ресторане)
+          minLength: 1
+          example: A1
+        capacity:
+          type: integer
+          description: Вместимость, чел.
+          minimum: 1
+          example: 4
+        zone:
+          type: string
+          description: Зона зала
+          nullable: true
+          example: Терраса
+        is_active:
+          type: boolean
+          description: Столик доступен для бронирования
+          example: true
+
+    RestaurantTableCreate:
+      type: object
+      required:
+      - number
+      - capacity
+      properties:
+        number:
+          type: string
+          description: Номер или название столика (уникально в ресторане)
+          minLength: 1
+          example: A1
+        capacity:
+          type: integer
+          description: Вместимость, чел.
+          minimum: 1
+          example: 4
+        zone:
+          type: string
+          description: Зона зала
+          nullable: true
+          example: Терраса
+        is_active:
+          type: boolean
+          description: Столик доступен для бронирования
+          example: true
+
+    RestaurantTableUpdate:
+      type: object
+      properties:
+        number:
+          type: string
+          description: Номер или название столика (уникально в ресторане)
+          minLength: 1
+          example: A1
+        capacity:
+          type: integer
+          description: Вместимость, чел.
+          minimum: 1
+          example: 4
+        zone:
+          type: string
+          description: Зона зала
+          nullable: true
+          example: Терраса
+        is_active:
+          type: boolean
+          description: Столик доступен для бронирования
+          example: true
+      minProperties: 1
+
+    TimeSlot:
+      type: object
+      description: Шаблон временного интервала ресторана. Одинаков для всех дат.
+      required:
+      - id
+      - restaurant_id
+      - start_time
+      - end_time
+      - is_active
+      properties:
+        id:
+          type: integer
+          description: Идентификатор слота
+          readOnly: true
+          example: 1
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 1
+        start_time:
+          type: string
+          description: Начало слота (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '12:00'
+        end_time:
+          type: string
+          description: Конец слота (ЧЧ:ММ), позже начала
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '14:00'
+        is_active:
+          type: boolean
+          description: Слот доступен для бронирования
+          example: true
+
+    TimeSlotCreate:
+      type: object
+      required:
+      - start_time
+      - end_time
+      properties:
+        start_time:
+          type: string
+          description: Начало слота (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '12:00'
+        end_time:
+          type: string
+          description: Конец слота (ЧЧ:ММ), позже начала
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '14:00'
+        is_active:
+          type: boolean
+          description: Слот доступен для бронирования
+          example: true
+
+    TimeSlotUpdate:
+      type: object
+      properties:
+        start_time:
+          type: string
+          description: Начало слота (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '12:00'
+        end_time:
+          type: string
+          description: Конец слота (ЧЧ:ММ), позже начала
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '14:00'
+        is_active:
+          type: boolean
+          description: Слот доступен для бронирования
+          example: true
+      minProperties: 1
+
+    Availability:
+      type: object
+      description: Свободные столики ресторана на выбранные дату и слот.
+      required:
+      - date
+      - time_slot
+      - tables
+      properties:
+        date:
+          type: string
+          description: Дата
+          format: date
+          example: '2026-10-05'
+        time_slot:
+          $ref: '#/components/schemas/TimeSlot'
+        tables:
+          type: array
+          description: Свободные столики нужной вместимости
+          items:
+            $ref: '#/components/schemas/RestaurantTable'
+
+    RestaurantAdmin:
+      type: object
+      required:
+      - id
+      - user_id
+      - restaurant_id
+      properties:
+        id:
+          type: integer
+          description: Идентификатор записи
+          readOnly: true
+          example: 1
+        user_id:
+          type: integer
+          description: Идентификатор пользователя
+          example: 7
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 1
+        user:
+          $ref: '#/components/schemas/UserShort'
+        created_at:
+          type: string
+          description: Дата назначения
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+
+    RestaurantAdminCreate:
+      type: object
+      required:
+      - user_id
+      properties:
+        user_id:
+          type: integer
+          description: Идентификатор пользователя, которого назначают администратором
+          example: 7
+
+    Booking:
+      type: object
+      required:
+      - id
+      - user_id
+      - restaurant_table_id
+      - time_slot_id
+      - status
+      - booking_date
+      - guests_count
+      properties:
+        id:
+          type: integer
+          description: Идентификатор брони
+          readOnly: true
+          example: 1
+        user_id:
+          type: integer
+          description: Идентификатор пользователя
+          example: 5
+        restaurant_table_id:
+          type: integer
+          description: Идентификатор столика
+          example: 3
+        time_slot_id:
+          type: integer
+          description: Идентификатор слота
+          example: 2
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        booking_date:
+          type: string
+          description: Дата бронирования
+          format: date
+          example: '2026-10-05'
+        guests_count:
+          type: integer
+          description: Число гостей
+          minimum: 1
+          example: 3
+        comment:
+          type: string
+          description: Пожелания гостя
+          nullable: true
+          example: Столик у окна
+        created_at:
+          type: string
+          description: Дата создания
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+        updated_at:
+          type: string
+          description: Дата последнего изменения
+          format: date-time
+          readOnly: true
+          example: '2026-09-19T10:00:00Z'
+
+    BookingDetails:
+      description: Бронь вместе с данными ресторана, столика и слота (для истории и списков).
+      allOf:
+      - $ref: '#/components/schemas/Booking'
+      - type: object
+        properties:
+          restaurant:
+            $ref: '#/components/schemas/RestaurantShort'
+          restaurant_table:
+            $ref: '#/components/schemas/RestaurantTable'
+          time_slot:
+            $ref: '#/components/schemas/TimeSlot'
+
+    BookingCreate:
+      type: object
+      required:
+      - restaurant_table_id
+      - time_slot_id
+      - booking_date
+      - guests_count
+      properties:
+        restaurant_table_id:
+          type: integer
+          description: Идентификатор столика
+          example: 3
+        time_slot_id:
+          type: integer
+          description: Идентификатор слота
+          example: 2
+        booking_date:
+          type: string
+          description: Дата бронирования (не в прошлом)
+          format: date
+          example: '2026-10-05'
+        guests_count:
+          type: integer
+          description: Число гостей (не больше вместимости столика)
+          minimum: 1
+          example: 3
+        comment:
+          type: string
+          description: Пожелания гостя
+          example: Столик у окна
+
+    BookingStatusUpdate:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+
+    BookingPage:
+      type: object
+      required:
+      - items
+      - meta
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingDetails'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
