@@ -1,0 +1,3 @@
+import "reflect-metadata";import express from "express";import cors from "cors";import {DataSource} from "typeorm";import {User} from "./entity/User";import routes from "./routes";
+export const AppDataSource=new DataSource({type:"postgres",host:process.env.DB_HOST||"localhost",port:+(process.env.DB_PORT||"5433"),username:process.env.DB_USER||"postgres",password:process.env.DB_PASSWORD||"311202",database:process.env.DB_NAME||"recipes_users",synchronize:true,logging:false,entities:[User]});
+AppDataSource.initialize().then(()=>{const app=express();app.use(cors());app.use(express.json());app.use(routes);app.listen(3001,()=>console.log("UserService: http://localhost:3001"));}).catch(e=>console.error("UserService DB error",e));

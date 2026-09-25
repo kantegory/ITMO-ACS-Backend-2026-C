@@ -1,0 +1,13 @@
+{
+  "name": "recipes-microservices-lr2",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build -w user-service && npm run build -w recipe-service && npm run build -w social-service && npm run build -w api-gateway",
+    "dev:user": "npm run dev -w user-service",
+    "dev:recipe": "npm run dev -w recipe-service",
+    "dev:social": "npm run dev -w social-service",
+    "dev:gateway": "npm run dev -w api-gateway"
+  },
+  "workspaces": ["services/*"]
+}

@@ -1,0 +1,41 @@
+name: Deploy backend to Yandex Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Yandex Cloud VM
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "Updating repository..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Building Docker images..."
+            docker compose build
+
+            echo "Restarting application..."
+            docker compose up -d
+
+            echo "Checking containers..."
+            docker compose ps
+
+            echo "Checking application..."
+            curl -f http://localhost:3000/api/recipes
+
+            echo "Deployment completed successfully."

@@ -1,0 +1,197 @@
+name: recipes-microservices-lr3
+services:
+  user-db:
+    image: postgres:17-alpine
+    container_name: lr3-user-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "311202"
+      POSTGRES_DB: recipes_users
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recipes_users"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - recipes-net
+
+  recipe-db:
+    image: postgres:17-alpine
+    container_name: lr3-recipe-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "311202"
+      POSTGRES_DB: recipes_recipes
+    volumes:
+      - recipe_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recipes_recipes"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - recipes-net
+
+  social-db:
+    image: postgres:17-alpine
+    container_name: lr3-social-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "311202"
+      POSTGRES_DB: recipes_social
+    volumes:
+      - social_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recipes_social"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - recipes-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: lr3-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks:
+      - recipes-net
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: lr3-user-service
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DB_HOST: user-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: "311202"
+      DB_NAME: recipes_users
+      JWT_SECRET: your-secret-key-change-in-production
+      SERVICE_TOKEN: internal-service-token
+      RECIPE_SERVICE_URL: http://recipe-service:3002
+      SOCIAL_SERVICE_URL: http://social-service:3003
+    depends_on:
+      user-db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    networks:
+      - recipes-net
+
+  recipe-service:
+    build:
+      context: .
+      dockerfile: services/recipe-service/Dockerfile
+    container_name: lr3-recipe-service
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      DB_HOST: recipe-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: "311202"
+      DB_NAME: recipes_recipes
+      JWT_SECRET: your-secret-key-change-in-production
+      SERVICE_TOKEN: internal-service-token
+      USER_SERVICE_URL: http://user-service:3001
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: recipes.events
+    depends_on:
+      recipe-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    ports:
+      - "3002:3002"
+    networks:
+      - recipes-net
+
+  social-service:
+    build:
+      context: .
+      dockerfile: services/social-service/Dockerfile
+    container_name: lr3-social-service
+    restart: unless-stopped
+    environment:
+      PORT: 3003
+      DB_HOST: social-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: "311202"
+      DB_NAME: recipes_social
+      SERVICE_TOKEN: internal-service-token
+      USER_SERVICE_URL: http://user-service:3001
+      RECIPE_SERVICE_URL: http://recipe-service:3002
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: recipes.events
+    depends_on:
+      social-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      recipe-service:
+        condition: service_started
+    ports:
+      - "3003:3003"
+    networks:
+      - recipes-net
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: lr3-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      USER_SERVICE_URL: http://user-service:3001
+      RECIPE_SERVICE_URL: http://recipe-service:3002
+      SOCIAL_SERVICE_URL: http://social-service:3003
+      SERVICE_TOKEN: internal-service-token
+      JWT_SECRET: your-secret-key-change-in-production
+    depends_on:
+      user-service:
+        condition: service_started
+      recipe-service:
+        condition: service_started
+      social-service:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    networks:
+      - recipes-net
+
+volumes:
+  user_db_data:
+  recipe_db_data:
+  social_db_data:
+  rabbitmq_data:
+
+networks:
+  recipes-net:
+    driver: bridge

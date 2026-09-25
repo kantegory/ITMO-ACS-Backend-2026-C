@@ -1,0 +1,21 @@
+import { Router } from "express";
+import { SocialController } from "../controller/SocialController";
+import { authMiddleware, serviceAuth } from "../middleware/auth";
+
+const r = Router();
+r.post("/api/recipes/:recipe_id/like", authMiddleware, SocialController.like);
+r.delete("/api/recipes/:recipe_id/like", authMiddleware, SocialController.unlike);
+r.post("/api/recipes/:recipe_id/save", authMiddleware, SocialController.save);
+r.delete("/api/recipes/:recipe_id/save", authMiddleware, SocialController.unsave);
+r.get("/api/recipes/:recipe_id/comments", SocialController.getComments);
+r.post("/api/recipes/:recipe_id/comments", authMiddleware, SocialController.addComment);
+r.put("/api/comments/:comment_id", authMiddleware, SocialController.updateComment);
+r.delete("/api/comments/:comment_id", authMiddleware, SocialController.deleteComment);
+r.post("/api/users/:user_id/subscribe", authMiddleware, SocialController.subscribe);
+r.delete("/api/users/:user_id/subscribe", authMiddleware, SocialController.unsubscribe);
+r.get("/api/users/me/subscriptions", authMiddleware, SocialController.getSubscriptions);
+r.get("/api/users/me/subscribers", authMiddleware, SocialController.getSubscribers);
+r.get("/internal/recipes/:recipe_id/summary", serviceAuth, SocialController.summary);
+r.post("/internal/recipes/summaries", serviceAuth, SocialController.summaries);
+r.get("/internal/users/:user_id/saved", serviceAuth, SocialController.internalSaved);
+export default r;

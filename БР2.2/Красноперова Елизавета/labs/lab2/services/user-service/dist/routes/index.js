@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const AuthController_1 = require("../controller/AuthController");
+const UserController_1 = require("../controller/UserController");
+const auth_1 = require("../middleware/auth");
+const r = (0, express_1.Router)();
+r.post("/api/auth/register", AuthController_1.AuthController.register);
+r.post("/api/auth/login", AuthController_1.AuthController.login);
+r.get("/api/users/me", auth_1.authMiddleware, UserController_1.UserController.getProfile);
+r.put("/api/users/me", auth_1.authMiddleware, UserController_1.UserController.updateProfile);
+r.get("/api/users/me/recipes", auth_1.authMiddleware, UserController_1.UserController.myRecipes);
+r.get("/api/users/me/saved", auth_1.authMiddleware, UserController_1.UserController.savedRecipes);
+r.get("/api/users/:user_id", UserController_1.UserController.getPublicProfile);
+r.get("/internal/users/:user_id", auth_1.serviceAuth, UserController_1.UserController.internalGet);
+r.get("/internal/users/:user_id/exists", auth_1.serviceAuth, UserController_1.UserController.internalExists);
+exports.default = r;

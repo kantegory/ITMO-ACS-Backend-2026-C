@@ -1,0 +1,439 @@
+openapi: 3.0.3
+info:
+  title: Recipes Microservices - Internal API
+  version: 1.0.0
+  description: |
+    Спецификация внутренних HTTP API для межсервисного взаимодействия
+    проекта сервиса обмена рецептами и кулинарных блогов.
+
+    Внутренние endpoints не предназначены для непосредственного вызова клиентом
+    и защищены заголовком X-Service-Token.
+
+servers:
+  - url: http://localhost:3001
+    description: UserService
+  - url: http://localhost:3002
+    description: RecipeService
+  - url: http://localhost:3003
+    description: SocialService
+
+tags:
+  - name: UserService
+  - name: RecipeService
+  - name: SocialService
+
+paths:
+  /internal/users/{user_id}:
+    get:
+      tags: [UserService]
+      summary: Получить краткие данные пользователя
+      operationId: internalGetUser
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalUser'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/users/{user_id}/exists:
+    get:
+      tags: [UserService]
+      summary: Проверить существование пользователя
+      operationId: internalUserExists
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExistsUserResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/recipes/{recipe_id}:
+    get:
+      tags: [RecipeService]
+      summary: Получить полный рецепт для межсервисного использования
+      operationId: internalGetRecipe
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/RecipeId'
+      responses:
+        '200':
+          description: Рецепт найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalRecipe'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '404':
+          description: Рецепт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/recipes/{recipe_id}/exists:
+    get:
+      tags: [RecipeService]
+      summary: Проверить существование рецепта
+      operationId: internalRecipeExists
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/RecipeId'
+      responses:
+        '200':
+          description: Рецепт существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExistsRecipeResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '404':
+          description: Рецепт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/recipes/by-author/{user_id}:
+    get:
+      tags: [RecipeService]
+      summary: Получить рецепты пользователя
+      operationId: internalRecipesByAuthor
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Рецепты пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/recipes/by-ids:
+    post:
+      tags: [RecipeService]
+      summary: Получить рецепты по списку идентификаторов
+      operationId: internalRecipesByIds
+      security: [{ serviceToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipesByIdsRequest'
+      responses:
+        '200':
+          description: Найденные рецепты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/recipes/{recipe_id}/summary:
+    get:
+      tags: [SocialService]
+      summary: Получить социальную сводку рецепта
+      operationId: internalRecipeSummary
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/RecipeId'
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Пользователь для вычисления персональных флагов.
+      responses:
+        '200':
+          description: Социальная сводка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/recipes/summaries:
+    post:
+      tags: [SocialService]
+      summary: Получить социальные сводки нескольких рецептов
+      operationId: internalRecipeSummaries
+      security: [{ serviceToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipeSummariesRequest'
+      responses:
+        '200':
+          description: Социальные сводки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeSummariesResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /internal/users/{user_id}/saved:
+    get:
+      tags: [SocialService]
+      summary: Получить идентификаторы сохранённых рецептов пользователя
+      operationId: internalSavedRecipes
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Идентификаторы сохранённых рецептов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedRecipeIdsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedService'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    serviceToken:
+      type: apiKey
+      in: header
+      name: X-Service-Token
+      description: Секретный сервисный токен для внутренних запросов.
+
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    RecipeId:
+      name: recipe_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+
+    InternalUser:
+      type: object
+      required: [user_id, username]
+      properties:
+        user_id: { type: integer }
+        username: { type: string }
+        avatar_url: { type: string, nullable: true }
+        bio: { type: string, nullable: true }
+
+    InternalRecipe:
+      type: object
+      required: [recipe_id, title, author_id]
+      properties:
+        recipe_id: { type: integer }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        photo_main_url: { type: string, nullable: true }
+        video_url: { type: string, nullable: true }
+        cooking_time_min: { type: integer, nullable: true }
+        difficulty: { type: string, nullable: true, enum: [easy, medium, hard] }
+        dish_type: { type: string, nullable: true }
+        is_published: { type: boolean }
+        published_at: { type: string, format: date-time, nullable: true }
+        author_id: { type: integer }
+        steps:
+          type: array
+          items: { $ref: '#/components/schemas/Step' }
+        recipeIngredients:
+          type: array
+          items: { $ref: '#/components/schemas/RecipeIngredient' }
+
+    Step:
+      type: object
+      properties:
+        step_id: { type: integer }
+        recipe_id: { type: integer }
+        step_number: { type: integer }
+        instruction_text: { type: string }
+        photo_url: { type: string, nullable: true }
+
+    RecipeIngredient:
+      type: object
+      properties:
+        recipe_ingredient_id: { type: integer }
+        recipe_id: { type: integer }
+        ingredient_id: { type: integer }
+        quantity: { type: string }
+        ingredient:
+          $ref: '#/components/schemas/Ingredient'
+
+    Ingredient:
+      type: object
+      properties:
+        ingredient_id: { type: integer }
+        name: { type: string }
+        category: { type: string, nullable: true }
+
+    ExistsUserResponse:
+      type: object
+      required: [user_id, exists]
+      properties:
+        user_id: { type: integer }
+        exists: { type: boolean }
+
+    ExistsRecipeResponse:
+      type: object
+      required: [recipe_id, exists, author_id]
+      properties:
+        recipe_id: { type: integer }
+        exists: { type: boolean }
+        author_id: { type: integer }
+
+    RecipeSummary:
+      type: object
+      required: [recipe_id, likes_count, comments_count, is_liked_by_me, is_saved_by_me]
+      properties:
+        recipe_id: { type: integer }
+        likes_count: { type: integer, minimum: 0 }
+        comments_count: { type: integer, minimum: 0 }
+        is_liked_by_me: { type: boolean }
+        is_saved_by_me: { type: boolean }
+
+    RecipeSummariesRequest:
+      type: object
+      required: [recipe_ids]
+      properties:
+        recipe_ids:
+          type: array
+          minItems: 1
+          items: { type: integer, minimum: 1 }
+        user_id:
+          type: integer
+          minimum: 1
+
+    RecipeSummariesResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RecipeSummary' }
+
+    RecipeListItem:
+      type: object
+      required: [recipe_id, title, author_id]
+      properties:
+        recipe_id: { type: integer }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        photo_main_url: { type: string, nullable: true }
+        cooking_time_min: { type: integer }
+        difficulty: { type: string }
+        dish_type: { type: string }
+        author_id: { type: integer }
+        author: { $ref: '#/components/schemas/InternalUser' }
+        likes_count: { type: integer, minimum: 0 }
+        published_at: { type: string, format: date-time }
+
+    RecipeListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RecipeListItem' }
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1 }
+
+    RecipesByIdsRequest:
+      type: object
+      required: [recipe_ids]
+      properties:
+        recipe_ids:
+          type: array
+          minItems: 1
+          items: { type: integer, minimum: 1 }
+
+    SavedRecipeIdsResponse:
+      type: object
+      required: [recipe_ids]
+      properties:
+        recipe_ids:
+          type: array
+          items: { type: integer, minimum: 1 }
+
+  responses:
+    UnauthorizedService:
+      description: Ошибка сервисной авторизации
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Ошибка сервисной авторизации
+    InternalError:
+      description: Внутренняя ошибка сервиса
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: Внутренняя ошибка сервиса
