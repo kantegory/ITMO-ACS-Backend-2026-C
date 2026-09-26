@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:17
+    restart: always
+    ports:
+      - 15433:5432
+    volumes:
+      - ./dbs/postgres-data:/var/lib/postgresql/data
+      - ./dbs/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    env_file:
+      - .env
