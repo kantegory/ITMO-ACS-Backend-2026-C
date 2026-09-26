@@ -1,0 +1,624 @@
+openapi: 3.0.3
+
+info:
+  title: Внутренний API микросервисов бронирования столиков
+  version: 1.0.0
+  description: |-
+    Внутренний API для общения микросервисов приложения бронирования столиков (ДЗ4, курс «Бэкенд-разработка», ИТМО). Публичный API (43 операции из ДЗ2) остаётся прежним и раздаётся через gateway; здесь описаны только вызовы сервис-сервис.
+
+    **Сервисы.** auth-service (порт 3001), restaurants-service (порт 3002), bookings-service (порт 3003). У каждого сервиса своя база данных. Адрес сервиса, который отвечает на запрос, указан у каждого пути в поле servers.
+
+    **Доступ.** Все адреса начинаются с /internal, через gateway они не публикуются. Каждый вызов сопровождается заголовком X-Internal-Token с общим ключом INTERNAL_API_KEY (одинаковым у всех сервисов).
+
+    **Ошибки.** Формат тот же, что у публичного API: {statusCode, message, errors?}. Ответы 5xx и сетевые сбои обрабатывает вызывающий сервис: недоступность вызываемого сервиса превращается в клиентскую ошибку 503, превышение таймаута (3 секунды) в 504.
+
+servers:
+- url: http://localhost:3001
+  description: auth-service
+- url: http://localhost:3002
+  description: restaurants-service
+- url: http://localhost:3003
+  description: bookings-service
+
+tags:
+- name: auth-service
+  description: Пользователи и роли
+- name: restaurants-service
+  description: Данные ресторанов для бронирований и проверка прав
+- name: bookings-service
+  description: Проверка наличия броней
+
+security:
+- internalToken: []
+
+
+paths:
+  /internal/users:
+    servers:
+    - url: http://localhost:3001
+      description: auth-service
+
+    get:
+      tags:
+      - auth-service
+      summary: Краткие данные пользователей пачкой
+      description: Вызывает restaurants-service, чтобы показать авторов отзывов и список администраторов ресторана
+        одним запросом. Идентификаторы, которых нет в базе, в ответ не попадают.
+      operationId: getUsersShort
+      parameters:
+      - name: ids
+        in: query
+        description: Идентификаторы пользователей через запятую (не более 100)
+        required: true
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 1
+          maxItems: 100
+        example:
+        - 3
+        - 4
+
+      responses:
+        '200':
+          description: Найденные пользователи
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserShort'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/users/{userId}:
+    servers:
+    - url: http://localhost:3001
+      description: auth-service
+    parameters:
+    - $ref: '#/components/parameters/UserId'
+
+    get:
+      tags:
+      - auth-service
+      summary: Данные пользователя
+      description: 'Вызывает restaurants-service при назначении администратора ресторана: проверяет, что пользователь
+        существует, и узнаёт его текущую роль.'
+      operationId: getUserInternal
+
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInternal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/users/{userId}/role:
+    servers:
+    - url: http://localhost:3001
+      description: auth-service
+    parameters:
+    - $ref: '#/components/parameters/UserId'
+
+    patch:
+      tags:
+      - auth-service
+      summary: Изменить роль пользователя
+      description: 'Вызывает restaurants-service, когда пользователю с ролью USER назначают ресторан (USER → RESTAURANT_ADMIN).
+        Операция идемпотентна: повторный вызов с той же ролью безопасен. Новая роль попадёт в токен при следующем
+        входе.'
+      operationId: updateUserRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdate'
+
+      responses:
+        '200':
+          description: Роль обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInternal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/booking-context:
+    servers:
+    - url: http://localhost:3002
+      description: restaurants-service
+
+    get:
+      tags:
+      - restaurants-service
+      summary: Данные для проверки и отображения броней
+      description: Вызывает bookings-service при создании брони (проверить столик, слот, вместимость) и при выводе
+        истории броней (получить название и адрес ресторана, номер столика, время слота). Нужно передать хотя бы
+        один из параметров table_ids и time_slot_ids.
+      operationId: getBookingContext
+      parameters:
+      - name: table_ids
+        in: query
+        description: Идентификаторы столиков через запятую (не более 100)
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 1
+          maxItems: 100
+        example:
+        - 3
+        - 4
+      - name: time_slot_ids
+        in: query
+        description: Идентификаторы слотов через запятую (не более 100)
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 1
+          maxItems: 100
+        example:
+        - 3
+        - 4
+
+      responses:
+        '200':
+          description: Найденные столики, слоты и рестораны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingContext'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/restaurants/{restaurantId}/tables:
+    servers:
+    - url: http://localhost:3002
+      description: restaurants-service
+    parameters:
+    - $ref: '#/components/parameters/RestaurantId'
+
+    get:
+      tags:
+      - restaurants-service
+      summary: Столики ресторана для расчёта свободных
+      description: 'Вызывает bookings-service при поиске свободных столиков: из этого списка он исключает столики,
+        занятые в его базе на выбранные дату и слот.'
+      operationId: getRestaurantTablesInternal
+      parameters:
+      - name: only_active
+        in: query
+        description: Только активные столики
+        schema:
+          type: boolean
+          default: true
+      - name: min_capacity
+        in: query
+        description: Минимальная вместимость столика
+        schema:
+          type: integer
+          minimum: 1
+
+      responses:
+        '200':
+          description: Столики ресторана
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TableInternal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /internal/users/{userId}/managed-restaurants:
+    servers:
+    - url: http://localhost:3002
+      description: restaurants-service
+    parameters:
+    - $ref: '#/components/parameters/UserId'
+
+    get:
+      tags:
+      - restaurants-service
+      summary: Рестораны, которыми управляет пользователь
+      description: Вызывает bookings-service, чтобы определить, какие брони может смотреть и изменять администратор
+        ресторана. Если пользователь ничего не администрирует (или его нет), возвращается пустой список.
+      operationId: getManagedRestaurants
+
+      responses:
+        '200':
+          description: Список идентификаторов ресторанов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagedRestaurants'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /internal/bookings/exists:
+    servers:
+    - url: http://localhost:3003
+      description: bookings-service
+
+    get:
+      tags:
+      - bookings-service
+      summary: Есть ли брони на столики или слоты
+      description: 'Вызывает restaurants-service перед удалением столика, слота или ресторана: если на них есть
+        брони, удаление запрещается (замена ON DELETE RESTRICT из ДЗ1). Условия объединяются через ИЛИ: считаются
+        брони на любой из переданных столиков и слотов. Нужно передать хотя бы один параметр.'
+      operationId: bookingsExist
+      parameters:
+      - name: table_ids
+        in: query
+        description: Идентификаторы столиков через запятую (не более 100)
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 1
+          maxItems: 100
+        example:
+        - 3
+        - 4
+      - name: time_slot_ids
+        in: query
+        description: Идентификаторы слотов через запятую (не более 100)
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 1
+          maxItems: 100
+        example:
+        - 3
+        - 4
+      - name: only_active
+        in: query
+        description: 'Считать только брони в статусах PENDING и CONFIRMED (по умолчанию учитываются все статусы:
+          история важна при удалении)'
+        schema:
+          type: boolean
+          default: false
+
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingsExist'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: Общий ключ сервисов (переменная окружения INTERNAL_API_KEY)
+
+
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Идентификатор пользователя
+      schema:
+        type: integer
+        minimum: 1
+        example: 7
+
+    RestaurantId:
+      name: restaurantId
+      in: path
+      required: true
+      description: Идентификатор ресторана
+      schema:
+        type: integer
+        minimum: 1
+        example: 5
+
+
+  responses:
+    BadRequest:
+      description: Неверные параметры запроса (пустой или неправильно записанный список идентификаторов, не указан
+        ни один обязательный параметр)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 400
+            message: Неверные параметры запроса
+
+    Unauthorized:
+      description: Заголовок X-Internal-Token не передан или содержит неверный ключ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 401
+            message: Неверный внутренний ключ
+
+    NotFound:
+      description: Объект не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 404
+            message: Пользователь не найден
+
+
+  schemas:
+    Role:
+      type: string
+      description: Роль пользователя
+      enum:
+      - ADMIN
+      - RESTAURANT_ADMIN
+      - USER
+      example: RESTAURANT_ADMIN
+
+    UserShort:
+      type: object
+      required:
+      - id
+      - first_name
+      - last_name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор пользователя
+          example: 7
+        first_name:
+          type: string
+          description: Имя
+          example: Иван
+        last_name:
+          type: string
+          description: Фамилия
+          example: Ресторанов
+
+    UserInternal:
+      type: object
+      description: Данные пользователя для других сервисов. Email, телефон и хэш пароля не передаются.
+      required:
+      - id
+      - role
+      - first_name
+      - last_name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор пользователя
+          example: 7
+        role:
+          $ref: '#/components/schemas/Role'
+        first_name:
+          type: string
+          description: Имя
+          example: Иван
+        last_name:
+          type: string
+          description: Фамилия
+          example: Ресторанов
+
+    RoleUpdate:
+      type: object
+      required:
+      - role
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+
+    RestaurantShort:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 5
+        name:
+          type: string
+          description: Название
+          example: Траттория Порто
+        address:
+          type: string
+          description: Адрес
+          nullable: true
+          example: Невский проспект, 10
+
+    TableInternal:
+      type: object
+      required:
+      - id
+      - restaurant_id
+      - number
+      - capacity
+      - is_active
+      properties:
+        id:
+          type: integer
+          description: Идентификатор столика
+          example: 3
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 5
+        number:
+          type: string
+          description: Номер столика
+          example: A1
+        capacity:
+          type: integer
+          description: Вместимость
+          example: 4
+        zone:
+          type: string
+          description: Зона зала
+          nullable: true
+          example: Терраса
+        is_active:
+          type: boolean
+          description: Столик доступен для бронирования
+          example: true
+
+    TimeSlotInternal:
+      type: object
+      required:
+      - id
+      - restaurant_id
+      - start_time
+      - end_time
+      - is_active
+      properties:
+        id:
+          type: integer
+          description: Идентификатор слота
+          example: 2
+        restaurant_id:
+          type: integer
+          description: Идентификатор ресторана
+          example: 5
+        start_time:
+          type: string
+          description: Начало (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '14:00'
+        end_time:
+          type: string
+          description: Конец (ЧЧ:ММ)
+          pattern: ^([01][0-9]|2[0-3]):[0-5][0-9]$
+          example: '16:00'
+        is_active:
+          type: boolean
+          description: Слот доступен для бронирования
+          example: true
+
+    BookingContext:
+      type: object
+      description: 'Данные для проверки и отображения брони. Идентификаторы, которых нет в базе, в ответ не попадают:
+        решение о 404 принимает вызывающий сервис.'
+      required:
+      - tables
+      - time_slots
+      - restaurants
+      properties:
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TableInternal'
+        time_slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSlotInternal'
+        restaurants:
+          type: array
+          description: Рестораны, которым принадлежат найденные столики и слоты
+          items:
+            $ref: '#/components/schemas/RestaurantShort'
+
+    ManagedRestaurants:
+      type: object
+      required:
+      - user_id
+      - restaurant_ids
+      properties:
+        user_id:
+          type: integer
+          description: Идентификатор пользователя
+          example: 7
+        restaurant_ids:
+          type: array
+          description: Рестораны, где пользователь назначен администратором (пустой список, если таких нет)
+          items:
+            type: integer
+
+    BookingsExist:
+      type: object
+      required:
+      - exists
+      - count
+      properties:
+        exists:
+          type: boolean
+          description: Есть ли хотя бы одна подходящая бронь
+          example: true
+        count:
+          type: integer
+          description: Количество подходящих броней
+          example: 2
+
+    Error:
+      type: object
+      required:
+      - statusCode
+      - message
+      properties:
+        statusCode:
+          type: integer
+          description: HTTP-код ошибки
+          example: 400
+        message:
+          type: string
+          description: Описание ошибки
+          example: Неверные параметры запроса
+        errors:
+          type: array
+          description: Ошибки по полям (только для ошибок валидации)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: table_ids
+              message:
+                type: string
+                example: Ожидается список целых чисел

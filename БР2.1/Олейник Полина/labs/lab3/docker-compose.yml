@@ -1,0 +1,133 @@
+services:
+  db:
+    image: postgres:17
+    restart: always
+    ports:
+      - 15433:5432
+    volumes:
+      - ./dbs/postgres-data:/var/lib/postgresql/data
+      - ./dbs/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    env_file:
+      - .env
+    # Проверка "база реально принимает подключения", а не просто "процесс запущен"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: always
+    ports:
+      - 5673:5672   # AMQP — сдвинуто с дефолтного 5672, как Postgres на 15433 вместо 5432
+      - 15673:15672 # Management UI (http://localhost:15673)
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  auth:
+    build: ./services/auth # собрать образ по Dockerfile в этой папке, готового образа нет
+    restart: always
+    env_file:
+      - ./services/auth/.env
+    environment:
+      # без этого приложение слушает только loopback внутри своего контейнера
+      # и недоступно другим контейнерам той же сети
+      APP_HOST: 0.0.0.0
+      DB_HOST: db # имя сервиса ниже становится DNS-именем контейнера в app-network
+      DB_PORT: 5432 # внутренний порт Postgres, не тот, что проброшен на хост (15433)
+      DB_ENTITIES: dist/models/*.entity.js # собранный JS в образе, не src/*.ts
+      DB_SUBSCRIBERS: dist/models/*.subscriber.js
+    depends_on:
+      db:
+        condition: service_healthy # ждать готовности базы, не просто её старта
+    networks:
+      - app-network
+    # ports: намеренно нет — сервис доступен только внутри сети, не с хоста
+
+  restaurants:
+    build: ./services/restaurants
+    restart: always
+    env_file:
+      - ./services/restaurants/.env
+    environment:
+      APP_HOST: 0.0.0.0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_ENTITIES: dist/models/*.entity.js
+      DB_SUBSCRIBERS: dist/models/*.subscriber.js
+      AUTH_SERVICE_URL: http://auth:3001 # адрес соседнего контейнера по имени сервиса
+      BOOKINGS_SERVICE_URL: http://bookings:3003
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      auth:
+        # достаточно "запущен" — auth вызывается по запросу, а не при старте restaurants
+        condition: service_started
+    networks:
+      - app-network
+
+  bookings:
+    build: ./services/bookings
+    restart: always
+    env_file:
+      - ./services/bookings/.env
+    environment:
+      APP_HOST: 0.0.0.0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_ENTITIES: dist/models/*.entity.js
+      DB_SUBSCRIBERS: dist/models/*.subscriber.js
+      RESTAURANTS_SERVICE_URL: http://restaurants:3002
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      restaurants:
+        condition: service_started
+    networks:
+      - app-network
+
+  gateway:
+    build: ./gateway
+    restart: always
+    ports:
+      - 8080:8080 # единственный сервис, открытый наружу — точка входа снаружи
+    env_file:
+      - ./gateway/.env
+    environment:
+      APP_HOST: 0.0.0.0
+      AUTH_SERVICE_URL: http://auth:3001
+      RESTAURANTS_SERVICE_URL: http://restaurants:3002
+      BOOKINGS_SERVICE_URL: http://bookings:3003
+    depends_on:
+      auth:
+        condition: service_started
+      restaurants:
+        condition: service_started
+      bookings:
+        condition: service_started
+    networks:
+      - app-network
+
+# Общая сеть даёт контейнерам DNS по имени сервиса (auth, db, rabbitmq...) —
+# без неё пришлось бы обращаться друг к другу по IP-адресу.
+networks:
+  app-network:
+    driver: bridge

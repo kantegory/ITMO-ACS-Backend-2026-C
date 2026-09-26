@@ -1,0 +1,104 @@
+import {
+    Get,
+    Post,
+    Delete,
+    Param,
+    Body,
+    UseBefore,
+    HttpCode,
+    OnUndefined,
+    NotFoundError,
+} from 'routing-controllers';
+
+import EntityController from '../common/entity-controller';
+import BaseController from '../common/base-controller';
+import dataSource from '../config/data-source';
+
+import { RestaurantPhoto } from '../models/restaurant-photo.entity';
+import { Restaurant } from '../models/restaurant.entity';
+
+import authMiddleware from '../middlewares/auth.middleware';
+import restaurantAdminMiddleware from '../middlewares/restaurant-admin.middleware';
+
+import {
+    RestaurantPhotoCreateDto,
+    RestaurantPhotoDto,
+    toRestaurantPhotoDto,
+} from '../dto/restaurant-photo.dto';
+
+// Копия лр1/src/controllers/restaurant-photo.controller.ts.
+@EntityController({
+    baseRoute: '/restaurants/:restaurantId/photos',
+    entity: RestaurantPhoto,
+})
+class RestaurantPhotoController extends BaseController {
+    @Get('')
+    async list(
+        @Param('restaurantId') restaurantId: number,
+    ): Promise<RestaurantPhotoDto[]> {
+        const restaurant = await dataSource
+            .getRepository(Restaurant)
+            .findOneBy({ id: restaurantId });
+        if (!restaurant) {
+            throw new NotFoundError('Restaurant not found');
+        }
+
+        const photos = await this.repository.find({
+            where: { restaurant_id: Number(restaurantId) },
+            order: { sort_order: 'ASC' },
+        });
+
+        return (photos as RestaurantPhoto[]).map(toRestaurantPhotoDto);
+    }
+
+    @Post('')
+    @HttpCode(201)
+    @UseBefore(authMiddleware, restaurantAdminMiddleware)
+    async create(
+        @Param('restaurantId') restaurantId: number,
+        @Body({ type: RestaurantPhotoCreateDto }) data: RestaurantPhotoCreateDto,
+    ): Promise<RestaurantPhotoDto> {
+        const restaurant = await dataSource
+            .getRepository(Restaurant)
+            .findOneBy({ id: restaurantId });
+        if (!restaurant) {
+            throw new NotFoundError('Restaurant not found');
+        }
+
+        if (data.is_main) {
+            await this.repository.update(
+                { restaurant_id: Number(restaurantId), is_main: true },
+                { is_main: false },
+            );
+        }
+
+        const photo = this.repository.create({
+            ...data,
+            restaurant_id: Number(restaurantId),
+        });
+        await this.repository.save(photo);
+
+        return toRestaurantPhotoDto(photo as RestaurantPhoto);
+    }
+
+    @Delete('/:photoId')
+    @OnUndefined(204)
+    @UseBefore(authMiddleware, restaurantAdminMiddleware)
+    async remove(
+        @Param('restaurantId') restaurantId: number,
+        @Param('photoId') photoId: number,
+    ): Promise<void> {
+        const photo = await this.repository.findOneBy({
+            id: photoId,
+            restaurant_id: Number(restaurantId),
+        });
+
+        if (!photo) {
+            throw new NotFoundError('Photo not found');
+        }
+
+        await this.repository.remove(photo);
+    }
+}
+
+export default RestaurantPhotoController;
