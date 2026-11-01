@@ -1,0 +1,22 @@
+import { Router } from "express";
+import { UserController as Users } from "./controllers/UserController";
+import { RestaurantController as Restaurants } from "./controllers/RestaurantController";
+import { BookingController as Bookings } from "./controllers/BookingController";
+import { auth } from "./middleware";
+
+const router = Router();
+router.post("/auth/register", Users.register);
+router.post("/auth/login", Users.login);
+router.get("/users/me", auth, Users.me);
+router.patch("/users/me", auth, Users.update);
+router.get("/cities", Restaurants.cities);
+router.get("/cuisines", Restaurants.cuisines);
+router.get("/restaurants", Restaurants.list);
+router.get("/restaurants/:id", Restaurants.detail);
+router.get("/bookings/availability", Bookings.availability);
+router.get("/bookings/restaurant", auth, Bookings.forRestaurant);
+router.patch("/bookings/:id/status", auth, Bookings.changeStatus);
+router.post("/bookings", auth, Bookings.create);
+router.get("/bookings", auth, Bookings.mine);
+router.delete("/bookings/:id", auth, Bookings.cancel);
+export default router;

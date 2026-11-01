@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Внутренний API ресторанов
+  version: 1.1.0
+servers:
+- url: http://localhost:3002
+paths:
+  /internal/booking-options:
+    get:
+      summary: Проверить столик и слот перед бронированием
+      description: Вызывается сервисом bookings. Столик и слот должны относиться к
+        одному ресторану.
+      security:
+      - internalKey: []
+      parameters:
+      - name: table_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: time_slot_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Данные для проверки вместимости
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurant_id:
+                    type: string
+                    format: uuid
+                  seats:
+                    type: integer
+                    example: 4
+                  is_active:
+                    type: boolean
+                    example: true
+                  admin_id:
+                    type: string
+                    format: uuid
+        '400':
+          description: Неверный UUID или столик и слот из разных ресторанов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Неверный внутренний ключ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Столик или слот отсутствует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /internal/restaurants:
+    get:
+      summary: Получить столики, слоты и владельцев выбранных ресторанов
+      description: Вызывается bookings для доступности столиков, фильтров истории
+        и проверки прав администратора. Без фильтров возвращает все рестораны; без
+        совпадений — пустой массив. Доступ только по внутреннему ключу.
+      security:
+      - internalKey: []
+      parameters:
+      - name: restaurant_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: name
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Результат запроса
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogRestaurant'
+        '400':
+          description: Неверные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Неверный внутренний ключ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    internalKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Key
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+    Table:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        seats:
+          type: integer
+        location:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+    TimeSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        start_time:
+          type: string
+          example: '18:00:00'
+        end_time:
+          type: string
+          example: '20:00:00'
+        duration_minutes:
+          type: integer
+          nullable: true
+    CatalogRestaurant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        admin_id:
+          type: string
+          format: uuid
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/Table'
+        time_slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSlot'
