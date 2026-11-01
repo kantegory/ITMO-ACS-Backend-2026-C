@@ -1,0 +1,884 @@
+{
+  "info": {
+    "name": "Бронирование столика",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Последовательный сценарий пользователя и администратора ресторана. Тестовые данные из SQL: admin@example.com / Student123. Каждый полный запуск завершает или отменяет созданные брони."
+  },
+  "variable": [
+    {
+      "key": "users_url",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "restaurants_url",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "bookings_url",
+      "value": "http://localhost:3000/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 Регистрация",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{users_url}}/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"Student123\",\n  \"name\": \"Семён\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 201', () => pm.response.to.have.status(201));",
+              "pm.test('Пароль скрыт', () => pm.expect(pm.response.json()).not.to.have.property('password_hash'));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('email', 'student-' + Date.now() + '@example.com');",
+              "pm.collectionVariables.set('date', new Date(Date.now()+86400000).toISOString().slice(0,10));",
+              "pm.collectionVariables.set('date2', new Date(Date.now()+172800000).toISOString().slice(0,10));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 Вход",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{users_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"Student123\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Получен JWT', () => pm.expect(pm.response.json().token).to.be.a('string'));",
+              "pm.collectionVariables.set('token', pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 Личный кабинет",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{users_url}}/users/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Мой email', () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('email')));",
+              "pm.collectionVariables.set('user', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 Изменить профиль",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{users_url}}/users/me",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Семён Тест\",\n  \"phone\": \"+79990000000\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Имя изменено', () => { pm.expect(pm.response.json().name).to.eql('Семён Тест'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 Города",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/cities"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('city', pm.response.json()[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 Кухни",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/cuisines"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('cuisine', pm.response.json().find(x => x.name === 'Европейская').id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 Поиск с фильтром",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants?city_id={{city}}&cuisine_id={{cuisine}}&max_price=2000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Найден один ресторан', () => pm.expect(pm.response.json()).to.have.lengthOf(1));",
+              "pm.collectionVariables.set('restaurant', pm.response.json()[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 Сортировка ресторанов price_asc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants?sort=price_asc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Правильный порядок', () => { const xs=pm.response.json(); pm.expect(xs.length).to.be.at.least(2); pm.expect(xs.every((x,i)=>i===0 || Number(xs[i-1].avg_price) <= Number(x.avg_price))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "9 Сортировка ресторанов price_desc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants?sort=price_desc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Правильный порядок', () => { const xs=pm.response.json(); pm.expect(xs.length).to.be.at.least(2); pm.expect(xs.every((x,i)=>i===0 || Number(xs[i-1].avg_price) >= Number(x.avg_price))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Сортировка ресторанов rating_desc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants?sort=rating_desc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Правильный порядок', () => { const xs=pm.response.json(); pm.expect(xs.length).to.be.at.least(2); pm.expect(xs.every((x,i)=>i===0 || Number(xs[i-1].rating) >= Number(x.rating))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Поиск по названию",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants?name=Нева"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Найден ресторан по имени', () => { pm.expect(pm.response.json().map(x=>x.name)).to.eql(['Нева']); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Карточка ресторана",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants/{{restaurant}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('В карточке есть меню', () => pm.expect(pm.response.json().menu.length).to.be.above(0));",
+              "pm.collectionVariables.set('table', pm.response.json().tables[0].id);",
+              "pm.collectionVariables.set('slot', pm.response.json().time_slots[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Категория меню и отзывы rating_asc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants/{{restaurant}}?menu_category=Горячее&reviews_sort=rating_asc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Фильтр категории', () => { const menu=pm.response.json().menu; pm.expect(menu.length).to.be.above(0); pm.expect(menu.every(x=>x.category==='Горячее')).to.eql(true); });",
+              "pm.test('Порядок оценок', () => { const xs=pm.response.json().reviews; pm.expect(xs.length).to.be.at.least(2); pm.expect(xs.every((x,i)=>i===0 || xs[i-1].rating <= x.rating)).to.eql(true); });",
+              "pm.test('Рейтинг рассчитан по отзывам', () => { const data=pm.response.json(); pm.expect(Number(data.rating)).to.eql(data.reviews.reduce((s,x)=>s+x.rating,0)/data.reviews.length); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Категория меню и отзывы rating_desc",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants/{{restaurant}}?menu_category=Горячее&reviews_sort=rating_desc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Фильтр категории', () => { const menu=pm.response.json().menu; pm.expect(menu.length).to.be.above(0); pm.expect(menu.every(x=>x.category==='Горячее')).to.eql(true); });",
+              "pm.test('Порядок оценок', () => { const xs=pm.response.json().reviews; pm.expect(xs.length).to.be.at.least(2); pm.expect(xs.every((x,i)=>i===0 || xs[i-1].rating >= x.rating)).to.eql(true); });",
+              "pm.test('Рейтинг рассчитан по отзывам', () => { const data=pm.response.json(); pm.expect(Number(data.rating)).to.eql(data.reviews.reduce((s,x)=>s+x.rating,0)/data.reviews.length); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Недопустимая сортировка",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{restaurants_url}}/restaurants?sort=invalid"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 400', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Доступный столик",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{bookings_url}}/bookings/availability?restaurant_id={{restaurant}}&booking_date={{date}}&guests_count=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Столик доступен', () => { pm.expect(pm.response.json().some(x=>x.table_id===pm.collectionVariables.get('table') && x.time_slot_id===pm.collectionVariables.get('slot'))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Вместимость столика",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{bookings_url}}/bookings/availability?restaurant_id={{restaurant}}&booking_date={{date}}&guests_count=99"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Нет подходящих мест', () => { pm.expect(pm.response.json()).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 Создать бронь",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"table_id\": \"{{table}}\",\n  \"time_slot_id\": \"{{slot}}\",\n  \"booking_date\": \"{{date}}\",\n  \"guests_count\": 2,\n  \"comment\": \"Столик на двоих\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 201', () => pm.response.to.have.status(201));",
+              "pm.test('Бронь подтверждена', () => pm.expect(pm.response.json().status).to.eql('CONFIRMED'));",
+              "pm.collectionVariables.set('booking', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Занятый столик",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"table_id\": \"{{table}}\",\n  \"time_slot_id\": \"{{slot}}\",\n  \"booking_date\": \"{{date}}\",\n  \"guests_count\": 2,\n  \"comment\": \"Столик на двоих\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 Занятый слот исключён",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{bookings_url}}/bookings/availability?restaurant_id={{restaurant}}&booking_date={{date}}&guests_count=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Бронь скрывает слот', () => { pm.expect(pm.response.json().some(x=>x.table_id===pm.collectionVariables.get('table') && x.time_slot_id===pm.collectionVariables.get('slot'))).to.eql(false); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 История по дате и ресторану",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings?restaurant_name=Нева&date_from={{date}}&date_to={{date}}&sort=date_asc"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Нужная бронь найдена', () => { pm.expect(pm.response.json().some(x=>x.id===pm.collectionVariables.get('booking'))).to.eql(true); });",
+              "pm.test('Только мои брони', () => { pm.expect(pm.response.json().every(x=>x.user_id===pm.collectionVariables.get('user'))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 История другого ресторана",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings?restaurant_name=Волна"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Пустая история', () => { pm.expect(pm.response.json()).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 История другой даты",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings?date_from={{date2}}&date_to={{date2}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Пустая история', () => { pm.expect(pm.response.json()).to.eql([]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 Чужое управление рестораном запрещено",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/restaurant?restaurant_id={{restaurant}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 403', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 Пользователь не меняет статус ресторана",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/{{booking}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 403', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 Вход администратора ресторана",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{users_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Student123\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Получен токен администратора', () => { pm.expect(pm.response.json().token).to.be.a('string'); });",
+              "pm.collectionVariables.set('admin_token',pm.response.json().token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 Брони своего ресторана",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/restaurant?restaurant_id={{restaurant}}&date_from={{date}}&date_to={{date}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Администратор видит бронь', () => { pm.expect(pm.response.json().some(x=>x.id===pm.collectionVariables.get('booking'))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 Завершить бронь",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/{{booking}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Бронь завершена', () => { pm.expect(pm.response.json().status).to.eql('COMPLETED'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29 Завершённую бронь нельзя отменить",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/{{booking}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 Завершённую бронь нельзя восстановить",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/{{booking}}/status",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31 Новая бронь для проверки отмены",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"table_id\": \"{{table}}\",\n  \"time_slot_id\": \"{{slot}}\",\n  \"booking_date\": \"{{date}}\",\n  \"guests_count\": 2,\n  \"comment\": \"Столик на двоих\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 201', () => pm.response.to.have.status(201));",
+              "pm.test('Бронь подтверждена', () => pm.expect(pm.response.json().status).to.eql('CONFIRMED'));",
+              "pm.collectionVariables.set('booking', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "32 История бронирований",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Бронь есть в истории', () => pm.expect(pm.response.json().some(x => x.id === pm.collectionVariables.get('booking'))).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33 Отменить бронь",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{bookings_url}}/bookings/{{booking}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Бронь отменена', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "34 Отмена освобождает слот",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{bookings_url}}/bookings/availability?restaurant_id={{restaurant}}&booking_date={{date}}&guests_count=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Код 200', () => pm.response.to.have.status(200));",
+              "pm.test('Столик снова доступен', () => { pm.expect(pm.response.json().some(x=>x.table_id===pm.collectionVariables.get('table') && x.time_slot_id===pm.collectionVariables.get('slot'))).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

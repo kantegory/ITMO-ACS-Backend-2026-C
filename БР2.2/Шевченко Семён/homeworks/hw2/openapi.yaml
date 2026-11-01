@@ -1,0 +1,837 @@
+openapi: 3.0.3
+info:
+  title: Бронирование столиков
+  version: 1.1.0
+  description: REST API сервиса бронирования столиков в ресторанах.
+servers:
+- url: http://localhost:3000/api
+paths:
+  /auth/register:
+    post:
+      tags:
+      - Пользователи
+      summary: Зарегистрироваться
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                password:
+                  type: string
+                  minLength: 6
+                  description: От 6 символов, не более 72 байт UTF-8 (ограничение
+                    bcrypt).
+                name:
+                  type: string
+                  maxLength: 100
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /auth/login:
+    post:
+      tags:
+      - Пользователи
+      summary: Войти
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: JWT для заголовка Authorization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me:
+    get:
+      tags:
+      - Пользователи
+      summary: Мой профиль
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Данные пользователя без пароля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags:
+      - Пользователи
+      summary: Изменить имя и телефон
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                phone:
+                  type: string
+                  nullable: true
+                  maxLength: 20
+      responses:
+        '200':
+          description: Обновлённый профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /cities:
+    get:
+      tags:
+      - Рестораны
+      summary: Города для фильтра
+      responses:
+        '200':
+          description: Список городов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    country:
+                      type: string
+                      nullable: true
+  /cuisines:
+    get:
+      tags:
+      - Рестораны
+      summary: Кухни для фильтра
+      responses:
+        '200':
+          description: Список кухонь
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    icon_url:
+                      type: string
+                      nullable: true
+  /restaurants:
+    get:
+      tags:
+      - Рестораны
+      summary: Поиск ресторанов
+      parameters:
+      - name: city_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: cuisine_id
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: max_price
+        in: query
+        description: Максимальный средний чек в рублях
+        schema:
+          type: integer
+      - name: name
+        in: query
+        schema:
+          type: string
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - name
+          - price_asc
+          - price_desc
+          - rating_asc
+          - rating_desc
+          default: name
+      responses:
+        '200':
+          description: Подходящие рестораны
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Restaurant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+      description: Рейтинг вычисляется как среднее оценок отзывов; при отсутствии
+        отзывов равен 0. Фильтры и сортировки выполняются через TypeORM.
+  /restaurants/{id}:
+    get:
+      tags:
+      - Рестораны
+      summary: Карточка ресторана с меню, фотографиями и отзывами
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: menu_category
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: reviews_sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - newest
+          - rating_asc
+          - rating_desc
+          default: newest
+      responses:
+        '200':
+          description: Ресторан, столики и время для бронирования
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Restaurant'
+                - type: object
+                  properties:
+                    menu:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/MenuItem'
+                    tables:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Table'
+                    time_slots:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TimeSlot'
+                    photos:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Photo'
+                    reviews:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /bookings:
+    get:
+      tags:
+      - Бронирования
+      summary: История моих бронирований
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Брони пользователя из JWT, с фильтрами и сортировкой по дате
+            посещения.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      parameters:
+      - name: restaurant_id
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: restaurant_name
+        in: query
+        required: false
+        schema:
+          type: string
+      - &id001
+        name: date_from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - &id002
+        name: date_to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - &id003
+        name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - date_asc
+          - date_desc
+          default: date_desc
+      - &id004
+        name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - CONFIRMED
+          - CANCELLED
+          - COMPLETED
+    post:
+      tags:
+      - Бронирования
+      summary: Забронировать столик
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingInput'
+      responses:
+        '201':
+          description: Бронь подтверждена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /bookings/{id}:
+    delete:
+      tags:
+      - Бронирования
+      summary: Отменить свою бронь
+      description: Запись остаётся в истории со статусом CANCELLED. Завершённую бронь
+        отменять нельзя.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Отменённая бронь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /bookings/availability:
+    get:
+      tags:
+      - Бронирования
+      summary: Свободные столики и слоты на выбранную дату
+      description: 'Учитываются активность столика, вместимость и активные брони на
+        эту дату. Результат не резервирует место: при конкурентном бронировании POST
+        может вернуть 409.'
+      parameters:
+      - name: restaurant_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: booking_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: guests_count
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: Результат запроса
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailableOption'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /bookings/restaurant:
+    get:
+      tags:
+      - Бронирования
+      summary: Брони ресторана для его администратора
+      security: &id005
+      - bearerAuth: []
+      description: Идентификатор администратора берётся из JWT и сравнивается с admin_id
+        ресторана.
+      parameters:
+      - name: restaurant_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - *id001
+      - *id002
+      - *id003
+      - *id004
+      responses:
+        '200':
+          description: Результат запроса
+          content:
+            application/json:
+              schema:
+                type: array
+                items: &id006
+                  $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /bookings/{id}/status:
+    patch:
+      tags:
+      - Бронирования
+      summary: Изменить статус брони администратором ресторана
+      security: *id005
+      description: Допустимы PENDING → CONFIRMED/CANCELLED и CONFIRMED → COMPLETED/CANCELLED.
+        Восстановление отменённой или завершённой брони запрещено. Повторная установка
+        текущего статуса допустима.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - CONFIRMED
+                  - CANCELLED
+                  - COMPLETED
+      responses:
+        '200':
+          description: Результат запроса
+          content:
+            application/json:
+              schema: *id006
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Некорректные данные запроса
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Неверный пароль или отсутствующий токен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Запись не найдена
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Email уже занят или столик уже забронирован
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Нет прав на управление этим рестораном
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unavailable:
+      description: Сервис ресторанов недоступен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum:
+          - USER
+          - RESTAURANT_ADMIN
+          - SUPER_ADMIN
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        admin_id:
+          type: string
+          format: uuid
+        city_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        address:
+          type: string
+        latitude:
+          type: string
+          nullable: true
+        longitude:
+          type: string
+          nullable: true
+        avg_price:
+          type: integer
+          nullable: true
+        rating:
+          type: string
+          nullable: true
+          example: '4.50'
+          description: Средняя оценка отзывов, рассчитанная при чтении.
+        working_hours:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    Table:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        number:
+          type: integer
+        seats:
+          type: integer
+        location:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+    TimeSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        start_time:
+          type: string
+          example: '18:00:00'
+        end_time:
+          type: string
+          example: '20:00:00'
+        duration_minutes:
+          type: integer
+          nullable: true
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price:
+          type: integer
+          description: Цена в копейках
+        category:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+          format: uri
+        is_available:
+          type: boolean
+          nullable: true
+    Photo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        is_cover:
+          type: boolean
+          nullable: true
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    BookingInput:
+      type: object
+      required:
+      - table_id
+      - time_slot_id
+      - booking_date
+      - guests_count
+      properties:
+        table_id:
+          type: string
+          format: uuid
+        time_slot_id:
+          type: string
+          format: uuid
+        booking_date:
+          type: string
+          format: date
+        guests_count:
+          type: integer
+          minimum: 1
+        comment:
+          type: string
+          nullable: true
+          maxLength: 1000
+    Booking:
+      allOf:
+      - $ref: '#/components/schemas/BookingInput'
+      - type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          user_id:
+            type: string
+            format: uuid
+          status:
+            type: string
+            enum:
+            - PENDING
+            - CONFIRMED
+            - CANCELLED
+            - COMPLETED
+          created_at:
+            type: string
+            format: date-time
+    AvailableOption:
+      type: object
+      required:
+      - table_id
+      - table_number
+      - seats
+      - time_slot_id
+      - start_time
+      - end_time
+      properties:
+        table_id:
+          type: string
+          format: uuid
+        table_number:
+          type: integer
+        seats:
+          type: integer
+        time_slot_id:
+          type: string
+          format: uuid
+        start_time:
+          type: string
+          example: '18:00:00'
+        end_time:
+          type: string
+          example: '20:00:00'

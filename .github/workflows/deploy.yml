@@ -1,0 +1,67 @@
+name: Check and deploy booking
+on:
+  push:
+    branches: [labs]
+  pull_request:
+    branches: [labs]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: booking-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "БР2.2/Шевченко Семён"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare environment
+        run: python3 labs/lab3/init-env.py
+      - name: Build test runner
+        run: ./compose.sh --profile tools build tools
+      - name: Start application
+        run: ./compose.sh up -d --build --wait --wait-timeout 180
+      - name: Test monolith, microservices and nginx
+        run: ./homeworks/hw3/check.sh
+      - name: Check nginx configuration
+        run: ./compose.sh exec -T nginx nginx -t
+      - name: Show logs on failure
+        if: failure()
+        run: ./compose.sh logs --no-color --tail 80
+      - name: Stop test environment
+        if: always()
+        run: ./compose.sh down
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/labs' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update server
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          EXPECTED_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SSH_FINGERPRINT }}
+          envs: DEPLOY_PATH,EXPECTED_SHA
+          command_timeout: 20m
+          script: |
+            set -eu
+            cd "$DEPLOY_PATH"
+            test "$(git branch --show-current)" = labs
+            git pull --ff-only origin labs
+            test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+            cd "БР2.2/Шевченко Семён"
+            python3 labs/lab3/init-env.py
+            ./compose.sh --profile tools build tools
+            ./compose.sh up -d --build --wait --wait-timeout 180
+            ./compose.sh exec -T nginx nginx -t
+            ./compose.sh exec -T nginx nginx -s reload
+            ./homeworks/hw3/check.sh
