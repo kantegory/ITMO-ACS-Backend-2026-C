@@ -1,9 +1,9 @@
 name: Check and deploy booking
 on:
   push:
-    branches: [main]
+    branches: [labs]
   pull_request:
-    branches: [main]
+    branches: [labs]
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,7 +36,7 @@ jobs:
         run: ./compose.sh down
   deploy:
     needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    if: github.ref == 'refs/heads/labs' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Update server
@@ -55,11 +55,13 @@ jobs:
           script: |
             set -eu
             cd "$DEPLOY_PATH"
-            git pull --ff-only origin main
+            test "$(git branch --show-current)" = labs
+            git pull --ff-only origin labs
             test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
             cd "БР2.2/Шевченко Семён"
             python3 labs/lab3/init-env.py
             ./compose.sh --profile tools build tools
             ./compose.sh up -d --build --wait --wait-timeout 180
-            ./homeworks/hw3/check.sh
             ./compose.sh exec -T nginx nginx -t
+            ./compose.sh exec -T nginx nginx -s reload
+            ./homeworks/hw3/check.sh
